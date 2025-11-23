@@ -72,3 +72,4 @@ samconfig.toml
 *.pem
 *.key
 .serverless/
+frontend-versions/main-version/node_modules/

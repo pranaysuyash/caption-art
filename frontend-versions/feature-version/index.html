@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caption Art - AI Caption Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="noise-overlay"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="logo">
+                    <span class="logo-icon">✨</span>
+                    Caption<span class="accent">Art</span>
+                </h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-view="generator">Generator</button>
+                    <button class="nav-btn" data-view="gallery">Gallery</button>
+                    <button class="theme-toggle" id="themeToggle">
+                        <span class="theme-icon">🌙</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Generator View -->
+            <section id="generatorView" class="view active">
+                <div class="hero">
+                    <h2 class="hero-title">
+                        Create <span class="gradient-text">Stunning</span> Captions
+                        <span class="blob blob-1"></span>
+                        <span class="blob blob-2"></span>
+                    </h2>
+                    <p class="hero-subtitle">Transform your images into art with AI-powered captions</p>
+                </div>
+
+                <div class="generator-grid">
+                    <!-- Upload Section -->
+                    <div class="card upload-card">
+                        <div class="card-header">
+                            <h3 class="card-title">📸 Upload Image</h3>
+                            <span class="badge">Step 1</span>
+                        </div>
+                        <div class="upload-zone" id="uploadZone">
+                            <input type="file" id="fileInput" accept="image/*" hidden>
+                            <div class="upload-placeholder">
+                                <div class="upload-icon">⬆️</div>
+                                <p class="upload-text">Click or drag image here</p>
+                                <p class="upload-hint">Supports JPG, PNG, GIF</p>
+                            </div>
+                            <div class="preview-container" id="previewContainer" style="display: none;">
+                                <img id="preview" class="preview-image" alt="Preview">
+                                <button class="remove-btn" id="removeBtn">✕</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Style Selection -->
+                    <div class="card style-card">
+                        <div class="card-header">
+                            <h3 class="card-title">🎨 Choose Style</h3>
+                            <span class="badge">Step 2</span>
+                        </div>
+                        <div class="style-options">
+                            <button class="style-btn active" data-style="creative">
+                                <span class="style-emoji">✨</span>
+                                <span class="style-name">Creative</span>
+                            </button>
+                            <button class="style-btn" data-style="funny">
+                                <span class="style-emoji">😂</span>
+                                <span class="style-name">Funny</span>
+                            </button>
+                            <button class="style-btn" data-style="poetic">
+                                <span class="style-emoji">🌸</span>
+                                <span class="style-name">Poetic</span>
+                            </button>
+                            <button class="style-btn" data-style="minimal">
+                                <span class="style-emoji">⚪</span>
+                                <span class="style-name">Minimal</span>
+                            </button>
+                            <button class="style-btn" data-style="dramatic">
+                                <span class="style-emoji">🎭</span>
+                                <span class="style-name">Dramatic</span>
+                            </button>
+                            <button class="style-btn" data-style="quirky">
+                                <span class="style-emoji">🎪</span>
+                                <span class="style-name">Quirky</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <div class="card generate-card">
+                        <div class="card-header">
+                            <h3 class="card-title">⚡ Generate</h3>
+                            <span class="badge">Step 3</span>
+                        </div>
+                        <button class="generate-btn" id="generateBtn" disabled>
+                            <span class="btn-text">Generate Caption</span>
+                            <span class="btn-shimmer"></span>
+                        </button>
+                        <div class="loading-bar" id="loadingBar" style="display: none;">
+                            <div class="loading-progress"></div>
+                        </div>
+                    </div>
+
+                    <!-- Results -->
+                    <div class="card results-card" id="resultsCard" style="display: none;">
+                        <div class="card-header">
+                            <h3 class="card-title">✅ Your Caption</h3>
+                            <button class="icon-btn" id="regenerateBtn" title="Regenerate">
+                                🔄
+                            </button>
+                        </div>
+                        <div class="caption-result">
+                            <p class="caption-text" id="captionText"></p>
+                            <div class="result-actions">
+                                <button class="action-btn" id="copyBtn">
+                                    <span>📋</span> Copy
+                                </button>
+                                <button class="action-btn" id="downloadBtn">
+                                    <span>💾</span> Save
+                                </button>
+                                <button class="action-btn" id="shareBtn">
+                                    <span>🔗</span> Share
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features -->
+                <div class="features">
+                    <div class="feature">
+                        <span class="feature-icon">🚀</span>
+                        <h4>Lightning Fast</h4>
+                        <p>Get captions in seconds</p>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🎯</span>
+                        <h4>Multiple Styles</h4>
+                        <p>6 unique caption styles</p>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">💡</span>
+                        <h4>AI Powered</h4>
+                        <p>Advanced algorithms</p>
+                    </div>
+                    <div class="feature">
+                        <span class="feature-icon">🎨</span>
+                        <h4>Custom Design</h4>
+                        <p>Beautiful output every time</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gallery View -->
+            <section id="galleryView" class="view">
+                <div class="gallery-header">
+                    <h2 class="section-title">Recent Creations</h2>
+                    <button class="icon-btn" id="clearGallery">🗑️ Clear All</button>
+                </div>
+                <div class="gallery-grid" id="galleryGrid">
+                    <div class="gallery-empty">
+                        <span class="empty-icon">🖼️</span>
+                        <p>No captions yet. Start creating!</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p class="footer-text">
+                Made with <span class="heart">❤️</span> using modern web design
+            </p>
+            <div class="footer-links">
+                <a href="#" class="footer-link">About</a>
+                <a href="#" class="footer-link">Privacy</a>
+                <a href="#" class="footer-link">Contact</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <span class="toast-icon">✓</span>
+        <span class="toast-message" id="toastMessage"></span>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
