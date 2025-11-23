@@ -53,7 +53,7 @@ export default function App() {
   const [text, setText] = useState<string>('')
   const [preset, setPreset] = useState<StylePreset>('neon')
   const [fontSize, setFontSize] = useState<number>(96)
-  const [licenseOk, setLicenseOk] = useState<boolean>(false)
+  const [licenseOk, setLicenseOk] = useState<boolean>(true) // Always true for local testing
 
   const onFile = async (f: File) => {
     setFile(f)
@@ -143,12 +143,7 @@ export default function App() {
         </select>
         <input className="range" type="range" min={24} max={160} value={fontSize} onChange={e => setFontSize(parseInt(e.target.value))} />
         <input className="input" placeholder="Enter your text" value={text} onChange={e => setText(e.target.value)} />
-        <input className="input" placeholder="Gumroad license" onBlur={async (e) => {
-          const key = e.currentTarget.value.trim(); if (!key) return
-          const d = await callApi<{ ok: boolean }>('/verify', { licenseKey: key })
-          setLicenseOk(!!d.ok)
-          alert(d.ok ? 'Premium unlocked' : 'Invalid/Refused license')
-        }} />
+        {/* License input removed for local testing */}
         <button className="button" onClick={exportImg}>Export</button>
       </div>
 
@@ -165,7 +160,7 @@ export default function App() {
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <span className="badge">Free: 2 exports/day with watermark</span>
+        <span className="badge">Local Testing Mode - No Restrictions</span>
       </div>
     </div>
   )
