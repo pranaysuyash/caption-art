@@ -23,31 +23,127 @@ function textStyle(preset: StylePreset, fontSize: number) {
   }
 }
 
-async function getPresignedUrl(filename: string, contentType: string) {
-  const r = await fetch(import.meta.env.VITE_API_BASE + '/presign', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, contentType })
-  })
-  if (!r.ok) throw new Error('presign failed')
-  return r.json() as Promise<{ url: string, key: string }>
+// Direct API calls to Replicate and OpenAI
+async function generateCaption(imageDataUrl: string): Promise<string[]> {
+  try {
+    // Call Replicate BLIP for base caption
+    const replicateResponse = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${import.meta.env.VITE_REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        version: 'salesforce/blip:2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746',
+        input: {
+          image: imageDataUrl,
+          task: 'image_captioning'
+        }
+      })
+    })
+
+    if (!replicateResponse.ok) {
+      console.error('Replicate API error:', await replicateResponse.text())
+      return ['A beautiful moment captured', 'An artistic composition', 'A stunning visual']
+    }
+
+    const prediction = await replicateResponse.json()
+    
+    // Poll for result
+    let result = prediction
+    while (result.status !== 'succeeded' && result.status !== 'failed') {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
+        headers: {
+          'Authorization': `Token ${import.meta.env.VITE_REPLICATE_API_TOKEN}`
+        }
+      })
+      result = await pollResponse.json()
+    }
+
+    const baseCaption = result.output || 'A beautiful image'
+
+    // Rewrite with OpenAI
+    try {
+      const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [{
+            role: 'user',
+            content: `Rewrite this image caption in 3 different creative ways (return as JSON array): "${baseCaption}"`
+          }],
+          temperature: 0.8
+        })
+      })
+
+      if (openaiResponse.ok) {
+        const openaiData = await openaiResponse.json()
+        const variants = JSON.parse(openaiData.choices[0].message.content)
+        return [baseCaption, ...variants]
+      }
+    } catch (e) {
+      console.error('OpenAI error:', e)
+    }
+
+    return [baseCaption, `${baseCaption} ✨`, `${baseCaption} 🎨`]
+  } catch (error) {
+    console.error('Caption generation error:', error)
+    return ['A beautiful moment captured', 'An artistic composition', 'A stunning visual']
+  }
 }
 
-async function callApi<T>(path: string, body: any): Promise<T> {
-  const r = await fetch(import.meta.env.VITE_API_BASE + path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  })
-  if (!r.ok) throw new Error('api failed')
-  return r.json() as Promise<T>
+async function generateMask(imageDataUrl: string): Promise<string> {
+  try {
+    const response = await fetch('https://api.replicate.com/v1/predictions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${import.meta.env.VITE_REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        version: 'cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003',
+        input: {
+          image: imageDataUrl
+        }
+      })
+    })
+
+    if (!response.ok) {
+      console.error('Rembg API error:', await response.text())
+      return ''
+    }
+
+    const prediction = await response.json()
+    
+    // Poll for result
+    let result = prediction
+    while (result.status !== 'succeeded' && result.status !== 'failed') {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
+        headers: {
+          'Authorization': `Token ${import.meta.env.VITE_REPLICATE_API_TOKEN}`
+        }
+      })
+      result = await pollResponse.json()
+    }
+
+    return result.output || ''
+  } catch (error) {
+    console.error('Mask generation error:', error)
+    return ''
+  }
 }
 
 export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [imageObjUrl, setImageObjUrl] = useState<string>('')
-  const [s3Key, setS3Key] = useState<string>('')
+  const [loading, setLoading] = useState<boolean>(false)
   const [maskUrl, setMaskUrl] = useState<string>('')
   const [captions, setCaptions] = useState<string[]>([])
   const [text, setText] = useState<string>('')
@@ -59,16 +155,29 @@ export default function App() {
     setFile(f)
     const obj = URL.createObjectURL(f)
     setImageObjUrl(obj)
+    setLoading(true)
 
-    const { url, key } = await getPresignedUrl(f.name, f.type)
-    await fetch(url, { method: 'PUT', headers: { 'Content-Type': f.type }, body: f })
-    setS3Key(key)
+    // Convert file to base64 data URL
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const imageDataUrl = reader.result as string
 
-    const cap = await callApi<{ base: string, variants: string[] }>('/caption', { s3Key: key })
-    setCaptions([cap.base, ...(cap.variants || [])].filter(Boolean))
+      try {
+        // Generate captions
+        const captionResults = await generateCaption(imageDataUrl)
+        setCaptions(captionResults)
 
-    const m = await callApi<{ maskPngUrl: string }>('/mask', { s3Key: key })
-    setMaskUrl(m.maskPngUrl)
+        // Generate mask for "text behind subject" effect
+        const maskResult = await generateMask(imageDataUrl)
+        setMaskUrl(maskResult)
+      } catch (error) {
+        console.error('Error processing image:', error)
+        alert('Error processing image. Please check your API keys.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    reader.readAsDataURL(f)
   }
 
   useEffect(() => {
@@ -134,7 +243,7 @@ export default function App() {
     <div className="container">
       <h1>Contextual Captioner + Text Art</h1>
       <div className="row" style={{ marginTop: 12 }}>
-        <input type="file" accept="image/*" onChange={e => e.target.files && onFile(e.target.files[0])} />
+        <input type="file" accept="image/*" onChange={e => e.target.files && onFile(e.target.files[0])} disabled={loading} />
         <select className="select" value={preset} onChange={e => setPreset(e.target.value as StylePreset)}>
           <option value="neon">Neon</option>
           <option value="magazine">Magazine</option>
@@ -143,9 +252,14 @@ export default function App() {
         </select>
         <input className="range" type="range" min={24} max={160} value={fontSize} onChange={e => setFontSize(parseInt(e.target.value))} />
         <input className="input" placeholder="Enter your text" value={text} onChange={e => setText(e.target.value)} />
-        {/* License input removed for local testing */}
-        <button className="button" onClick={exportImg}>Export</button>
+        <button className="button" onClick={exportImg} disabled={!imageObjUrl}>Export</button>
       </div>
+
+      {loading && (
+        <div style={{ marginTop: 12, color: '#4ECDC4' }}>
+          ⏳ Generating captions and processing image...
+        </div>
+      )}
 
       {captions.length > 0 && (
         <div className="caption-grid" style={{ marginTop: 12 }}>
