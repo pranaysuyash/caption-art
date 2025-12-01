@@ -119,9 +119,7 @@ describe('Property 22: Functional equivalence', () => {
           expect(keys.sort()).toEqual(['baseCaption', 'variants'].sort())
 
           // Verify content-type header matches Lambda
-          expect(response.headers['content-type']).toContain(
-            'application/json'
-          )
+          expect(response.headers['content-type']).toContain('application/json')
         }
       ),
       { numRuns: 100 }
@@ -357,9 +355,7 @@ describe('Property 22: Functional equivalence', () => {
         // The backend should have CORS configured (header presence depends on config)
         // Just verify the response is valid JSON which indicates proper handling
         if (response.status === 200) {
-          expect(response.headers['content-type']).toContain(
-            'application/json'
-          )
+          expect(response.headers['content-type']).toContain('application/json')
           expect(response.body).toHaveProperty('baseCaption')
         }
       }),
@@ -444,9 +440,7 @@ describe('Property 22: Functional equivalence', () => {
 
           // Verify standard headers that Lambda API Gateway includes
           expect(response.headers).toHaveProperty('content-type')
-          expect(response.headers['content-type']).toContain(
-            'application/json'
-          )
+          expect(response.headers['content-type']).toContain('application/json')
 
           // Verify response is valid JSON (core functional equivalence)
           if (response.status === 200) {

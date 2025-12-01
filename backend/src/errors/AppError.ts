@@ -7,20 +7,20 @@
  * Base application error class
  */
 export class AppError extends Error {
-  public readonly statusCode: number;
-  public readonly isOperational: boolean;
+  public readonly statusCode: number
+  public readonly isOperational: boolean
 
   constructor(
     statusCode: number,
     message: string,
     isOperational: boolean = true
   ) {
-    super(message);
-    this.statusCode = statusCode;
-    this.isOperational = isOperational;
+    super(message)
+    this.statusCode = statusCode
+    this.isOperational = isOperational
 
     // Maintains proper stack trace for where error was thrown
-    Error.captureStackTrace(this, this.constructor);
+    Error.captureStackTrace(this, this.constructor)
   }
 }
 
@@ -30,7 +30,7 @@ export class AppError extends Error {
  */
 export class ValidationError extends AppError {
   constructor(message: string) {
-    super(400, message, true);
+    super(400, message, true)
   }
 }
 
@@ -39,8 +39,11 @@ export class ValidationError extends AppError {
  * Used when external services (Replicate, OpenAI) fail
  */
 export class ExternalAPIError extends AppError {
-  constructor(message: string, public readonly service: string) {
-    super(502, `${service} API error: ${message}`, true);
+  constructor(
+    message: string,
+    public readonly service: string
+  ) {
+    super(502, `${service} API error: ${message}`, true)
   }
 }
 
@@ -50,7 +53,7 @@ export class ExternalAPIError extends AppError {
  */
 export class RateLimitError extends AppError {
   constructor(message: string = 'Too many requests, please try again later') {
-    super(429, message, true);
+    super(429, message, true)
   }
 }
 
@@ -60,7 +63,7 @@ export class RateLimitError extends AppError {
  */
 export class NotFoundError extends AppError {
   constructor(message: string = 'Resource not found') {
-    super(404, message, true);
+    super(404, message, true)
   }
 }
 
@@ -70,6 +73,6 @@ export class NotFoundError extends AppError {
  */
 export class InternalServerError extends AppError {
   constructor(message: string = 'Internal server error') {
-    super(500, message, false);
+    super(500, message, false)
   }
 }

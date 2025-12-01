@@ -192,7 +192,9 @@ describe('Performance Properties', () => {
                 request(app)
                   .post('/api/caption')
                   .send({ imageUrl: 'http://example.com/image.jpg' })
-                  .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+                  .catch((err) => ({
+                    status: err.code === 'ECONNRESET' ? 503 : 500,
+                  }))
             )
 
             const maskRequests = Array.from(
@@ -201,7 +203,9 @@ describe('Performance Properties', () => {
                 request(app)
                   .post('/api/mask')
                   .send({ imageUrl: 'http://example.com/image.jpg' })
-                  .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+                  .catch((err) => ({
+                    status: err.code === 'ECONNRESET' ? 503 : 500,
+                  }))
             )
 
             const verifyRequests = Array.from(
@@ -210,13 +214,19 @@ describe('Performance Properties', () => {
                 request(app)
                   .post('/api/verify')
                   .send({ licenseKey: 'test-key-12345' })
-                  .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+                  .catch((err) => ({
+                    status: err.code === 'ECONNRESET' ? 503 : 500,
+                  }))
             )
 
             const healthRequests = Array.from(
               { length: requestsPerEndpoint },
-              () => request(app).get('/api/health')
-                  .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+              () =>
+                request(app)
+                  .get('/api/health')
+                  .catch((err) => ({
+                    status: err.code === 'ECONNRESET' ? 503 : 500,
+                  }))
             )
 
             // Execute all requests concurrently
@@ -237,7 +247,9 @@ describe('Performance Properties', () => {
             })
 
             // Count successful responses
-            const successCount = responses.filter((r) => r.status === 200).length
+            const successCount = responses.filter(
+              (r) => r.status === 200
+            ).length
             // At least some requests should succeed
             expect(successCount).toBeGreaterThan(0)
 
@@ -258,16 +270,22 @@ describe('Performance Properties', () => {
           async (concurrentRequests) => {
             // Send first batch of concurrent requests
             const firstBatch = Array.from({ length: concurrentRequests }, () =>
-              request(app).get('/api/health')
-                .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+              request(app)
+                .get('/api/health')
+                .catch((err) => ({
+                  status: err.code === 'ECONNRESET' ? 503 : 500,
+                }))
             )
 
             const firstBatchPromise = Promise.all(firstBatch)
 
             // While first batch is processing, send a second request
             // This verifies non-blocking behavior
-            const secondRequest = request(app).get('/api/health')
-              .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+            const secondRequest = request(app)
+              .get('/api/health')
+              .catch((err) => ({
+                status: err.code === 'ECONNRESET' ? 503 : 500,
+              }))
 
             const startTime = Date.now()
 
@@ -283,7 +301,9 @@ describe('Performance Properties', () => {
             firstBatchResponses.forEach((response) => {
               expect([200, 400, 403, 404, 500, 503]).toContain(response.status)
             })
-            expect([200, 400, 403, 404, 500, 503]).toContain(secondResponse.status)
+            expect([200, 400, 403, 404, 500, 503]).toContain(
+              secondResponse.status
+            )
 
             // Verify non-blocking: the second request should complete in reasonable time
             // even while the first batch is processing
@@ -304,14 +324,19 @@ describe('Performance Properties', () => {
             // Measure concurrent execution time
             const concurrentStart = Date.now()
             const concurrentRequests = Array.from({ length: numRequests }, () =>
-              request(app).get('/api/health')
-                .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+              request(app)
+                .get('/api/health')
+                .catch((err) => ({
+                  status: err.code === 'ECONNRESET' ? 503 : 500,
+                }))
             )
             const responses = await Promise.all(concurrentRequests)
             const concurrentTime = Date.now() - concurrentStart
 
             // At least one request should succeed
-            const successCount = responses.filter((r) => r.status === 200).length
+            const successCount = responses.filter(
+              (r) => r.status === 200
+            ).length
             expect(successCount).toBeGreaterThanOrEqual(1)
 
             // If requests were sequential, time would be numRequests * avgRequestTime
@@ -344,20 +369,28 @@ describe('Performance Properties', () => {
           async (loadLevel) => {
             // Send loadLevel concurrent requests
             const requests = Array.from({ length: loadLevel }, () =>
-              request(app).get('/api/health')
-                .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500, body: {} }))
+              request(app)
+                .get('/api/health')
+                .catch((err) => ({
+                  status: err.code === 'ECONNRESET' ? 503 : 500,
+                  body: {},
+                }))
             )
 
             const responses = await Promise.all(requests)
 
             // At least one request should succeed
-            const successCount = responses.filter((r) => r.status === 200).length
+            const successCount = responses.filter(
+              (r) => r.status === 200
+            ).length
             expect(successCount).toBeGreaterThanOrEqual(1)
 
             // Verify successful responses are valid
-            responses.filter((r) => r.status === 200).forEach((response) => {
-              expect(response.body).toHaveProperty('status', 'healthy')
-            })
+            responses
+              .filter((r) => r.status === 200)
+              .forEach((response) => {
+                expect(response.body).toHaveProperty('status', 'healthy')
+              })
           }
         ),
         { numRuns: 100 }
@@ -377,8 +410,11 @@ describe('Performance Properties', () => {
               const batchStartTime = Date.now()
 
               const requests = Array.from({ length: requestsPerBatch }, () =>
-                request(app).get('/api/health')
-                  .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+                request(app)
+                  .get('/api/health')
+                  .catch((err) => ({
+                    status: err.code === 'ECONNRESET' ? 503 : 500,
+                  }))
               )
 
               const responses = await Promise.all(requests)
@@ -388,7 +424,9 @@ describe('Performance Properties', () => {
               batchTimes.push(batchTime)
 
               // At least one request should succeed
-              const successCount = responses.filter((r) => r.status === 200).length
+              const successCount = responses.filter(
+                (r) => r.status === 200
+              ).length
               expect(successCount).toBeGreaterThanOrEqual(1)
 
               // Small delay between batches to allow connection cleanup
@@ -440,8 +478,8 @@ describe('Performance Properties', () => {
                     return request(app).get('/api/health')
                 }
               }
-              return makeRequest().catch((err) => ({ 
-                status: err.code === 'ECONNRESET' ? 503 : 500 
+              return makeRequest().catch((err) => ({
+                status: err.code === 'ECONNRESET' ? 503 : 500,
               }))
             })
 
@@ -453,7 +491,9 @@ describe('Performance Properties', () => {
             })
 
             // Count successful responses
-            const successCount = responses.filter((r) => r.status === 200).length
+            const successCount = responses.filter(
+              (r) => r.status === 200
+            ).length
             // At least 1 request should succeed (test environment is very limited)
             expect(successCount).toBeGreaterThanOrEqual(1)
           }

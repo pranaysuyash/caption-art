@@ -111,7 +111,8 @@ export async function generateImage(prompt: string): Promise<string> {
     const replicate = new Replicate({ auth: config.replicate.apiToken })
 
     // Using Stable Diffusion XL
-    const model = 'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b7159d72228b194'
+    const model =
+      'stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b7159d72228b194'
 
     const output = await replicate.run(
       model as `${string}/${string}:${string}`,

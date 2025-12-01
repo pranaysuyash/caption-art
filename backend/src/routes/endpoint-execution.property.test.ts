@@ -67,7 +67,12 @@ describe('Property 6: Endpoint execution', () => {
           fc.array(
             fc.string({ minLength: 1, maxLength: 20 }).filter((s) => {
               // Filter out strings with problematic characters that might interfere with JSON/routing
-              return !s.includes('\\') && !s.includes('"') && !s.includes('\n') && !s.includes('\r')
+              return (
+                !s.includes('\\') &&
+                !s.includes('"') &&
+                !s.includes('\n') &&
+                !s.includes('\r')
+              )
             }),
             { minLength: 0, maxLength: 5 }
           ),

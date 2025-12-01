@@ -126,9 +126,7 @@ describe('Property 21: HTTP client compatibility', () => {
             .set('Content-Type', 'application/json')
 
           expect(response.status).toBe(200)
-          expect(response.headers['content-type']).toContain(
-            'application/json'
-          )
+          expect(response.headers['content-type']).toContain('application/json')
           expect(response.body).toHaveProperty('valid')
         }
       ),
@@ -154,7 +152,9 @@ describe('Property 21: HTTP client compatibility', () => {
 
     // Test with supertest
     const supertestRequest = await import('supertest')
-    const supertestResponse = await supertestRequest.default(app).get('/api/health')
+    const supertestResponse = await supertestRequest
+      .default(app)
+      .get('/api/health')
     expect(supertestResponse.status).toBe(200)
     expect(supertestResponse.body).toHaveProperty('status')
   })
@@ -293,16 +293,13 @@ describe('Property 21: HTTP client compatibility', () => {
 
   it('should handle requests with and without trailing slashes', async () => {
     await fc.assert(
-      fc.asyncProperty(
-        fc.boolean(),
-        async (withTrailingSlash) => {
-          const path = withTrailingSlash ? '/api/health/' : '/api/health'
-          const response = await fetch(`http://localhost:${port}${path}`)
+      fc.asyncProperty(fc.boolean(), async (withTrailingSlash) => {
+        const path = withTrailingSlash ? '/api/health/' : '/api/health'
+        const response = await fetch(`http://localhost:${port}${path}`)
 
-          // Both should work (Express handles trailing slashes)
-          expect(response.status).toBeLessThan(500)
-        }
-      ),
+        // Both should work (Express handles trailing slashes)
+        expect(response.status).toBeLessThan(500)
+      }),
       { numRuns: 100 }
     )
   })

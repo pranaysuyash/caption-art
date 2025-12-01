@@ -4,15 +4,18 @@ Last Updated: 2025-12-01
 Status: Draft (Supplement to existing audit docs)
 
 ## Purpose
+
 This register catalogs current technical debt items not fully covered or newly observed since the previous audit summaries. Each entry lists: Category, Description, Impact, Severity, Suggested Remediation, Effort Estimate, Dependencies, and Target Window.
 
 Severity Scale: Critical | High | Medium | Low
 Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7), XL (8+)
 
 ---
+
 ## Backend
 
 ### 1. Syntax Error in `services/openai.ts`
+
 - Category: Reliability
 - Description: Extra closing parenthesis at end of `rewriteCaption` causing runtime/compile failure.
 - Impact: Caption variant generation completely breaks.
@@ -23,6 +26,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Immediate (Hotfix)
 
 ### 2. Inconsistent Validation Strategy
+
 - Category: Consistency / Maintainability
 - Description: Mixed manual (verify route) and Zod schema usage; story route defines inline schema.
 - Impact: Increased risk of drift; harder auditing; uneven error messages.
@@ -33,6 +37,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 3. Non-Cancellable External Calls
+
 - Category: Performance / Resource Management
 - Description: `withRetry` only races with timeout promise; underlying API call continues.
 - Impact: Wasted network & compute; potential concurrency saturation under load.
@@ -43,6 +48,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ### 4. Error Taxonomy Narrowness
+
 - Category: Observability
 - Description: Error classes lack structured codes (retryable, external, validation).
 - Impact: Harder analytics, alert routing.
@@ -53,6 +59,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2–3
 
 ### 5. Overly Restrictive Production Rate Limit
+
 - Category: UX / Scalability
 - Description: 5 requests / 15 min per IP may frustrate legitimate usage.
 - Impact: Churn risk, support load.
@@ -63,6 +70,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 3
 
 ### 6. Missing Keyword Sanitization
+
 - Category: Security
 - Description: `rewriteCaption` directly interpolates user-provided keywords into prompt.
 - Impact: Prompt injection, token/latency inflation.
@@ -73,6 +81,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 7. NaN Risk on Temperature Parsing
+
 - Category: Reliability
 - Description: Invalid `OPENAI_TEMPERATURE` string yields NaN silently.
 - Impact: Undefined model behavior; edge-case failures.
@@ -82,6 +91,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 8. Lack of Caching for Identical Image Requests
+
 - Category: Performance / Cost
 - Description: Recomputes captions/masks for same image multiple times.
 - Impact: External API cost growth.
@@ -92,6 +102,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 4
 
 ### 9. Hard-Coded SDXL Model String
+
 - Category: Config Hygiene
 - Description: Model reference lives inline in `generateImage`.
 - Impact: Harder upgrades; inconsistent with config centralization.
@@ -101,6 +112,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 10. Gumroad 200 for Invalid License
+
 - Category: Semantics
 - Description: Always returns 200 even on invalid license.
 - Impact: Confusing API consumers; forces branch logic client-side.
@@ -111,6 +123,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ### 11. CORS Credentials with Wildcard
+
 - Category: Security / Standards Compliance
 - Description: `Access-Control-Allow-Credentials: true` while origin may be `*`.
 - Impact: Browser ignores credentials; ambiguous policy.
@@ -120,6 +133,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 12. Per-Request Client Instantiation
+
 - Category: Performance
 - Description: New OpenAI / Replicate clients for each call.
 - Impact: Increased latency and overhead.
@@ -129,9 +143,11 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 3
 
 ---
+
 ## Frontend
 
 ### 13. Compositor Re-Creation on Minor State Changes
+
 - Category: Performance
 - Description: `useEffect` dependency list triggers full compositor rebuild frequently.
 - Impact: Frame drops, battery drain.
@@ -142,6 +158,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ### 14. Duplicate Mask Generation Paths
+
 - Category: Cost / Logic
 - Description: Hidden `MaskGenerator` + manual fetch run concurrently.
 - Impact: Double API calls; inconsistent state.
@@ -151,6 +168,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 15. Inline Hard-Coded Debounce Values
+
 - Category: Consistency
 - Description: 150ms appears both inline and in config.
 - Impact: Drift risk.
@@ -160,6 +178,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 16. Keyboard Shortcut Platform Mismatch
+
 - Category: UX
 - Description: `Ctrl+S` only; Mac users expect `Cmd`.
 - Impact: Reduced adoption of shortcuts.
@@ -169,6 +188,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ### 17. History & Auto-Save Interaction Ambiguity
+
 - Category: Reliability
 - Description: Auto-save may record states between rapid edits making undo unintuitive.
 - Impact: Frustration, state confusion.
@@ -178,6 +198,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 3
 
 ### 18. Unbounded Captions Array Growth
+
 - Category: Memory
 - Description: Captions appended indefinitely.
 - Impact: Memory footprint increase over long sessions.
@@ -187,6 +208,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ### 19. Incomplete Accessibility for Emoji Buttons
+
 - Category: Accessibility
 - Description: Missing `aria-label` for platform toggles.
 - Impact: Screen reader ambiguity.
@@ -196,6 +218,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 20. Mask Regeneration No Abort Capability
+
 - Category: UX / Performance
 - Description: Long-running mask fetch cannot be cancelled on new upload.
 - Impact: Late state overwrites.
@@ -205,9 +228,11 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 3
 
 ---
+
 ## Infrastructure (CDK)
 
 ### 21. WAF ACL Empty ARN Association
+
 - Category: Deployment Reliability
 - Description: If `WAF_ACL_ARN` not set, association uses empty string.
 - Impact: Possible invalid CFN resource; wasted deploy attempts.
@@ -217,6 +242,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 22. Overly Broad SSM Policy
+
 - Category: Security
 - Description: `ssm:GetParameter` on `*`.
 - Impact: Excessive privilege escalation risk.
@@ -226,6 +252,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 23. Missing API Gateway CORS
+
 - Category: Integration Reliability
 - Description: No explicit CORS config; mismatch with frontend expectations.
 - Impact: Preflight failures on deployed stack.
@@ -235,6 +262,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ### 24. Uniform Lambda Memory Allocation
+
 - Category: Cost Optimization
 - Description: All Lambdas at 512MB regardless of workload.
 - Impact: Over/under-provisioning.
@@ -244,6 +272,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 3
 
 ### 25. Missing Alarm / Monitoring Set
+
 - Category: Observability
 - Description: No CloudWatch alarms (errors, throttles).
 - Impact: Delayed incident detection.
@@ -254,9 +283,11 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ---
+
 ## Cross-Cutting
 
 ### 26. Lack of Unified Config for Models & Feature Flags
+
 - Category: Maintainability
 - Description: Hard-coded model strings; no feature toggles.
 - Impact: Slower iteration.
@@ -266,6 +297,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ### 27. Missing Structured Logging
+
 - Category: Observability
 - Description: Console logs only; no JSON format.
 - Impact: Harder aggregation.
@@ -275,6 +307,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 2
 
 ### 28. No Prompt Injection Safeguards
+
 - Category: Security
 - Description: Plain concatenation of user data into prompts.
 - Impact: Model misuse, unexpected outputs.
@@ -284,6 +317,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 1
 
 ### 29. Absence of Cache Strategy Document
+
 - Category: Performance Planning
 - Description: Optimization ideas not formalized.
 - Impact: Ad hoc decisions.
@@ -293,6 +327,7 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 4
 
 ### 30. Incomplete License Enforcement Logic
+
 - Category: Product Integrity
 - Description: Watermark toggling stub; license always true.
 - Impact: Revenue leakage potential.
@@ -302,35 +337,40 @@ Effort Scale (ideal engineer-days): XS (<0.5), S (0.5–1), M (2–3), L (4–7)
 - Target: Sprint 3
 
 ---
+
 ## Prioritization Summary
-| ID | Severity | Effort | Scheduled Sprint (Proposed) |
-|----|----------|--------|-----------------------------|
-| 1  | Critical | XS     | Hotfix Pre-Sprint           |
-| 2  | High     | M      | 1                           |
-| 6  | High     | S      | 1                           |
-| 11 | High     | S      | 1                           |
-| 14 | High     | S      | 1                           |
-| 21 | High     | S      | 1                           |
-| 22 | High     | S      | 1                           |
-| 7  | Medium   | XS     | 1                           |
-| 9  | Low      | XS     | 1                           |
-| 13 | High     | M      | 2                           |
-| 16 | Medium   | S      | 2                           |
-| 23 | High     | M      | 2                           |
-| 25 | High     | S      | 2                           |
-| 27 | Medium   | M      | 2                           |
-| 3  | Medium   | M      | 2–3                         |
-| 4  | Medium   | M      | 2–3                         |
-| 5  | High     | M      | 3                           |
-| 12 | Medium   | M      | 3                           |
-| 17 | Medium   | M      | 3                           |
-| 30 | Medium   | M      | 3                           |
-| 8  | Medium   | L      | 4                           |
-| 29 | Low      | S      | 4                           |
+
+| ID  | Severity | Effort | Scheduled Sprint (Proposed) |
+| --- | -------- | ------ | --------------------------- |
+| 1   | Critical | XS     | Hotfix Pre-Sprint           |
+| 2   | High     | M      | 1                           |
+| 6   | High     | S      | 1                           |
+| 11  | High     | S      | 1                           |
+| 14  | High     | S      | 1                           |
+| 21  | High     | S      | 1                           |
+| 22  | High     | S      | 1                           |
+| 7   | Medium   | XS     | 1                           |
+| 9   | Low      | XS     | 1                           |
+| 13  | High     | M      | 2                           |
+| 16  | Medium   | S      | 2                           |
+| 23  | High     | M      | 2                           |
+| 25  | High     | S      | 2                           |
+| 27  | Medium   | M      | 2                           |
+| 3   | Medium   | M      | 2–3                         |
+| 4   | Medium   | M      | 2–3                         |
+| 5   | High     | M      | 3                           |
+| 12  | Medium   | M      | 3                           |
+| 17  | Medium   | M      | 3                           |
+| 30  | Medium   | M      | 3                           |
+| 8   | Medium   | L      | 4                           |
+| 29  | Low      | S      | 4                           |
 
 ---
+
 ## Tracking & Metrics
+
 Recommended KPIs:
+
 - Mean external caption latency (p50/p95).
 - Retry rate per external provider.
 - Prompt injection rejections per 1K requests.
@@ -339,14 +379,19 @@ Recommended KPIs:
 - Frontend compositor render duration (avg per state change).
 
 ---
+
 ## Review Cadence
+
 - Weekly standup: Re-assess critical items.
 - Sprint planning: Confirm next top 5.
 - Monthly architecture review: Re-score unresolved medium/high items.
 
 ---
+
 ## Exit Criteria for Debt Closure
+
 An item is considered resolved when:
+
 1. Code change merged addressing remediation.
 2. Tests added (unit + integration if applicable).
 3. Observability hooks updated (logs/metrics).
@@ -354,8 +399,11 @@ An item is considered resolved when:
 5. KPI impact measured or baseline captured.
 
 ---
+
 ## Appendix
+
 Linkage:
+
 - See `ARCHITECTURE_IMPROVEMENT_PLAN.md` for structural changes aligning with items 2, 3, 13.
 - See `VALIDATION_UNIFICATION_SPEC.md` for item 2 & 6 implementation guidance.
 - See `OBSERVABILITY_SPEC.md` for items 4, 25, 27.

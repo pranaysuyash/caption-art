@@ -301,10 +301,9 @@ describe('Property 24: Logging availability', () => {
           const mostHaveMethodAndPath =
             logCalls.filter((call) => {
               const logMessage = call.join(' ')
-              return (
-                logMessage.includes('POST') || logMessage.includes('/api/')
-              )
-            }).length >= logCalls.length * 0.5
+              return logMessage.includes('POST') || logMessage.includes('/api/')
+            }).length >=
+            logCalls.length * 0.5
 
           expect(allHaveTimestamp || mostHaveMethodAndPath).toBe(true)
         }
@@ -328,7 +327,8 @@ describe('Property 24: Logging availability', () => {
 
     // Verify error was logged
     const errorLogged =
-      consoleErrorSpy.mock.calls.length > 0 || consoleLogSpy.mock.calls.length > 0
+      consoleErrorSpy.mock.calls.length > 0 ||
+      consoleLogSpy.mock.calls.length > 0
 
     expect(errorLogged).toBe(true)
 

@@ -3,9 +3,9 @@
  * Catches all errors and sends appropriate responses
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { AppError } from '../errors/AppError';
-import { ZodError } from 'zod';
+import { Request, Response, NextFunction } from 'express'
+import { AppError } from '../errors/AppError'
+import { ZodError } from 'zod'
 
 /**
  * Error handler middleware
@@ -18,29 +18,29 @@ export function errorHandler(
   _next: NextFunction
 ) {
   // Log error with context
-  const timestamp = new Date().toISOString();
-  console.error(`[${timestamp}] Error on ${req.method} ${req.path}:`, err);
+  const timestamp = new Date().toISOString()
+  console.error(`[${timestamp}] Error on ${req.method} ${req.path}:`, err)
 
   // Set content type to JSON
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Type', 'application/json')
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {
     return res.status(400).json({
       error: 'Validation error',
-      details: err.errors.map(e => ({
+      details: err.issues.map((e) => ({
         field: e.path.join('.'),
-        message: e.message
-      }))
-    });
+        message: e.message,
+      })),
+    })
   }
 
   // Handle custom AppError instances
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
       error: err.message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    })
   }
 
   // Handle unexpected errors
@@ -48,7 +48,7 @@ export function errorHandler(
     error: 'Internal server error',
     ...(process.env.NODE_ENV === 'development' && {
       message: err.message,
-      stack: err.stack
-    })
-  });
+      stack: err.stack,
+    }),
+  })
 }

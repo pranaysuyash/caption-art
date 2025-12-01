@@ -104,16 +104,14 @@ describe('Property 8: API compatibility', () => {
   it('verify endpoint should return valid and optional email fields', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc
-          .string({ minLength: 1, maxLength: 50 })
-          .filter(
-            (key) =>
-              // Filter out strings containing JavaScript reserved property names
-              // that might interfere with Express routing or JSON parsing
-              !key.includes('__proto__') &&
-              !key.includes('constructor') &&
-              !key.includes('prototype')
-          ),
+        fc.string({ minLength: 1, maxLength: 50 }).filter(
+          (key) =>
+            // Filter out strings containing JavaScript reserved property names
+            // that might interfere with Express routing or JSON parsing
+            !key.includes('__proto__') &&
+            !key.includes('constructor') &&
+            !key.includes('prototype')
+        ),
         async (licenseKey) => {
           const response = await request(app)
             .post('/api/verify')

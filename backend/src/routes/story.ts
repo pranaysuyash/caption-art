@@ -24,43 +24,50 @@ const NextFrameRequestSchema = z.object({
  * - nextPrompt: string - The prompt used to generate the next image
  * - nextImageUrl: string - URL of the generated image
  */
-router.post('/next-frame', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // Validate request body
-    const validatedData = NextFrameRequestSchema.parse(req.body)
-    const { currentCaption, styleContext } = validatedData
-
-    // 1. Generate prompt for the next scene
-    let nextPrompt: string
+router.post(
+  '/next-frame',
+  async (req: Request, res: Response, next: NextFunction) => {
     try {
-      nextPrompt = await generateNextScenePrompt(currentCaption, styleContext)
-    } catch (error) {
-      throw new ExternalAPIError(
-        error instanceof Error ? error.message : 'Failed to generate story script',
-        'OpenAI'
-      )
-    }
+      // Validate request body
+      const validatedData = NextFrameRequestSchema.parse(req.body)
+      const { currentCaption, styleContext } = validatedData
 
-    // 2. Generate image for the next scene
-    let nextImageUrl: string
-    try {
-      // Combine style context with the new prompt for better consistency
-      const fullPrompt = `${styleContext}. ${nextPrompt}`
-      nextImageUrl = await generateImage(fullPrompt)
-    } catch (error) {
-      throw new ExternalAPIError(
-        error instanceof Error ? error.message : 'Failed to generate story image',
-        'Replicate'
-      )
-    }
+      // 1. Generate prompt for the next scene
+      let nextPrompt: string
+      try {
+        nextPrompt = await generateNextScenePrompt(currentCaption, styleContext)
+      } catch (error) {
+        throw new ExternalAPIError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to generate story script',
+          'OpenAI'
+        )
+      }
 
-    res.json({
-      nextPrompt,
-      nextImageUrl,
-    })
-  } catch (error) {
-    next(error)
+      // 2. Generate image for the next scene
+      let nextImageUrl: string
+      try {
+        // Combine style context with the new prompt for better consistency
+        const fullPrompt = `${styleContext}. ${nextPrompt}`
+        nextImageUrl = await generateImage(fullPrompt)
+      } catch (error) {
+        throw new ExternalAPIError(
+          error instanceof Error
+            ? error.message
+            : 'Failed to generate story image',
+          'Replicate'
+        )
+      }
+
+      res.json({
+        nextPrompt,
+        nextImageUrl,
+      })
+    } catch (error) {
+      next(error)
+    }
   }
-})
+)
 
 export default router

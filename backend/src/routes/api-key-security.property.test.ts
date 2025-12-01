@@ -21,16 +21,20 @@ describe('Property 3: API key security', () => {
 
   beforeAll(() => {
     // Mock external services to prevent real API calls during property tests
-    vi.spyOn(replicateService, 'generateBaseCaption').mockResolvedValue('A test caption')
-    vi.spyOn(replicateService, 'generateMask').mockResolvedValue('https://example.com/mask.png')
+    vi.spyOn(replicateService, 'generateBaseCaption').mockResolvedValue(
+      'A test caption'
+    )
+    vi.spyOn(replicateService, 'generateMask').mockResolvedValue(
+      'https://example.com/mask.png'
+    )
     vi.spyOn(openaiService, 'rewriteCaption').mockResolvedValue([
       'Variant 1',
       'Variant 2',
-      'Variant 3'
+      'Variant 3',
     ])
     vi.spyOn(gumroadService, 'verifyLicense').mockResolvedValue({
       valid: true,
-      email: 'test@example.com'
+      email: 'test@example.com',
     })
 
     // Disable rate limiter for property tests that run 100 iterations

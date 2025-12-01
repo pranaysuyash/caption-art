@@ -33,6 +33,7 @@ describe('Error Handler Middleware', () => {
 
           let responseData: any
           const res = {
+            setHeader: vi.fn(),
             status: vi.fn().mockReturnThis(),
             json: vi.fn((data) => {
               responseData = data
@@ -68,6 +69,7 @@ describe('Error Handler Middleware', () => {
     let statusCode: number | undefined
     let responseData: any
     const res = {
+      setHeader: vi.fn(),
       status: vi.fn((code) => {
         statusCode = code
         return res
@@ -92,6 +94,7 @@ describe('Error Handler Middleware', () => {
     let statusCode: number | undefined
     let responseData: any
     const res = {
+      setHeader: vi.fn(),
       status: vi.fn((code) => {
         statusCode = code
         return res
@@ -116,6 +119,7 @@ describe('Error Handler Middleware', () => {
     let statusCode: number | undefined
     let responseData: any
     const res = {
+      setHeader: vi.fn(),
       status: vi.fn((code) => {
         statusCode = code
         return res
@@ -164,6 +168,7 @@ describe('Error Handler Middleware', () => {
     const error = new ValidationError('Test error')
     const req = { path: '/api/test', method: 'POST' } as Request
     const res = {
+      setHeader: vi.fn(),
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
     } as unknown as Response
