@@ -1,0 +1,66 @@
+/* Toolbar component styles */
+.toolbar {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: center;
+  padding: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.toolbar button {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-width: fit-content;
+}
+
+.toolbar__button-text {
+  display: inline;
+}
+
+.toolbar__divider {
+  width: 2px;
+  height: 24px;
+  background: var(--color-border-light);
+  margin: 0 var(--spacing-xs);
+}
+
+.toolbar__shortcuts {
+  margin-left: auto;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: 600;
+}
+
+/* Mobile adaptations (< 768px) */
+@media (max-width: 767px) {
+  .toolbar {
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs);
+  }
+  
+  .toolbar__button-text {
+    display: none; /* Hide button text on mobile, show icons only */
+  }
+  
+  .toolbar__divider {
+    display: none; /* Hide divider on mobile */
+  }
+  
+  .toolbar__shortcuts {
+    display: none; /* Hide shortcuts hint on mobile */
+  }
+  
+  .toolbar button {
+    padding: var(--spacing-xs);
+    min-width: 40px;
+    justify-content: center;
+  }
+}
+
+/* Desktop - show shortcuts hint */
+@media (min-width: 1024px) {
+  .toolbar__shortcuts {
+    display: block;
+  }
+}

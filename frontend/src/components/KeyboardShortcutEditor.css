@@ -1,0 +1,308 @@
+/**
+ * KeyboardShortcutEditor Styles
+ */
+
+.keyboard-shortcut-editor {
+  width: 100%;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.editor-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.reset-all-button {
+  padding: 8px 16px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.reset-all-button:hover {
+  background: #c82333;
+}
+
+.shortcuts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.shortcut-category {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  padding: 16px;
+  background: #fafafa;
+}
+
+.shortcut-category h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.shortcut-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.shortcut-item:last-child {
+  margin-bottom: 0;
+}
+
+.shortcut-item:hover {
+  border-color: #ccc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.shortcut-item.has-conflict {
+  border-color: #ffc107;
+  background: #fff9e6;
+}
+
+.shortcut-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.action-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.conflict-warning {
+  font-size: 12px;
+  color: #f57c00;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shortcut-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shortcut-display {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 13px;
+  padding: 6px 12px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #333;
+  min-width: 100px;
+  text-align: center;
+}
+
+.shortcut-input {
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  min-width: 150px;
+  text-align: center;
+  background: #fff;
+  color: #333;
+}
+
+.shortcut-input:focus {
+  outline: none;
+  border-color: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.edit-shortcut-button,
+.save-shortcut-button,
+.cancel-shortcut-button,
+.reset-shortcut-button {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+  color: #333;
+}
+
+.edit-shortcut-button:hover {
+  background: #f8f8f8;
+  border-color: #007bff;
+  color: #007bff;
+}
+
+.save-shortcut-button {
+  background: #28a745;
+  color: white;
+  border-color: #28a745;
+}
+
+.save-shortcut-button:hover {
+  background: #218838;
+}
+
+.save-shortcut-button:disabled {
+  background: #ccc;
+  border-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.cancel-shortcut-button {
+  color: #666;
+}
+
+.cancel-shortcut-button:hover {
+  background: #f8f8f8;
+}
+
+.reset-shortcut-button {
+  font-size: 16px;
+  padding: 6px 10px;
+  color: #666;
+}
+
+.reset-shortcut-button:hover {
+  background: #fff5f5;
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+.editor-help {
+  margin-top: 20px;
+  padding: 12px;
+  background: #e3f2fd;
+  border: 1px solid #90caf9;
+  border-radius: 4px;
+}
+
+.editor-help p {
+  margin: 0;
+  font-size: 13px;
+  color: #1976d2;
+  line-height: 1.5;
+}
+
+.editor-help strong {
+  font-weight: 600;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+  .editor-header h3 {
+    color: #e0e0e0;
+  }
+
+  .shortcut-category {
+    background: #2a2a2a;
+    border-color: #444;
+  }
+
+  .shortcut-category h4 {
+    color: #aaa;
+  }
+
+  .shortcut-item {
+    background: #3a3a3a;
+    border-color: #555;
+  }
+
+  .shortcut-item:hover {
+    border-color: #666;
+  }
+
+  .shortcut-item.has-conflict {
+    background: #3d3520;
+    border-color: #ffc107;
+  }
+
+  .action-name {
+    color: #e0e0e0;
+  }
+
+  .shortcut-display {
+    background: #2a2a2a;
+    border-color: #555;
+    color: #e0e0e0;
+  }
+
+  .shortcut-input {
+    background: #2a2a2a;
+    color: #e0e0e0;
+  }
+
+  .edit-shortcut-button,
+  .cancel-shortcut-button,
+  .reset-shortcut-button {
+    background: #3a3a3a;
+    border-color: #555;
+    color: #e0e0e0;
+  }
+
+  .edit-shortcut-button:hover,
+  .cancel-shortcut-button:hover {
+    background: #4a4a4a;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .shortcut-item,
+  .edit-shortcut-button,
+  .save-shortcut-button,
+  .cancel-shortcut-button,
+  .reset-shortcut-button,
+  .reset-all-button {
+    transition: none;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .shortcut-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .shortcut-controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .shortcut-display,
+  .shortcut-input {
+    min-width: 120px;
+  }
+}

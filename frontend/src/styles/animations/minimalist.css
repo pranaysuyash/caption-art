@@ -1,0 +1,98 @@
+/* Minimalist Theme Animations - Requirements: 14.3 */
+/* Subtle, understated animations focused on fade effects */
+
+/* Subtle Fade In - Very gentle opacity transition */
+@keyframes minimalist-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Subtle Fade Out - Very gentle opacity transition */
+@keyframes minimalist-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Minimal Slide - Very subtle slide effect */
+@keyframes minimalist-slide-in {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Minimal Slide Out */
+@keyframes minimalist-slide-out {
+  from {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+}
+
+/* Subtle Highlight - Minimal hover effect */
+@keyframes minimalist-highlight {
+  from {
+    opacity: 0.8;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Utility Classes for Minimalist Theme */
+.minimalist-animate-fade-in {
+  animation: minimalist-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.minimalist-animate-fade-out {
+  animation: minimalist-fade-out 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.minimalist-animate-slide-in {
+  animation: minimalist-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.minimalist-animate-slide-out {
+  animation: minimalist-slide-out 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.minimalist-animate-highlight {
+  animation: minimalist-highlight 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Interactive Element Animations - Very subtle */
+[data-theme="minimalist"] .button:hover:not(:disabled),
+[data-theme="minimalist"] .card:hover {
+  animation: minimalist-highlight 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Entry Animations for Theme Elements - Minimal */
+[data-theme="minimalist"] .theme-enter {
+  animation: minimalist-fade-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-theme="minimalist"] .theme-enter-slide {
+  animation: minimalist-slide-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Minimalist theme uses very subtle transitions */
+[data-theme="minimalist"] * {
+  transition-duration: 0.15s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}

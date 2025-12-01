@@ -1,0 +1,169 @@
+/* Glassmorphism Theme Animations - Requirements: 14.2 */
+/* Smooth, elegant animations with fade, scale, and blur effects */
+
+/* Fade In - Smooth opacity transition */
+@keyframes glassmorphism-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade Out - Smooth opacity transition */
+@keyframes glassmorphism-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Scale Up - Gentle scale effect */
+@keyframes glassmorphism-scale-up {
+  from {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Scale Down - Gentle scale effect */
+@keyframes glassmorphism-scale-down {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+}
+
+/* Blur Transition - Blur in effect */
+@keyframes glassmorphism-blur-in {
+  from {
+    filter: blur(10px);
+    opacity: 0;
+  }
+  to {
+    filter: blur(0);
+    opacity: 1;
+  }
+}
+
+/* Blur Transition - Blur out effect */
+@keyframes glassmorphism-blur-out {
+  from {
+    filter: blur(0);
+    opacity: 1;
+  }
+  to {
+    filter: blur(10px);
+    opacity: 0;
+  }
+}
+
+/* Float Effect - Gentle hover animation */
+@keyframes glassmorphism-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Glow Effect - Subtle glow animation */
+@keyframes glassmorphism-glow {
+  0%, 100% {
+    box-shadow: var(--shadow-md);
+  }
+  50% {
+    box-shadow: var(--shadow-glow);
+  }
+}
+
+/* Fade Scale - Combined fade and scale */
+@keyframes glassmorphism-fade-scale {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Utility Classes for Glassmorphism Theme */
+.glassmorphism-animate-fade-in {
+  animation: glassmorphism-fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glassmorphism-animate-fade-out {
+  animation: glassmorphism-fade-out 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glassmorphism-animate-scale-up {
+  animation: glassmorphism-scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.glassmorphism-animate-scale-down {
+  animation: glassmorphism-scale-down 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.glassmorphism-animate-blur-in {
+  animation: glassmorphism-blur-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glassmorphism-animate-blur-out {
+  animation: glassmorphism-blur-out 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glassmorphism-animate-float {
+  animation: glassmorphism-float 3s ease-in-out infinite;
+}
+
+.glassmorphism-animate-glow {
+  animation: glassmorphism-glow 2s ease-in-out infinite;
+}
+
+.glassmorphism-animate-fade-scale {
+  animation: glassmorphism-fade-scale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Interactive Element Animations */
+[data-theme="glassmorphism"] .button:hover:not(:disabled),
+[data-theme="glassmorphism"] .card:hover {
+  animation: glassmorphism-scale-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+[data-theme="glassmorphism"] .button:active:not(:disabled),
+[data-theme="glassmorphism"] .card:active {
+  animation: glassmorphism-scale-down 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Entry Animations for Theme Elements */
+[data-theme="glassmorphism"] .theme-enter {
+  animation: glassmorphism-fade-scale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-theme="glassmorphism"] .theme-enter-blur {
+  animation: glassmorphism-blur-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Floating Elements */
+[data-theme="glassmorphism"] .float-element {
+  animation: glassmorphism-float 3s ease-in-out infinite;
+}
+
+/* Glowing Elements */
+[data-theme="glassmorphism"] .glow-element {
+  animation: glassmorphism-glow 2s ease-in-out infinite;
+}

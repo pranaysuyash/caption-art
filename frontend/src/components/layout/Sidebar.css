@@ -1,0 +1,177 @@
+/* Sidebar - Scrollable container for control sections */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--color-background);
+  border-right: 2px solid var(--color-border);
+  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Section container with progressive disclosure */
+.sidebar__section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  animation: sidebar-section-fade-in 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes sidebar-section-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Section title */
+.sidebar__section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  padding-bottom: 0.5rem;
+  color: var(--color-text);
+  border-bottom: 2px solid var(--color-border);
+  transition: color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Section content */
+.sidebar__section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Loading state - Requirements: 10.1, 10.2, 10.3 */
+.sidebar__loading {
+  padding: 1rem;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+  animation: sidebar-pulse 1.5s ease-in-out infinite, sidebar-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes sidebar-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes sidebar-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Error state - Requirements: 10.5 */
+.sidebar__error {
+  padding: 0.75rem;
+  background: var(--color-error-bg, #fee);
+  color: var(--color-error, #c00);
+  border: 2px solid var(--color-error, #c00);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  animation: sidebar-error-shake 0.5s cubic-bezier(0.4, 0, 0.2, 1), sidebar-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes sidebar-error-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+/* Smooth transition when operations complete - Requirements: 10.4 */
+.sidebar__section-content {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar__section.loading .sidebar__section-content {
+  opacity: 0.6;
+}
+
+.sidebar__section.error .sidebar__section-content {
+  opacity: 0.8;
+}
+
+/* Scrollbar styling for better UX */
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Responsive adjustments for sidebar */
+@media (max-width: 767px) {
+  .sidebar {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .sidebar__section-title {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sidebar {
+    padding: 1.25rem;
+  }
+}
+
+/* Caption Generator optimization for sidebar - Requirements: 2.4, 2.5 */
+.sidebar__section-content .caption-generator {
+  max-height: none; /* Allow natural height */
+}
+
+.sidebar__section-content .caption-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidebar__section-content .caption-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: none; /* Allow natural height, controlled by Show More button */
+}
+
+/* Ensure caption cards don't break sidebar scrolling */
+.sidebar__section-content .caption-card {
+  min-height: auto;
+  max-height: none;
+}

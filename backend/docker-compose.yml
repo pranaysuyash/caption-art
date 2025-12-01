@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      # Server Configuration
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${PORT:-3001}
+      
+      # Replicate API
+      - REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN}
+      - REPLICATE_BLIP_MODEL=${REPLICATE_BLIP_MODEL:-salesforce/blip:2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746}
+      - REPLICATE_REMBG_MODEL=${REPLICATE_REMBG_MODEL:-cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003}
+      
+      # OpenAI API
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
+      - OPENAI_TEMPERATURE=${OPENAI_TEMPERATURE:-0.8}
+      
+      # Gumroad
+      - GUMROAD_PRODUCT_PERMALINK=${GUMROAD_PRODUCT_PERMALINK:-caption-art}
+      - GUMROAD_ACCESS_TOKEN=${GUMROAD_ACCESS_TOKEN}
+      
+      # CORS
+      - CORS_ORIGIN=${CORS_ORIGIN:-*}
+    volumes:
+      # Mount source code for development hot-reloading
+      - ./src:/app/src
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+    command: npm run dev
+    restart: unless-stopped

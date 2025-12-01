@@ -1,0 +1,108 @@
+/* Theme-Specific Animations - Central Import File */
+/* Requirements: 14.1, 14.2, 14.3, 14.4, 14.5 */
+
+/* Import all theme-specific animation files */
+@import './neobrutalism.css';
+@import './glassmorphism.css';
+@import './minimalist.css';
+@import './cyberpunk.css';
+
+/* Reduced Motion Override - Requirements: 14.5 */
+/* Disable all theme-specific animations when reduced motion is enabled */
+@media (prefers-reduced-motion: reduce) {
+  /* Neo-brutalism animations */
+  .neobrutalism-animate-bounce,
+  .neobrutalism-animate-lift,
+  .neobrutalism-animate-shake,
+  .neobrutalism-animate-pop-in,
+  .neobrutalism-animate-slide-bounce,
+  [data-theme="neobrutalism"] .button:active:not(:disabled),
+  [data-theme="neobrutalism"] .card:active,
+  [data-theme="neobrutalism"] .button:hover:not(:disabled),
+  [data-theme="neobrutalism"] .card:hover,
+  [data-theme="neobrutalism"] .theme-enter,
+  [data-theme="neobrutalism"] .theme-enter-slide,
+  [data-theme="neobrutalism"] .error-shake {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Glassmorphism animations */
+  .glassmorphism-animate-fade-in,
+  .glassmorphism-animate-fade-out,
+  .glassmorphism-animate-scale-up,
+  .glassmorphism-animate-scale-down,
+  .glassmorphism-animate-blur-in,
+  .glassmorphism-animate-blur-out,
+  .glassmorphism-animate-float,
+  .glassmorphism-animate-glow,
+  .glassmorphism-animate-fade-scale,
+  [data-theme="glassmorphism"] .button:hover:not(:disabled),
+  [data-theme="glassmorphism"] .card:hover,
+  [data-theme="glassmorphism"] .button:active:not(:disabled),
+  [data-theme="glassmorphism"] .card:active,
+  [data-theme="glassmorphism"] .theme-enter,
+  [data-theme="glassmorphism"] .theme-enter-blur,
+  [data-theme="glassmorphism"] .float-element,
+  [data-theme="glassmorphism"] .glow-element {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Minimalist animations */
+  .minimalist-animate-fade-in,
+  .minimalist-animate-fade-out,
+  .minimalist-animate-slide-in,
+  .minimalist-animate-slide-out,
+  .minimalist-animate-highlight,
+  [data-theme="minimalist"] .button:hover:not(:disabled),
+  [data-theme="minimalist"] .card:hover,
+  [data-theme="minimalist"] .theme-enter,
+  [data-theme="minimalist"] .theme-enter-slide,
+  [data-theme="minimalist"] * {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Cyberpunk animations */
+  .cyberpunk-animate-glitch,
+  .cyberpunk-animate-flicker,
+  .cyberpunk-animate-scan-line,
+  .cyberpunk-animate-neon-pulse,
+  .cyberpunk-animate-digital-fade-in,
+  .cyberpunk-animate-rgb-split,
+  .cyberpunk-animate-static,
+  .cyberpunk-animate-hologram,
+  [data-theme="cyberpunk"] .button:hover:not(:disabled),
+  [data-theme="cyberpunk"] .card:hover,
+  [data-theme="cyberpunk"] .button:active:not(:disabled),
+  [data-theme="cyberpunk"] .card:active,
+  [data-theme="cyberpunk"] .theme-enter,
+  [data-theme="cyberpunk"] .theme-enter-glitch,
+  [data-theme="cyberpunk"] .scan-line-overlay::before,
+  [data-theme="cyberpunk"] .neon-text,
+  [data-theme="cyberpunk"] .error-glitch {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* Remove all text shadows and filters that contribute to animation effects */
+  [data-theme="cyberpunk"] * {
+    text-shadow: none !important;
+    filter: none !important;
+  }
+
+  /* Ensure instant state changes for accessibility */
+  [data-theme] .button:hover:not(:disabled),
+  [data-theme] .card:hover,
+  [data-theme] .button:active:not(:disabled),
+  [data-theme] .card:active {
+    transform: none !important;
+  }
+}
+
+/* Theme Animation Loading - Prevent flash on initial load */
+.theme-animations-loading * {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}

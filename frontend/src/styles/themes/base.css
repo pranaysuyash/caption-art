@@ -1,0 +1,167 @@
+/**
+ * Base Theme Styles
+ * 
+ * This file defines the CSS custom properties (variables) used by the theme system.
+ * All themes must provide values for these variables.
+ * 
+ * CSS Variable Naming Convention:
+ * - Colors: --color-{name}
+ * - Typography: --font-{property}
+ * - Spacing: --spacing-{size}
+ * - Shadows: --shadow-{size}
+ * - Borders: --border-{property}
+ * - Animations: --animation-{property}
+ */
+
+/* Font Loading Optimization */
+/* Ensure all theme fonts use font-display: swap for better performance */
+@font-face {
+  font-family: 'Space Grotesk';
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Orbitron';
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Share Tech Mono';
+  font-display: swap;
+}
+
+:root {
+  /* Color Variables */
+  --color-bg: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-tertiary: #f3f4f6;
+  
+  --color-text: #111827;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  
+  --color-primary: #3b82f6;
+  --color-secondary: #8b5cf6;
+  --color-accent: #10b981;
+  
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  
+  --color-border: #e5e7eb;
+  --color-border-light: #f3f4f6;
+  --color-border-heavy: #d1d5db;
+  
+  /* Typography Variables */
+  --font-family-heading: system-ui, -apple-system, sans-serif;
+  --font-family-body: system-ui, -apple-system, sans-serif;
+  --font-family-mono: 'SF Mono', 'Monaco', monospace;
+  
+  --font-size-base: 16px;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+  --font-size-2xl: 32px;
+  --font-size-3xl: 48px;
+  --font-size-4xl: 64px;
+  
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  
+  --line-height-base: 1.6;
+  --letter-spacing: -0.01em;
+  
+  /* Spacing Variables */
+  --spacing-unit: 8px;
+  --spacing-0: 4px;
+  --spacing-1: 8px;
+  --spacing-2: 12px;
+  --spacing-3: 16px;
+  --spacing-4: 24px;
+  --spacing-5: 32px;
+  --spacing-6: 48px;
+  --spacing-7: 64px;
+  --spacing-8: 96px;
+  --spacing-9: 128px;
+  
+  /* Shadow Variables */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.15);
+  --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-glow: 0 0 20px currentColor;
+  
+  /* Border Variables */
+  --border-width-thin: 1px;
+  --border-width-medium: 1px;
+  --border-width-thick: 2px;
+  
+  --border-radius-sm: 4px;
+  --border-radius-md: 6px;
+  --border-radius-lg: 8px;
+  --border-radius-full: 9999px;
+  
+  --border-style: solid;
+  
+  /* Animation Variables */
+  --animation-duration-fast: 150ms;
+  --animation-duration-base: 250ms;
+  --animation-duration-slow: 400ms;
+  
+  --animation-easing-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-easing-bounce: cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-easing-sharp: cubic-bezier(0.4, 0, 0.6, 1);
+  
+  /* Theme Transition */
+  --theme-transition-duration: 300ms;
+}
+
+/* Theme Transition Class */
+.theme-transitioning * {
+  transition: background-color var(--theme-transition-duration) var(--animation-easing-smooth),
+              color var(--theme-transition-duration) var(--animation-easing-smooth),
+              border-color var(--theme-transition-duration) var(--animation-easing-smooth),
+              box-shadow var(--theme-transition-duration) var(--animation-easing-smooth) !important;
+}
+
+/* No Transition on Initial Load */
+.no-transition * {
+  transition: none !important;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .theme-transitioning * {
+    transition: none !important;
+  }
+}

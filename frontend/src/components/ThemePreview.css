@@ -1,0 +1,188 @@
+/**
+ * ThemePreview Styles
+ */
+
+.theme-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-secondary);
+  border: var(--border-width-medium, 2px) solid var(--color-border-light);
+  border-radius: var(--border-radius-md, 8px);
+  padding: 0;
+  cursor: pointer;
+  transition: all var(--animation-duration-fast, 150ms) var(--animation-easing-smooth, ease);
+  overflow: hidden;
+  text-align: left;
+}
+
+.theme-preview:hover {
+  border-color: var(--color-border);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.theme-preview:active {
+  transform: translateY(-2px);
+}
+
+.theme-preview--active {
+  border-color: var(--color-primary);
+  border-width: var(--border-width-thick, 3px);
+  box-shadow: var(--shadow-md);
+}
+
+.theme-preview--active:hover {
+  transform: translateY(-2px);
+}
+
+.theme-preview-thumbnail {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  overflow: hidden;
+}
+
+.theme-preview-colors {
+  display: flex;
+  height: 30px;
+}
+
+.theme-preview-color {
+  flex: 1;
+  transition: transform var(--animation-duration-fast, 150ms);
+}
+
+.theme-preview:hover .theme-preview-color {
+  transform: scaleY(1.1);
+}
+
+.theme-preview-samples {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  height: 110px;
+}
+
+.theme-preview-button {
+  padding: 6px 12px;
+  font-size: 12px;
+  text-align: center;
+  transition: all var(--animation-duration-fast, 150ms);
+}
+
+.theme-preview-card {
+  padding: 8px;
+  flex: 1;
+}
+
+.theme-preview-card-title {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.theme-preview-card-text {
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.theme-preview-input {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.theme-preview-info {
+  padding: 12px;
+  background: var(--color-bg);
+  border-top: var(--border-width-thin, 1px) solid var(--color-border-light);
+}
+
+.theme-preview-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: var(--font-weight-bold, 700);
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.theme-preview-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: var(--color-primary);
+  color: var(--color-bg);
+  font-size: 10px;
+  font-weight: var(--font-weight-medium, 500);
+  border-radius: var(--border-radius-sm, 4px);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.theme-preview-description {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.theme-preview-checkmark {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  background: var(--color-primary);
+  color: var(--color-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  box-shadow: var(--shadow-sm);
+  animation: checkmarkPop var(--animation-duration-base, 300ms) var(--animation-easing-smooth, ease);
+}
+
+@keyframes checkmarkPop {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Focus styles for accessibility */
+.theme-preview:focus {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.theme-preview:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .theme-preview,
+  .theme-preview-button,
+  .theme-preview-color {
+    transition: none;
+  }
+
+  .theme-preview:hover {
+    transform: none;
+  }
+
+  .theme-preview:hover .theme-preview-color {
+    transform: none;
+  }
+
+  .theme-preview-checkmark {
+    animation: none;
+  }
+}

@@ -1,0 +1,125 @@
+/* Neo-brutalism Theme Animations - Requirements: 14.1 */
+/* Bold, energetic animations with bounce and lift effects */
+
+/* Bounce Animation - Energetic button press effect */
+@keyframes neobrutalism-bounce {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+  25% {
+    transform: scale(0.95) translateY(2px);
+  }
+  50% {
+    transform: scale(1.05) translateY(-4px);
+  }
+  75% {
+    transform: scale(0.98) translateY(1px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Lift Effect - Hover state with shadow movement */
+@keyframes neobrutalism-lift {
+  from {
+    transform: translate(0, 0);
+    box-shadow: var(--shadow-md);
+  }
+  to {
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* Shake Effect - Error or attention-grabbing animation */
+@keyframes neobrutalism-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-4px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(4px);
+  }
+}
+
+/* Pop In - Entry animation with bounce */
+@keyframes neobrutalism-pop-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Slide and Bounce - Slide in with bounce effect */
+@keyframes neobrutalism-slide-bounce {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(10px);
+    opacity: 1;
+  }
+  80% {
+    transform: translateX(-5px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/* Utility Classes for Neo-brutalism Theme */
+.neobrutalism-animate-bounce {
+  animation: neobrutalism-bounce 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.neobrutalism-animate-lift {
+  animation: neobrutalism-lift 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.neobrutalism-animate-shake {
+  animation: neobrutalism-shake 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neobrutalism-animate-pop-in {
+  animation: neobrutalism-pop-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.neobrutalism-animate-slide-bounce {
+  animation: neobrutalism-slide-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Interactive Element Animations */
+[data-theme="neobrutalism"] .button:active:not(:disabled),
+[data-theme="neobrutalism"] .card:active {
+  animation: neobrutalism-bounce 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+[data-theme="neobrutalism"] .button:hover:not(:disabled),
+[data-theme="neobrutalism"] .card:hover {
+  animation: neobrutalism-lift 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Entry Animations for Theme Elements */
+[data-theme="neobrutalism"] .theme-enter {
+  animation: neobrutalism-pop-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+[data-theme="neobrutalism"] .theme-enter-slide {
+  animation: neobrutalism-slide-bounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+/* Error State Animation */
+[data-theme="neobrutalism"] .error-shake {
+  animation: neobrutalism-shake 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}

@@ -1,0 +1,122 @@
+/**
+ * ThemeToggle Styles
+ */
+
+.theme-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--color-bg-secondary);
+  border: var(--border-width-medium, 2px) solid var(--color-border);
+  border-radius: var(--border-radius-md, 8px);
+  color: var(--color-text);
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  font-weight: var(--font-weight-medium, 500);
+  cursor: pointer;
+  overflow: hidden;
+  transition: all var(--animation-duration-fast, 150ms) var(--animation-easing-smooth, ease);
+}
+
+.theme-toggle:hover {
+  background: var(--color-bg-tertiary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-toggle:active {
+  transform: translateY(0);
+}
+
+.theme-toggle:focus {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.theme-toggle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.theme-toggle-icon {
+  font-size: 18px;
+  transition: all var(--animation-duration-base, 300ms) var(--animation-easing-smooth, ease);
+}
+
+/* Hide moon icon in light mode */
+[data-theme-mode="light"] .theme-toggle-icon--moon,
+.theme-toggle:not([data-mode="dark"]) .theme-toggle-icon--moon {
+  opacity: 0;
+  transform: scale(0) rotate(-180deg);
+  position: absolute;
+}
+
+/* Show sun icon in light mode */
+[data-theme-mode="light"] .theme-toggle-icon--sun,
+.theme-toggle:not([data-mode="dark"]) .theme-toggle-icon--sun {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+/* Hide sun icon in dark mode */
+[data-theme-mode="dark"] .theme-toggle-icon--sun {
+  opacity: 0;
+  transform: scale(0) rotate(180deg);
+  position: absolute;
+}
+
+/* Show moon icon in dark mode */
+[data-theme-mode="dark"] .theme-toggle-icon--moon {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+/* Animation when toggling */
+.theme-toggle--animating .theme-toggle-icon {
+  animation: iconSpin var(--animation-duration-base, 300ms) var(--animation-easing-smooth, ease);
+}
+
+@keyframes iconSpin {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(0.8) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+.theme-toggle-label {
+  min-width: 40px;
+  text-align: left;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle,
+  .theme-toggle-icon {
+    transition: none;
+  }
+
+  .theme-toggle:hover {
+    transform: none;
+  }
+
+  .theme-toggle--animating .theme-toggle-icon {
+    animation: none;
+  }
+}
+
+/* Compact variant for smaller screens */
+@media (max-width: 768px) {
+  .theme-toggle {
+    padding: 6px 12px;
+  }
+
+  .theme-toggle-label {
+    display: none;
+  }
+}

@@ -1,0 +1,228 @@
+/* AppLayout - Main grid structure for sidebar-based layout */
+.app-layout {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  /* Removed padding-top - toolbar is position: fixed */
+}
+
+/* Screen reader only content - visually hidden but accessible to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Toolbar - Fixed header at top */
+.app-layout__toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  background: var(--color-background);
+  border-bottom: 2px solid var(--color-border);
+  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Content area - Contains sidebar and canvas */
+.app-layout__content {
+  display: grid;
+  overflow: visible;
+  min-height: 0;
+  height: 100%;
+  margin-top: 60px; /* Space for fixed toolbar */
+}
+
+/* Sidebar container */
+.app-layout__sidebar {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+/* Canvas container */
+.app-layout__canvas {
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding: 1.5rem;
+}
+
+/* Sidebar toggle button */
+.app-layout__sidebar-toggle {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  background: var(--color-primary, #000);
+  color: var(--color-background, #fff);
+  border: none;
+  border-radius: 4px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-layout__sidebar-toggle:hover {
+  opacity: 0.8;
+}
+
+.app-layout__sidebar-toggle:focus {
+  outline: 2px solid var(--color-primary, #000);
+  outline-offset: 2px;
+}
+
+.app-layout__sidebar-toggle:active {
+  transform: scale(0.95);
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   Desktop: 1024px+
+   Tablet: 768px - 1023px
+   Mobile: < 768px
+   ============================================ */
+
+/* Desktop layout (1024px+) */
+.app-layout--desktop .app-layout__content {
+  grid-template-columns: 320px 1fr;
+  grid-template-rows: 1fr;
+}
+
+.app-layout--desktop.app-layout--sidebar-collapsed .app-layout__content {
+  grid-template-columns: 0 1fr;
+}
+
+.app-layout--desktop .app-layout__sidebar {
+  transform: translateX(0);
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.app-layout--desktop.app-layout--sidebar-collapsed .app-layout__sidebar {
+  transform: translateX(-100%);
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Tablet layout (768px - 1023px) */
+.app-layout--tablet .app-layout__content {
+  grid-template-columns: 280px 1fr;
+  grid-template-rows: 1fr;
+}
+
+.app-layout--tablet.app-layout--sidebar-collapsed .app-layout__content {
+  grid-template-columns: 0 1fr;
+}
+
+.app-layout--tablet .app-layout__sidebar {
+  transform: translateX(0);
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.app-layout--tablet.app-layout--sidebar-collapsed .app-layout__sidebar {
+  transform: translateX(-100%);
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+/* Mobile layout (< 768px) */
+.app-layout--mobile .app-layout__content {
+  grid-template-rows: auto 1fr;
+  grid-template-columns: 1fr;
+}
+
+.app-layout--mobile .app-layout__sidebar {
+  max-height: 40vh;
+  overflow-y: auto;
+  transition: max-height 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-layout--mobile.app-layout--sidebar-collapsed .app-layout__sidebar {
+  display: none;
+}
+
+/* Smooth transitions for layout changes */
+.app-layout__sidebar,
+.app-layout__canvas {
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent layout shift during transitions */
+.app-layout__content {
+  transition: grid-template-columns 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   FULLSCREEN MODE
+   ============================================ */
+
+/* Fullscreen mode - Hide sidebar, maximize canvas */
+.app-layout--fullscreen .app-layout__content {
+  grid-template-columns: 1fr !important;
+}
+
+.app-layout--fullscreen .app-layout__sidebar {
+  display: none;
+}
+
+.app-layout--fullscreen .app-layout__canvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* Toolbar remains accessible in fullscreen */
+.app-layout--fullscreen .app-layout__toolbar {
+  opacity: 0.9;
+  transition: opacity 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-layout--fullscreen .app-layout__toolbar:hover,
+.app-layout--fullscreen .app-layout__toolbar:focus-within {
+  opacity: 1;
+}
+
+/* Media queries for automatic responsive behavior */
+@media (min-width: 1024px) {
+  .app-layout:not(.app-layout--desktop):not(.app-layout--tablet):not(.app-layout--mobile) .app-layout__content {
+    grid-template-columns: 320px 1fr;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-layout:not(.app-layout--desktop):not(.app-layout--tablet):not(.app-layout--mobile) .app-layout__content {
+    grid-template-columns: 280px 1fr;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-layout:not(.app-layout--desktop):not(.app-layout--tablet):not(.app-layout--mobile) .app-layout__content {
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr;
+  }
+  
+  .app-layout:not(.app-layout--desktop):not(.app-layout--tablet):not(.app-layout--mobile) .app-layout__sidebar {
+    max-height: 40vh;
+  }
+  
+  /* Mobile toolbar adaptations */
+  .app-layout__toolbar {
+    padding: 0 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+}

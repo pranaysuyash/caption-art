@@ -1,0 +1,289 @@
+/* Animation Definitions - Keyframes and transitions */
+
+/* Bounce Animation */
+@keyframes bounce {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+}
+
+/* Lift Effect */
+@keyframes lift {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-4px);
+  }
+}
+
+/* Fade In */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Fade Out */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Slide In from Right */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Slide Out to Right */
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Zoom In */
+@keyframes zoomIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Zoom Out */
+@keyframes zoomOut {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Typewriter Effect */
+@keyframes typewriter {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+/* Shimmer Effect for Loading */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+/* Rainbow Gradient Progress */
+@keyframes rainbowProgress {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Staggered Entry Animation */
+@keyframes staggeredEntry {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulse Animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Spin Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Utility Classes for Animations */
+.animate-bounce {
+  animation: bounce 0.3s var(--ease-bounce);
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s var(--ease-smooth);
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.3s var(--ease-smooth);
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s var(--ease-smooth);
+}
+
+.animate-slideOutRight {
+  animation: slideOutRight 0.3s var(--ease-smooth);
+}
+
+.animate-zoomIn {
+  animation: zoomIn 0.3s var(--ease-smooth);
+}
+
+.animate-zoomOut {
+  animation: zoomOut 0.3s var(--ease-smooth);
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Loading Animation Utilities */
+.loading-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-secondary) 0%,
+    var(--color-border-light) 50%,
+    var(--color-bg-secondary) 100%
+  );
+  background-size: 2000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+.loading-rainbow {
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-coral),
+    var(--color-accent-yellow),
+    var(--color-accent-turquoise),
+    var(--color-accent-coral)
+  );
+  background-size: 200% 100%;
+  animation: rainbowProgress 2s ease-in-out infinite;
+}
+
+/* Typewriter Effect Utility */
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typewriter 1s steps(40) forwards;
+}
+
+/* Staggered Entry Utilities */
+.stagger-1 {
+  animation: staggeredEntry 0.4s var(--ease-smooth);
+  animation-delay: 0.1s;
+  animation-fill-mode: backwards;
+}
+
+.stagger-2 {
+  animation: staggeredEntry 0.4s var(--ease-smooth);
+  animation-delay: 0.2s;
+  animation-fill-mode: backwards;
+}
+
+.stagger-3 {
+  animation: staggeredEntry 0.4s var(--ease-smooth);
+  animation-delay: 0.3s;
+  animation-fill-mode: backwards;
+}
+
+.stagger-4 {
+  animation: staggeredEntry 0.4s var(--ease-smooth);
+  animation-delay: 0.4s;
+  animation-fill-mode: backwards;
+}
+
+.stagger-5 {
+  animation: staggeredEntry 0.4s var(--ease-smooth);
+  animation-delay: 0.5s;
+  animation-fill-mode: backwards;
+}
+
+/* Reduced Motion Support - Requirements: 1.5 */
+/* Disable animations for users who prefer reduced motion */
+/* Provide instant transitions as fallback */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Remove all animation delays */
+  .stagger-1,
+  .stagger-2,
+  .stagger-3,
+  .stagger-4,
+  .stagger-5 {
+    animation-delay: 0s !important;
+  }
+  
+  /* Disable transform animations */
+  .button:hover:not(:disabled),
+  .card:hover,
+  .caption-card:hover {
+    transform: none !important;
+  }
+  
+  /* Keep focus states visible but without animation */
+  .input:focus,
+  .select:focus {
+    transition: none !important;
+  }
+}

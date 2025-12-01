@@ -99,6 +99,18 @@ This document outlines the requirements for integrating neo-brutalism design pri
 4. WHEN a user enters a license key THEN the system SHALL call the verify Lambda to validate the Gumroad license
 5. WHEN a user exports an image THEN the system SHALL generate a canvas composite with text behind the subject effect
 
+### Requirement 9
+
+**User Story:** As a developer, I want all components to use the neo-brutalism CSS classes consistently, so that the design system is maintainable and cohesive.
+
+#### Acceptance Criteria
+
+1. WHEN rendering any component THEN the system SHALL use CSS classes from the design system instead of inline styles
+2. WHEN rendering buttons THEN the system SHALL apply the .button class with appropriate modifiers (.button-primary, .button-secondary, .button-accent)
+3. WHEN rendering cards THEN the system SHALL apply the .card class with neo-brutalism styling
+4. WHEN rendering inputs THEN the system SHALL apply the .input class with focus states
+5. WHEN rendering toast notifications THEN the system SHALL use the .toast classes defined in components.css
+
 ### Requirement 8
 
 **User Story:** As a user, I want responsive design, so that I can use the application on different devices.
