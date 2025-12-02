@@ -231,4 +231,107 @@ router.post('/cleanup', requireAuth, async (req, res) => {
   }
 })
 
+// GET /api/export/workspace/:workspaceId/history - Get export history
+router.get('/workspace/:workspaceId/history', requireAuth, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { workspaceId } = req.params
+    const limit = parseInt(req.query.limit as string) || 10
+
+    // Verify workspace belongs to current agency
+    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' })
+    }
+
+    if (workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const history = AuthModel.getExportHistory(workspaceId, limit)
+
+    res.json({
+      workspaceId,
+      ...history
+    })
+  } catch (error) {
+    console.error('Get export history error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// GET /api/export/workspace/:workspaceId/statistics - Get export statistics
+router.get('/workspace/:workspaceId/statistics', requireAuth, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { workspaceId } = req.params
+
+    // Verify workspace belongs to current agency
+    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' })
+    }
+
+    if (workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const statistics = AuthModel.getExportStatistics(workspaceId)
+
+    res.json({
+      workspaceId,
+      ...statistics
+    })
+  } catch (error) {
+    console.error('Get export statistics error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// GET /api/export/workspace/:workspaceId/jobs - List all export jobs
+router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { workspaceId } = req.params
+    const status = req.query.status as string
+    const limit = parseInt(req.query.limit as string) || 20
+
+    // Verify workspace belongs to current agency
+    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' })
+    }
+
+    if (workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    let jobs = AuthModel.getExportJobsByWorkspace(workspaceId)
+
+    // Filter by status if provided
+    if (status) {
+      jobs = jobs.filter(job => job.status === status)
+    }
+
+    // Sort by creation date (most recent first)
+    jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+    // Apply limit
+    jobs = jobs.slice(0, limit)
+
+    res.json({
+      workspaceId,
+      jobs,
+      count: jobs.length,
+      filters: {
+        status: status || 'all',
+        limit
+      }
+    })
+  } catch (error) {
+    console.error('Get export jobs error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 export default router

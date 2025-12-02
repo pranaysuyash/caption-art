@@ -618,9 +618,7 @@ export class AuthModel {
     return exportJobs.get(id) || null
   }
 
-  static getExportJobsByWorkspace(workspaceId: string): ExportJob[] {
-    return Array.from(exportJobs.values()).filter(job => job.workspaceId === workspaceId)
-  }
+  // Export jobs retrieval remains implemented once above
 
   static updateExportJob(id: string, updates: Partial<ExportJob>): ExportJob | null {
     const job = exportJobs.get(id)
@@ -661,6 +659,93 @@ export class AuthModel {
 
   static getAllExportJobs(): ExportJob[] {
     return Array.from(exportJobs.values())
+  }
+
+  static getExportJobsByWorkspace(workspaceId: string): ExportJob[] {
+    return Array.from(exportJobs.values()).filter(job => job.workspaceId === workspaceId)
+  }
+
+  static getExportHistory(workspaceId: string, limit: number = 10): {
+    total: number
+    exports: ExportJob[]
+    recentActivity: {
+      date: string
+      count: number
+      status: string
+    }[]
+  } {
+    const workspaceExports = this.getExportJobsByWorkspace(workspaceId)
+
+    // Sort by creation date (most recent first)
+    const sortedExports = workspaceExports.sort((a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+
+    // Group by date for activity summary
+    const activityMap = new Map<string, { count: number; status: string }>()
+
+    sortedExports.forEach(exp => {
+      const dateKey = exp.createdAt.toISOString().split('T')[0]
+      const existing = activityMap.get(dateKey) || { count: 0, status: 'completed' }
+      activityMap.set(dateKey, {
+        count: existing.count + 1,
+        status: exp.status === 'completed' ? 'completed' : existing.status
+      })
+    })
+
+    const recentActivity = Array.from(activityMap.entries())
+      .slice(0, 7) // Last 7 days
+      .map(([date, data]) => ({
+        date,
+        ...data
+      }))
+
+    return {
+      total: workspaceExports.length,
+      exports: sortedExports.slice(0, limit),
+      recentActivity
+    }
+  }
+
+  static getExportStatistics(workspaceId: string): {
+    totalExports: number
+    completedExports: number
+    failedExports: number
+    averageProcessingTime: number
+    totalAssetsExported: number
+    totalGeneratedAssetsExported: number
+    successRate: number
+  } {
+    const workspaceExports = this.getExportJobsByWorkspace(workspaceId)
+
+    const completed = workspaceExports.filter(job => job.status === 'completed')
+    const failed = workspaceExports.filter(job => job.status === 'failed')
+
+    // Calculate average processing time for completed exports
+    const processingTimes = completed
+      .filter(job => job.completedAt && job.createdAt)
+      .map(job => {
+        const start = new Date(job.createdAt!).getTime()
+        const end = new Date(job.completedAt!).getTime()
+        return (end - start) / 1000 // Convert to seconds
+      })
+
+    const averageTime = processingTimes.length > 0
+      ? processingTimes.reduce((sum, time) => sum + time, 0) / processingTimes.length
+      : 0
+
+    const totalAssets = workspaceExports.reduce((sum, job) => sum + job.assetCount, 0)
+    const totalGeneratedAssets = workspaceExports.reduce((sum, job) => sum + (job.generatedAssetCount || 0), 0)
+
+    return {
+      totalExports: workspaceExports.length,
+      completedExports: completed.length,
+      failedExports: failed.length,
+      averageProcessingTime: Math.round(averageTime),
+      totalAssetsExported: totalAssets,
+      totalGeneratedAssetsExported: totalGeneratedAssets,
+      successRate: workspaceExports.length > 0 ? (completed.length / workspaceExports.length) * 100 : 0
+    }
   }
 
   // GeneratedAsset methods
