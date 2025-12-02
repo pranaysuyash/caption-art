@@ -7,12 +7,48 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
+export type CaptionTemplate = 'punchy' | 'descriptive' | 'hashtag-heavy' | 'storytelling' | 'question'
+
 export interface GenerationRequest {
   assetId: string
   workspaceId: string
   brandVoicePrompt: string
   assetUrl?: string
   assetDescription?: string
+  template?: CaptionTemplate
+}
+
+export const CAPTION_TEMPLATES = {
+  punchy: {
+    name: 'Punchy & Bold',
+    prompt: 'Create short, punchy captions that grab attention immediately. Use strong action words, minimal text, and powerful statements. Perfect for bold brands.',
+    length: '1-2 sentences',
+    style: 'Bold, confident, attention-grabbing'
+  },
+  descriptive: {
+    name: 'Descriptive & Detailed',
+    prompt: 'Create detailed, descriptive captions that tell the full story behind the image. Include context, details, and comprehensive information.',
+    length: '3-5 sentences',
+    style: 'Informative, thorough, educational'
+  },
+  'hashtag-heavy': {
+    name: 'Hashtag-Heavy',
+    prompt: 'Create engaging captions with extensive hashtag strategy. Include 10-15 relevant hashtags, mix of broad and niche tags, and industry-specific keywords.',
+    length: '2-3 sentences + hashtags',
+    style: 'Discoverable, trending, community-focused'
+  },
+  storytelling: {
+    name: 'Storytelling',
+    prompt: 'Create narrative-driven captions that tell a compelling story. Use emotional language, personal anecdotes, and engaging storytelling techniques.',
+    length: '3-4 sentences',
+    style: 'Personal, emotional, engaging'
+  },
+  question: {
+    name: 'Question-Based',
+    prompt: 'Create captions that ask engaging questions to drive comments and interaction. Use open-ended questions, polls, and conversation starters.',
+    length: '2-3 sentences',
+    style: 'Interactive, conversational, engaging'
+  }
 }
 
 export class CaptionGenerator {
@@ -20,7 +56,7 @@ export class CaptionGenerator {
    * Generate a caption for a single asset using AI
    */
   static async generateCaption(request: GenerationRequest): Promise<string> {
-    const { assetId, workspaceId, brandVoicePrompt, assetDescription } = request
+    const { assetId, workspaceId, brandVoicePrompt, assetDescription, template = 'descriptive' } = request
 
     // Get asset information outside try block for error handling
     const asset = AuthModel.getAssetById(assetId)
@@ -40,19 +76,26 @@ export class CaptionGenerator {
         assetTypeDescription = `media file named "${asset.originalName}"`
       }
 
+      // Get template instructions
+      const templateConfig = CAPTION_TEMPLATES[template]
+
       // Build the AI prompt
       const systemPrompt = `You are a professional social media caption writer. Your task is to create engaging, on-brand captions for visual content.
 
 Brand Voice Instructions:
 ${brandVoicePrompt}
 
+Template Style: ${templateConfig.name}
+${templateConfig.prompt}
+Target Length: ${templateConfig.length}
+Style Guide: ${templateConfig.style}
+
 Guidelines:
-- Write captions that are compelling and drive engagement
-- Keep captions concise but impactful (1-3 sentences)
-- Include relevant hashtags when appropriate
+- Follow the template style exactly
 - Match the brand voice consistently
 - Focus on the visual content's story or message
-- Make it suitable for platforms like Instagram, Facebook, LinkedIn`
+- Make it suitable for platforms like Instagram, Facebook, LinkedIn
+- Write compelling content that drives engagement`
 
       const userPrompt = `Write a social media caption for this ${assetTypeDescription}. ${
         assetDescription ? `Additional context: ${assetDescription}` : ''
@@ -152,6 +195,7 @@ Create a caption that aligns with the brand voice and would work well for social
             assetId,
             workspaceId: job.workspaceId,
             brandVoicePrompt: brandKit.voicePrompt,
+            template: job.template || 'descriptive'
           })
 
           // Update caption with generated text
@@ -170,7 +214,8 @@ Create a caption that aligns with the brand voice and would work well for social
               assetPath,
               captionText,
               brandKit,
-              agency
+              agency,
+              job.workspaceId
             )
 
             // Create generated asset records for each rendered format

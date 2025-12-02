@@ -34,6 +34,10 @@ router.post('/', requireAuth as any, (req, res) => {
       authenticatedReq.agency.id,
       clientName
     )
+    // DEV DEBUG: log the created workspace object to check serialization issues
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Created workspace (debug):', workspace)
+    }
     res.status(201).json({ workspace })
   } catch (error) {
     if (error instanceof z.ZodError) {

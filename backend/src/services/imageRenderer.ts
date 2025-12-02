@@ -3,6 +3,7 @@ import sharp from 'sharp'
 import fs from 'fs'
 import path from 'path'
 import { AuthModel, BrandKit, Agency } from '../models/auth'
+import { MaskingService } from './maskingService'
 
 export interface RenderOptions {
   format: 'instagram-square' | 'instagram-story'
@@ -11,6 +12,7 @@ export interface RenderOptions {
   brandKit: BrandKit
   watermark: boolean
   quality?: number
+  workspaceId: string
 }
 
 export interface RenderResult {
@@ -48,32 +50,22 @@ export class ImageRenderer {
   }
 
   /**
-   * Remove background from image using Replicate rembg
+   * Remove background from image using configurable masking service
    */
-  private static async removeBackground(imagePath: string): Promise<Buffer> {
+  private static async removeBackground(imagePath: string, workspaceId: string): Promise<Buffer> {
     try {
-      const Replicate = require('replicate')
-      const replicate = new Replicate({
-        auth: process.env.REPLICATE_API_TOKEN,
+      // Get masking model preference from workspace brand kit
+      const brandKit = AuthModel.getBrandKitByWorkspace(workspaceId)
+      const maskingModel = brandKit?.maskingModel || MaskingService.getDefaultModel()
+
+      // Apply masking using the selected model
+      const maskingResult = await MaskingService.applyMasking({
+        imagePath,
+        model: maskingModel
       })
 
-      // Read image and convert to base64
-      const imageBuffer = fs.readFileSync(imagePath)
-      const base64Image = imageBuffer.toString('base64')
-      const dataUrl = `data:image/png;base64,${base64Image}`
-
-      const output = await replicate.run(
-        'cjwbw/rembg:fb8af1711fa1dd4d607517e9cadcdab23c650a83d2631b050087c096e83225',
-        {
-          input: {
-            image: dataUrl
-          }
-        }
-      )
-
-      // The output is a URL to the processed image
-      const response = await fetch(output as string)
-      return Buffer.from(await response.arrayBuffer())
+      // Read the processed image
+      return fs.readFileSync(maskingResult.maskPath)
     } catch (error) {
       console.error('Background removal failed:', error)
       // Fallback: return original image
@@ -84,8 +76,8 @@ export class ImageRenderer {
   /**
    * Apply mask to isolate subject
    */
-  private static async applyMask(imagePath: string): Promise<Buffer> {
-    return await this.removeBackground(imagePath)
+  private static async applyMask(imagePath: string, workspaceId: string): Promise<Buffer> {
+    return await this.removeBackground(imagePath, workspaceId)
   }
 
   /**
@@ -178,7 +170,7 @@ export class ImageRenderer {
 
     try {
       // Apply mask to source image
-      const maskedImageBuffer = await this.applyMask(sourceImagePath)
+      const maskedImageBuffer = await this.applyMask(sourceImagePath, options.workspaceId)
       const maskedImage = await loadImage(maskedImageBuffer)
 
       // Calculate subject dimensions and position based on layout
@@ -305,7 +297,8 @@ export class ImageRenderer {
     sourceImagePath: string,
     caption: string,
     brandKit: BrandKit,
-    agency: Agency
+    agency: Agency,
+    workspaceId: string
   ): Promise<Array<{ format: string; layout: string } & RenderResult>> {
     const watermark = agency.planType === 'free'
     const results = []
@@ -318,7 +311,8 @@ export class ImageRenderer {
           layout,
           caption,
           brandKit,
-          watermark
+          watermark,
+          workspaceId
         })
         results.push({ format: 'instagram-square', layout, ...result })
       } catch (error) {
@@ -333,7 +327,8 @@ export class ImageRenderer {
         layout: 'center-focus',
         caption,
         brandKit,
-        watermark
+        watermark,
+        workspaceId
       })
       results.push({ format: 'instagram-story', layout: 'center-focus', ...result })
     } catch (error) {

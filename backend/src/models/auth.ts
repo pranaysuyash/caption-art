@@ -41,6 +41,7 @@ export interface BrandKit {
     position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
   }
   voicePrompt: string // AI caption tone instruction
+  maskingModel?: 'rembg-replicate' | 'sam3' | 'rf-detr' | 'roboflow' | 'hf-model-id'
   createdAt: Date
   updatedAt: Date
 }
@@ -77,6 +78,7 @@ export interface BatchJob {
   status: 'pending' | 'processing' | 'completed' | 'failed'
   processedCount: number
   totalCount: number
+  template?: 'punchy' | 'descriptive' | 'hashtag-heavy' | 'storytelling' | 'question'
   startedAt?: Date
   completedAt?: Date
   errorMessage?: string

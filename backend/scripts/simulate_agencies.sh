@@ -18,13 +18,25 @@ for i in $(seq 1 $AGENCIES); do
   echo "\n--- Agency $i ---"
   COOKIEJAR="$TMPDIR/session_$i.txt"
 
-  # Signup
-  RESP=$(curl -s -c $COOKIEJAR -H "Content-Type: application/json" -X POST -d '{"email":"agency'$i'@test.com","password":"password","agencyName":"Agency '$i'"}' "$BASE/api/auth/signup")
+  # Signup (if already exists, fallback to login)
+  USER_EMAIL="agency${i}@test.com"
+  RESP=$(curl -s -c $COOKIEJAR -H "Content-Type: application/json" -X POST -d '{"email":"'$USER_EMAIL'","password":"password","agencyName":"Agency '$i'"}' "$BASE/api/auth/signup")
   AGENCY_ID=$(echo "$RESP" | jq -r '.agency.id // empty')
+  if [[ -z "$AGENCY_ID" ]]; then
+    # Try login if user already exists
+    LOGIN_RESP=$(curl -s -c $COOKIEJAR -H "Content-Type: application/json" -X POST -d '{"email":"'$USER_EMAIL'","password":"password"}' "$BASE/api/auth/login")
+    AGENCY_ID=$(echo "$LOGIN_RESP" | jq -r '.agency.id // empty')
+  fi
 
   # Create Workspace
   RESP=$(curl -s -b $COOKIEJAR -H "Content-Type: application/json" -X POST -d '{"clientName":"Client_'$i'"}' "$BASE/api/workspaces")
   WORKSPACE_ID=$(echo "$RESP" | jq -r '.workspace.id // empty')
+  if [[ -z "$WORKSPACE_ID" || "$WORKSPACE_ID" == "" ]]; then
+    # Fetch list of workspaces and pick the latest for the agency (fallback)
+    WORKSPACES_RESP=$(curl -s -b $COOKIEJAR "$BASE/api/workspaces" || true)
+    WORKSPACE_ID=$(echo "$WORKSPACES_RESP" | jq -r '.workspaces[0].id // empty')
+    echo "Fallback Workspace ID: $WORKSPACE_ID"
+  fi
 
   # Create Brand Kit
   RESP=$(curl -s -b $COOKIEJAR -H "Content-Type: application/json" -X POST -d '{"workspaceId":"'$WORKSPACE_ID'","colors":{"primary":"#123456","secondary":"#654321","tertiary":"#ABCDEF"},"fonts":{"heading":"Inter","body":"Roboto"},"voicePrompt":"Friendly, helpful"}' "$BASE/api/brand-kits" )
@@ -32,7 +44,7 @@ for i in $(seq 1 $AGENCIES); do
 
   # Upload single asset
   # using the included test-image.png in repo if present
-  UPLOAD_RESP=$(curl -s -b $COOKIEJAR -F "workspaceId=$WORKSPACE_ID" -F "files=@$REPO_ROOT/backend/test-image.png" "$BASE/api/assets/upload")
+  UPLOAD_RESP=$(curl -s -b $COOKIEJAR -F "workspaceId=$WORKSPACE_ID" -F "files=@$REPO_ROOT/test-image.png" "$BASE/api/assets/upload")
   ASSET_IDS_JSON=$(echo "$UPLOAD_RESP" | jq -c '.assets | map(.id) // []')
   # Do batch generate call
   BATCH_START_RESP=$(curl -s -b $COOKIEJAR -H "Content-Type: application/json" -X POST -d "{\"workspaceId\":\"$WORKSPACE_ID\",\"assetIds\":$ASSET_IDS_JSON}" "$BASE/api/batch/generate")

@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { AuthModel } from '../models/auth'
 import { createAuthMiddleware } from '../routes/auth'
 import { AuthenticatedRequest } from '../types/auth'
+import { MaskingService } from '../services/maskingService'
 
 const router = Router()
 const requireAuth = createAuthMiddleware() as any
@@ -222,6 +223,68 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
     res.json({ brandKit })
   } catch (error) {
     console.error('Get brand kit by workspace error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// GET /api/brand-kits/masking-models - Get available masking models
+router.get('/masking-models', (req, res) => {
+  try {
+    const models = MaskingService.getAvailableModels()
+    const defaultModel = MaskingService.getDefaultModel()
+
+    res.json({
+      models,
+      defaultModel,
+      count: Object.keys(models).length
+    })
+  } catch (error) {
+    console.error('Get masking models error:', error)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// PUT /api/brand-kits/:id/masking-model - Update brand kit masking model
+router.put('/:id/masking-model', requireAuth, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { id } = req.params
+
+    const updateSchema = z.object({
+      maskingModel: z.enum(['rembg-replicate', 'sam3', 'rf-detr', 'roboflow', 'hf-model-id'])
+    })
+
+    const { maskingModel } = updateSchema.parse(req.body)
+
+    const brandKit = AuthModel.getBrandKitById(id)
+    if (!brandKit) {
+      return res.status(404).json({ error: 'Brand kit not found' })
+    }
+
+    // Verify brand kit belongs to current agency via workspace
+    const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+    if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    // Update brand kit with masking model
+    const updatedBrandKit = AuthModel.updateBrandKit(id, {
+      maskingModel
+    })
+
+    if (!updatedBrandKit) {
+      return res.status(404).json({ error: 'Brand kit not found' })
+    }
+
+    res.json({
+      message: 'Masking model updated successfully',
+      brandKit: updatedBrandKit
+    })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.issues })
+    }
+    console.error('Update masking model error:', error)
     res.status(500).json({ error: 'Internal server error' })
   }
 })
