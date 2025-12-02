@@ -13,6 +13,7 @@ import { useState, useEffect } from 'react'
 import { backendClient } from '../lib/api/backendClient'
 import { MaskResult } from '../lib/segmentation/types'
 import { MaskPreview } from './MaskPreview'
+import { ModelSelectorDropdown } from './ModelSelectorDropdown'
 
 export interface MaskGeneratorProps {
   imageDataUrl: string | null
@@ -39,6 +40,7 @@ export function MaskGenerator({
   const [progress, setProgress] = useState(0)
   const [previewEnabled, setPreviewEnabled] = useState(false)
   const [originalImage, setOriginalImage] = useState<HTMLImageElement | null>(null)
+  const [selectedModel, setSelectedModel] = useState<string>('rembg-replicate') // Default model
 
   // Load original image when imageDataUrl changes
   useEffect(() => {
@@ -77,7 +79,7 @@ export function MaskGenerator({
         }, 1000)
 
         // Call backend API instead of Replicate directly
-        const response = await backendClient.generateMask(imageDataUrl)
+        const response = await backendClient.generateMask(imageDataUrl, selectedModel)
         
         // Create mask image element
         const maskImage = new Image()
@@ -141,13 +143,21 @@ export function MaskGenerator({
 
   return (
     <div className="mask-generator">
+      {/* Model Selector Dropdown */}
+      <ModelSelectorDropdown
+        selectedModel={selectedModel}
+        onModelChange={setSelectedModel}
+        disabled={loading}
+        className="model-selector-section"
+      />
+
       {/* Loading state - Requirements: 3.3 */}
       {loading && (
         <div className="mask-loading" role="status" aria-live="polite">
           <div className="loading-spinner" aria-hidden="true">🎭</div>
           <div className="loading-text">
-            {progress < 30 ? 'Analyzing image...' : 
-             progress < 60 ? 'Detecting subject...' : 
+            {progress < 30 ? 'Analyzing image...' :
+             progress < 60 ? 'Detecting subject...' :
              'Generating mask...'}
           </div>
           {progress > 0 && (

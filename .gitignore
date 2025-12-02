@@ -36,6 +36,40 @@ mcp-shell.log
 **/coverage/
 **/.nyc_output/
 
+# Generated content and renders
+**/generated/
+**/uploads/
+**/exports/
+**/temp/
+**/cache/
+
+# Test files and examples
+**/test-*/
+**/*test.*
+**/*.test.*
+**/*.spec.*
+**/examples/
+**/demo/
+
+# Model files and assets
+**/*.model
+**/*.weights
+**/*.h5
+**/*.pkl
+**/*.joblib
+
+# Session and debug files
+**/cookies.txt
+**/cookies-*.txt
+**/debug-*
+**/session-*
+
+# Development artifacts
+**/screenshots/
+**/recordings/
+**/test-images/
+**/test-assets/
+
 # Temporary files
 **/*.tmp
 **/*.temp

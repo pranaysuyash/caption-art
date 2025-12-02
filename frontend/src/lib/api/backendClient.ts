@@ -25,6 +25,21 @@ export interface HealthResponse {
   uptime: number
 }
 
+export interface MaskingModel {
+  id: string
+  name: string
+  description: string
+  quality: 'basic' | 'good' | 'excellent' | 'premium'
+  speed: 'slow' | 'medium' | 'fast'
+  cost: 'free' | 'low' | 'medium' | 'high'
+  bestFor: string[]
+}
+
+export interface MaskingModelsResponse {
+  models: Record<string, MaskingModel>
+  defaultModel: string
+}
+
 export class BackendClient {
   private baseUrl: string
 
@@ -55,18 +70,32 @@ export class BackendClient {
   /**
    * Generate mask for an image
    */
-  async generateMask(imageUrl: string): Promise<MaskResponse> {
+  async generateMask(imageUrl: string, model?: string): Promise<MaskResponse> {
     const response = await fetch(`${this.baseUrl}/api/mask`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ imageUrl }),
+      body: JSON.stringify({ imageUrl, model }),
     })
 
     if (!response.ok) {
       const error = await response.json()
       throw new Error(error.error || 'Mask generation failed')
+    }
+
+    return response.json()
+  }
+
+  /**
+   * Get available masking models
+   */
+  async getMaskingModels(): Promise<MaskingModelsResponse> {
+    const response = await fetch(`${this.baseUrl}/api/brand-kits/masking-models`)
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Failed to fetch masking models')
     }
 
     return response.json()
