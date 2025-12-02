@@ -38,7 +38,7 @@ router.get('/workspace/:workspaceId/grid', requireAuth, async (req, res) => {
     const captions = AuthModel.getCaptionsByWorkspace(workspaceId)
 
     // Build grid data with asset and caption information
-    const gridData = assets.map(asset => {
+    const gridData = assets.map((asset) => {
       const assetCaptions = AuthModel.getCaptionsByAsset(asset.id)
       const caption = assetCaptions[0] || null
 
@@ -50,26 +50,28 @@ router.get('/workspace/:workspaceId/grid', requireAuth, async (req, res) => {
           url: asset.url,
           uploadedAt: asset.uploadedAt,
         },
-        caption: caption ? {
-          id: caption.id,
-          text: caption.text,
-          status: caption.status,
-          approvalStatus: caption.approvalStatus,
-          approved: caption.approvalStatus === 'approved',
-          generatedAt: caption.generatedAt,
-          approvedAt: caption.approvedAt,
-          rejectedAt: caption.rejectedAt,
-          errorMessage: caption.errorMessage,
-        } : null,
+        caption: caption
+          ? {
+              id: caption.id,
+              text: caption.text,
+              status: caption.status,
+              approvalStatus: caption.approvalStatus,
+              approved: caption.approvalStatus === 'approved',
+              generatedAt: caption.generatedAt,
+              approvedAt: caption.approvedAt,
+              rejectedAt: caption.rejectedAt,
+              errorMessage: caption.errorMessage,
+            }
+          : null,
       }
     })
 
     // Get approval statistics
     const stats = {
       total: captions.length,
-      pending: captions.filter(c => c.approvalStatus === 'pending').length,
-      approved: captions.filter(c => c.approvalStatus === 'approved').length,
-      rejected: captions.filter(c => c.approvalStatus === 'rejected').length,
+      pending: captions.filter((c) => c.approvalStatus === 'pending').length,
+      approved: captions.filter((c) => c.approvalStatus === 'approved').length,
+      rejected: captions.filter((c) => c.approvalStatus === 'rejected').length,
     }
 
     res.json({
@@ -112,7 +114,7 @@ router.put('/captions/:captionId/approve', requireAuth, async (req, res) => {
       message: 'Caption approved successfully',
       caption: {
         ...approvedCaption,
-        approved: approvedCaption.approvalStatus === 'approved'
+        approved: approvedCaption.approvalStatus === 'approved',
       },
     })
   } catch (error) {
@@ -148,12 +150,14 @@ router.put('/captions/:captionId/reject', requireAuth, async (req, res) => {
       message: 'Caption rejected successfully',
       caption: {
         ...rejectedCaption,
-        approved: rejectedCaption.approvalStatus === 'approved'
+        approved: rejectedCaption.approvalStatus === 'approved',
       },
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.issues })
+      return res
+        .status(400)
+        .json({ error: 'Invalid input', details: error.issues })
     }
     console.error('Reject caption error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -175,7 +179,9 @@ router.post('/batch-approve', requireAuth, async (req, res) => {
 
       const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
       if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-        return res.status(403).json({ error: 'Access denied for caption ${captionId}' })
+        return res
+          .status(403)
+          .json({ error: 'Access denied for caption ${captionId}' })
       }
     }
 
@@ -187,7 +193,9 @@ router.post('/batch-approve', requireAuth, async (req, res) => {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.issues })
+      return res
+        .status(400)
+        .json({ error: 'Invalid input', details: error.issues })
     }
     console.error('Batch approve error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -209,7 +217,9 @@ router.post('/batch-reject', requireAuth, async (req, res) => {
 
       const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
       if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-        return res.status(403).json({ error: 'Access denied for caption ${captionId}' })
+        return res
+          .status(403)
+          .json({ error: 'Access denied for caption ${captionId}' })
       }
     }
 
@@ -221,7 +231,9 @@ router.post('/batch-reject', requireAuth, async (req, res) => {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.issues })
+      return res
+        .status(400)
+        .json({ error: 'Invalid input', details: error.issues })
     }
     console.error('Batch reject error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -229,46 +241,53 @@ router.post('/batch-reject', requireAuth, async (req, res) => {
 })
 
 // GET /api/approval/workspace/:workspaceId/approved - Get approved captions only
-router.get('/workspace/:workspaceId/approved', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { workspaceId } = req.params
+router.get(
+  '/workspace/:workspaceId/approved',
+  requireAuth,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { workspaceId } = req.params
 
-    // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
-    if (!workspace) {
-      return res.status(404).json({ error: 'Workspace not found' })
-    }
-
-    if (workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
-
-    const approvedCaptions = AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-
-    // Enrich with asset information
-    const enrichedCaptions = approvedCaptions.map(caption => {
-      const asset = AuthModel.getAssetById(caption.assetId)
-      return {
-        ...caption,
-        approved: caption.approvalStatus === 'approved',
-        asset: asset ? {
-          id: asset.id,
-          originalName: asset.originalName,
-          mimeType: asset.mimeType,
-          url: asset.url,
-        } : null,
+      // Verify workspace belongs to current agency
+      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' })
       }
-    })
 
-    res.json({
-      captions: enrichedCaptions,
-      count: enrichedCaptions.length,
-    })
-  } catch (error) {
-    console.error('Get approved captions error:', error)
-    res.status(500).json({ error: 'Internal server error' })
+      if (workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+
+      const approvedCaptions =
+        AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
+
+      // Enrich with asset information
+      const enrichedCaptions = approvedCaptions.map((caption) => {
+        const asset = AuthModel.getAssetById(caption.assetId)
+        return {
+          ...caption,
+          approved: caption.approvalStatus === 'approved',
+          asset: asset
+            ? {
+                id: asset.id,
+                originalName: asset.originalName,
+                mimeType: asset.mimeType,
+                url: asset.url,
+              }
+            : null,
+        }
+      })
+
+      res.json({
+        captions: enrichedCaptions,
+        count: enrichedCaptions.length,
+      })
+    } catch (error) {
+      console.error('Get approved captions error:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
   }
-})
+)
 
 export default router

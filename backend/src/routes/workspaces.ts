@@ -25,12 +25,12 @@ router.get('/', requireAuth as any, (req, res) => {
 })
 
 // POST /api/workspaces - Create new workspace
-router.post('/', requireAuth as any, (req, res) => {
+router.post('/', requireAuth as any, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { clientName } = createWorkspaceSchema.parse(req.body)
 
-    const workspace = AuthModel.createWorkspace(
+    const workspace = await AuthModel.createWorkspace(
       authenticatedReq.agency.id,
       clientName
     )

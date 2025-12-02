@@ -36,24 +36,28 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
     const generatedAssets = AuthModel.getGeneratedAssetsByWorkspace(workspaceId)
 
     // Enrich with source asset information
-    const enrichedAssets = generatedAssets.map(asset => {
+    const enrichedAssets = generatedAssets.map((asset) => {
       const sourceAsset = AuthModel.getAssetById(asset.sourceAssetId)
       const caption = AuthModel.getCaptionById(asset.captionId)
       return {
         ...asset,
-        sourceAsset: sourceAsset ? {
-          id: sourceAsset.id,
-          originalName: sourceAsset.originalName,
-          mimeType: sourceAsset.mimeType,
-          url: sourceAsset.url,
-        } : null,
-        caption: caption ? {
-          id: caption.id,
-          text: caption.text,
-          status: caption.status,
-          approvalStatus: caption.approvalStatus,
-          approved: caption.approvalStatus === 'approved',
-        } : null,
+        sourceAsset: sourceAsset
+          ? {
+              id: sourceAsset.id,
+              originalName: sourceAsset.originalName,
+              mimeType: sourceAsset.mimeType,
+              url: sourceAsset.url,
+            }
+          : null,
+        caption: caption
+          ? {
+              id: caption.id,
+              text: caption.text,
+              status: caption.status,
+              approvalStatus: caption.approvalStatus,
+              approved: caption.approvalStatus === 'approved',
+            }
+          : null,
       }
     })
 
@@ -82,7 +86,35 @@ router.get('/job/:jobId', requireAuth, async (req, res) => {
     }
 
     const generatedAssets = AuthModel.getGeneratedAssetsByJob(jobId)
-    res.json({ generatedAssets })
+
+    // Enrich generated assets similar to workspace endpoint
+    const enrichedAssets = generatedAssets.map((asset) => {
+      const sourceAsset = AuthModel.getAssetById(asset.sourceAssetId)
+      const caption = AuthModel.getCaptionById(asset.captionId)
+      return {
+        ...asset,
+        approved: asset.approvalStatus === 'approved',
+        sourceAsset: sourceAsset
+          ? {
+              id: sourceAsset.id,
+              originalName: sourceAsset.originalName,
+              mimeType: sourceAsset.mimeType,
+              url: sourceAsset.url,
+            }
+          : null,
+        caption: caption
+          ? {
+              id: caption.id,
+              text: caption.text,
+              status: caption.status,
+              approvalStatus: caption.approvalStatus,
+              approved: caption.approvalStatus === 'approved',
+            }
+          : null,
+      }
+    })
+
+    res.json({ generatedAssets: enrichedAssets })
   } catch (error) {
     console.error('Get generated assets by job error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -90,44 +122,50 @@ router.get('/job/:jobId', requireAuth, async (req, res) => {
 })
 
 // GET /api/generated-assets/workspace/:workspaceId/approved - Get only approved generated assets
-router.get('/workspace/:workspaceId/approved', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { workspaceId } = req.params
+router.get(
+  '/workspace/:workspaceId/approved',
+  requireAuth,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { workspaceId } = req.params
 
-    // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
-    if (!workspace) {
-      return res.status(404).json({ error: 'Workspace not found' })
-    }
-
-    if (workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
-
-    const approvedAssets = AuthModel.getApprovedGeneratedAssets(workspaceId)
-
-    // Enrich with source asset information
-    const enrichedAssets = approvedAssets.map(asset => {
-      const sourceAsset = AuthModel.getAssetById(asset.sourceAssetId)
-      return {
-        ...asset,
-        approved: asset.approvalStatus === 'approved',
-        sourceAsset: sourceAsset ? {
-          id: sourceAsset.id,
-          originalName: sourceAsset.originalName,
-          mimeType: sourceAsset.mimeType,
-          url: sourceAsset.url,
-        } : null,
+      // Verify workspace belongs to current agency
+      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' })
       }
-    })
 
-    res.json({ generatedAssets: enrichedAssets })
-  } catch (error) {
-    console.error('Get approved generated assets error:', error)
-    res.status(500).json({ error: 'Internal server error' })
+      if (workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+
+      const approvedAssets = AuthModel.getApprovedGeneratedAssets(workspaceId)
+
+      // Enrich with source asset information
+      const enrichedAssets = approvedAssets.map((asset) => {
+        const sourceAsset = AuthModel.getAssetById(asset.sourceAssetId)
+        return {
+          ...asset,
+          approved: asset.approvalStatus === 'approved',
+          sourceAsset: sourceAsset
+            ? {
+                id: sourceAsset.id,
+                originalName: sourceAsset.originalName,
+                mimeType: sourceAsset.mimeType,
+                url: sourceAsset.url,
+              }
+            : null,
+        }
+      })
+
+      res.json({ generatedAssets: enrichedAssets })
+    } catch (error) {
+      console.error('Get approved generated assets error:', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
   }
-})
+)
 
 // PUT /api/generated-assets/:assetId/approve - Approve a generated asset
 router.put('/:assetId/approve', requireAuth, async (req, res) => {
@@ -153,7 +191,10 @@ router.put('/:assetId/approve', requireAuth, async (req, res) => {
 
     res.json({
       message: 'Generated asset approved successfully',
-      generatedAsset: approvedAsset,
+      generatedAsset: {
+        ...approvedAsset,
+        approved: approvedAsset.approvalStatus === 'approved',
+      },
     })
   } catch (error) {
     console.error('Approve generated asset error:', error)
@@ -186,11 +227,16 @@ router.put('/:assetId/reject', requireAuth, async (req, res) => {
 
     res.json({
       message: 'Generated asset rejected successfully',
-      generatedAsset: rejectedAsset,
+      generatedAsset: {
+        ...rejectedAsset,
+        approved: rejectedAsset.approvalStatus === 'approved',
+      },
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.issues })
+      return res
+        .status(400)
+        .json({ error: 'Invalid input', details: error.issues })
     }
     console.error('Reject generated asset error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -207,12 +253,16 @@ router.post('/batch-approve', requireAuth, async (req, res) => {
     for (const assetId of assetIds) {
       const generatedAsset = AuthModel.getGeneratedAssetById(assetId)
       if (!generatedAsset) {
-        return res.status(404).json({ error: `Generated asset ${assetId} not found` })
+        return res
+          .status(404)
+          .json({ error: `Generated asset ${assetId} not found` })
       }
 
       const workspace = AuthModel.getWorkspaceById(generatedAsset.workspaceId)
       if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-        return res.status(403).json({ error: 'Access denied for generated asset ${assetId}' })
+        return res
+          .status(403)
+          .json({ error: 'Access denied for generated asset ${assetId}' })
       }
     }
 
@@ -224,7 +274,9 @@ router.post('/batch-approve', requireAuth, async (req, res) => {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.issues })
+      return res
+        .status(400)
+        .json({ error: 'Invalid input', details: error.issues })
     }
     console.error('Batch approve generated assets error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -241,12 +293,16 @@ router.post('/batch-reject', requireAuth, async (req, res) => {
     for (const assetId of assetIds) {
       const generatedAsset = AuthModel.getGeneratedAssetById(assetId)
       if (!generatedAsset) {
-        return res.status(404).json({ error: `Generated asset ${assetId} not found` })
+        return res
+          .status(404)
+          .json({ error: `Generated asset ${assetId} not found` })
       }
 
       const workspace = AuthModel.getWorkspaceById(generatedAsset.workspaceId)
       if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-        return res.status(403).json({ error: 'Access denied for generated asset ${assetId}' })
+        return res
+          .status(403)
+          .json({ error: 'Access denied for generated asset ${assetId}' })
       }
     }
 
@@ -258,7 +314,9 @@ router.post('/batch-reject', requireAuth, async (req, res) => {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.issues })
+      return res
+        .status(400)
+        .json({ error: 'Invalid input', details: error.issues })
     }
     console.error('Batch reject generated assets error:', error)
     res.status(500).json({ error: 'Internal server error' })
@@ -281,22 +339,37 @@ router.get('/workspace/:workspaceId/stats', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const allGeneratedAssets = AuthModel.getGeneratedAssetsByWorkspace(workspaceId)
+    const allGeneratedAssets =
+      AuthModel.getGeneratedAssetsByWorkspace(workspaceId)
 
     const stats = {
       total: allGeneratedAssets.length,
-      pending: allGeneratedAssets.filter(a => a.approvalStatus === 'pending').length,
-      approved: allGeneratedAssets.filter(a => a.approvalStatus === 'approved').length,
-      rejected: allGeneratedAssets.filter(a => a.approvalStatus === 'rejected').length,
+      pending: allGeneratedAssets.filter((a) => a.approvalStatus === 'pending')
+        .length,
+      approved: allGeneratedAssets.filter(
+        (a) => a.approvalStatus === 'approved'
+      ).length,
+      rejected: allGeneratedAssets.filter(
+        (a) => a.approvalStatus === 'rejected'
+      ).length,
       byFormat: {
-        'instagram-square': allGeneratedAssets.filter(a => a.format === 'instagram-square').length,
-        'instagram-story': allGeneratedAssets.filter(a => a.format === 'instagram-story').length,
+        'instagram-square': allGeneratedAssets.filter(
+          (a) => a.format === 'instagram-square'
+        ).length,
+        'instagram-story': allGeneratedAssets.filter(
+          (a) => a.format === 'instagram-story'
+        ).length,
       },
       byLayout: {
-        'center-focus': allGeneratedAssets.filter(a => a.layout === 'center-focus').length,
-        'bottom-text': allGeneratedAssets.filter(a => a.layout === 'bottom-text').length,
-        'top-text': allGeneratedAssets.filter(a => a.layout === 'top-text').length,
-      }
+        'center-focus': allGeneratedAssets.filter(
+          (a) => a.layout === 'center-focus'
+        ).length,
+        'bottom-text': allGeneratedAssets.filter(
+          (a) => a.layout === 'bottom-text'
+        ).length,
+        'top-text': allGeneratedAssets.filter((a) => a.layout === 'top-text')
+          .length,
+      },
     }
 
     res.json({ stats })

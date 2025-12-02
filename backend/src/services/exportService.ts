@@ -16,15 +16,22 @@ export class ExportService {
    */
   static async createExport(
     workspaceId: string,
-    options: ExportOptions = { includeAssets: false, includeCaptions: true, includeGeneratedImages: true, format: 'zip' }
+    options: ExportOptions = {
+      includeAssets: false,
+      includeCaptions: true,
+      includeGeneratedImages: true,
+      format: 'zip',
+    }
   ): Promise<{ zipFilePath: string; fileName: string }> {
     const workspace = AuthModel.getWorkspaceById(workspaceId)
     if (!workspace) {
       throw new Error('Workspace not found')
     }
 
-    const approvedCaptions = AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-    const approvedGeneratedAssets = AuthModel.getApprovedGeneratedAssets(workspaceId)
+    const approvedCaptions =
+      AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
+    const approvedGeneratedAssets =
+      AuthModel.getApprovedGeneratedAssets(workspaceId)
 
     if (approvedCaptions.length === 0 && approvedGeneratedAssets.length === 0) {
       throw new Error('No approved content found for export')
@@ -70,36 +77,46 @@ export class ExportService {
           brandKit: AuthModel.getBrandKitByWorkspace(workspaceId),
         }
 
-        archive.append(JSON.stringify(metadata, null, 2), { name: 'metadata.json' })
+        archive.append(JSON.stringify(metadata, null, 2), {
+          name: 'metadata.json',
+        })
 
         if (options.includeCaptions) {
           // Add captions as text file
-          const captionsText = approvedCaptions.map((caption, index) => {
-            const asset = AuthModel.getAssetById(caption.assetId)
-            return `=== Caption ${index + 1} ===\n` +
-                   `Asset: ${asset?.originalName || 'Unknown'}\n` +
-                   `Caption: ${caption.text}\n` +
-                   `Generated: ${caption.generatedAt?.toISOString() || 'Unknown'}\n` +
-                   `Approved: ${caption.approvedAt?.toISOString() || 'Unknown'}\n\n`
-          }).join('')
+          const captionsText = approvedCaptions
+            .map((caption, index) => {
+              const asset = AuthModel.getAssetById(caption.assetId)
+              return (
+                `=== Caption ${index + 1} ===\n` +
+                `Asset: ${asset?.originalName || 'Unknown'}\n` +
+                `Caption: ${caption.text}\n` +
+                `Generated: ${caption.generatedAt?.toISOString() || 'Unknown'}\n` +
+                `Approved: ${caption.approvedAt?.toISOString() || 'Unknown'}\n\n`
+              )
+            })
+            .join('')
 
           archive.append(captionsText, { name: 'captions.txt' })
 
           // Add captions as JSON
-          const enrichedCaptions = approvedCaptions.map(caption => {
+          const enrichedCaptions = approvedCaptions.map((caption) => {
             const asset = AuthModel.getAssetById(caption.assetId)
             return {
               ...caption,
               approved: caption.approvalStatus === 'approved',
-              asset: asset ? {
-                id: asset.id,
-                originalName: asset.originalName,
-                mimeType: asset.mimeType,
-              } : null,
+              asset: asset
+                ? {
+                    id: asset.id,
+                    originalName: asset.originalName,
+                    mimeType: asset.mimeType,
+                  }
+                : null,
             }
           })
 
-          archive.append(JSON.stringify(enrichedCaptions, null, 2), { name: 'captions.json' })
+          archive.append(JSON.stringify(enrichedCaptions, null, 2), {
+            name: 'captions.json',
+          })
         }
 
         if (options.includeAssets) {
@@ -108,7 +125,11 @@ export class ExportService {
             const asset = AuthModel.getAssetById(caption.assetId)
             if (asset && fs.existsSync(path.join(process.cwd(), asset.url))) {
               const assetFilePath = path.join(process.cwd(), asset.url)
-              const zipAssetPath = path.join('assets', 'originals', asset.originalName)
+              const zipAssetPath = path.join(
+                'assets',
+                'originals',
+                asset.originalName
+              )
               archive.file(assetFilePath, { name: zipAssetPath })
             }
           }
@@ -117,9 +138,19 @@ export class ExportService {
         if (options.includeGeneratedImages) {
           // Create generated-images directory and add rendered images
           for (const generatedAsset of approvedGeneratedAssets) {
-            if (fs.existsSync(path.join(process.cwd(), generatedAsset.imageUrl))) {
-              const imageFilePath = path.join(process.cwd(), generatedAsset.imageUrl)
-              const zipImagePath = path.join('generated-images', `${generatedAsset.format}`, generatedAsset.layout, `${path.basename(generatedAsset.imageUrl)}`)
+            if (
+              fs.existsSync(path.join(process.cwd(), generatedAsset.imageUrl))
+            ) {
+              const imageFilePath = path.join(
+                process.cwd(),
+                generatedAsset.imageUrl
+              )
+              const zipImagePath = path.join(
+                'generated-images',
+                `${generatedAsset.format}`,
+                generatedAsset.layout,
+                `${path.basename(generatedAsset.imageUrl)}`
+              )
               archive.file(imageFilePath, { name: zipImagePath })
             }
           }
@@ -186,7 +217,6 @@ Thank you for using caption-art!
         zipFilePath,
         completedAt: new Date(),
       })
-
     } catch (error) {
       console.error(`Error processing export job ${jobId}:`, error)
 
@@ -202,9 +232,13 @@ Thank you for using caption-art!
   /**
    * Start a new export job for approved captions and generated assets
    */
-  static async startExport(workspaceId: string): Promise<{ jobId: string; message: string }> {
-    const approvedCaptions = AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-    const approvedGeneratedAssets = AuthModel.getApprovedGeneratedAssets(workspaceId)
+  static async startExport(
+    workspaceId: string
+  ): Promise<{ jobId: string; message: string }> {
+    const approvedCaptions =
+      AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
+    const approvedGeneratedAssets =
+      AuthModel.getApprovedGeneratedAssets(workspaceId)
 
     if (approvedCaptions.length === 0 && approvedGeneratedAssets.length === 0) {
       throw new Error('No approved content found for export')
@@ -219,11 +253,15 @@ Thank you for using caption-art!
     )
 
     // Start processing in background
-    this.processExportJob(job.id).catch(error => {
-      console.error(`Background export processing failed for job ${job.id}:`, error)
+    this.processExportJob(job.id).catch((error) => {
+      console.error(
+        `Background export processing failed for job ${job.id}:`,
+        error
+      )
     })
 
-    const totalContent = approvedCaptions.length + approvedGeneratedAssets.length
+    const totalContent =
+      approvedCaptions.length + approvedGeneratedAssets.length
     return {
       jobId: job.id,
       message: `Export started for ${totalContent} approved items (${approvedCaptions.length} captions, ${approvedGeneratedAssets.length} generated images)`,
@@ -240,7 +278,7 @@ Thank you for using caption-art!
     }
 
     const files = fs.readdirSync(exportsDir)
-    const cutoffTime = Date.now() - (olderThanHours * 60 * 60 * 1000)
+    const cutoffTime = Date.now() - olderThanHours * 60 * 60 * 1000
     let deletedCount = 0
 
     for (const file of files) {

@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
-import { AppError } from '../errors/AppError'
+import { AppError, ExternalAPIError } from '../errors/AppError'
 import { ZodError } from 'zod'
 
 /**
@@ -21,8 +21,14 @@ export function errorHandler(
   const timestamp = new Date().toISOString()
   console.error(`[${timestamp}] Error on ${req.method} ${req.path}:`, err)
 
-  // Set content type to JSON
-  res.setHeader('Content-Type', 'application/json')
+  // Set content type to JSON if response object supports it
+  try {
+    if (typeof (res as any).setHeader === 'function') {
+      res.setHeader('Content-Type', 'application/json')
+    }
+  } catch (err) {
+    // Fallback: ignore errors setting header in mocked test responses
+  }
 
   // Handle Zod validation errors
   if (err instanceof ZodError) {
@@ -33,6 +39,13 @@ export function errorHandler(
         message: e.message,
       })),
     })
+  }
+
+  // Handle custom External API error (502)
+  if (err instanceof ExternalAPIError) {
+    return res
+      .status(err.statusCode)
+      .json({ error: err.message, service: err.service })
   }
 
   // Handle custom AppError instances

@@ -43,7 +43,8 @@ export class ExternalAPIError extends AppError {
     message: string,
     public readonly service: string
   ) {
-    super(502, `${service} API error: ${message}`, true)
+    // Keep the message concise for API responses; expose service separately when needed
+    super(502, message, true)
   }
 }
 

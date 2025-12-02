@@ -7,7 +7,9 @@ const routes: string[] = []
 function walk(stack: any[], prefix = '') {
   for (const layer of stack) {
     if (layer.route && layer.route.path) {
-      const methods = Object.keys(layer.route.methods).map((m) => m.toUpperCase()).join(',')
+      const methods = Object.keys(layer.route.methods)
+        .map((m) => m.toUpperCase())
+        .join(',')
       routes.push(`${methods} ${prefix}${layer.route.path}`)
     } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
       let layerPath = ''

@@ -5,12 +5,15 @@ const stack = (app as any)._router ? (app as any)._router.stack : []
 
 function formatLayer(layer: any): any {
   if (layer.route) {
-    const methods = Object.keys(layer.route.methods).map((m) => m.toUpperCase()).join(',')
+    const methods = Object.keys(layer.route.methods)
+      .map((m) => m.toUpperCase())
+      .join(',')
     return `${methods} ${layer.route.path}`
   }
 
   if (layer.name === 'router' && layer.handle && layer.handle.stack) {
-    const regexpSource = layer.regexp && layer.regexp.source ? layer.regexp.source : ''
+    const regexpSource =
+      layer.regexp && layer.regexp.source ? layer.regexp.source : ''
     // Convert ^\/? to '/'
     const basePath = regexpSource
       .replace('^\\/', '/')

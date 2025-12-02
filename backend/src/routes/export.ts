@@ -40,9 +40,12 @@ router.post('/workspace/:workspaceId/start', requireAuth, async (req, res) => {
     }
 
     // Check if there are approved captions to export
-    const approvedCaptions = AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
+    const approvedCaptions =
+      AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
     if (approvedCaptions.length === 0) {
-      return res.status(400).json({ error: 'No approved captions found for export' })
+      return res
+        .status(400)
+        .json({ error: 'No approved captions found for export' })
     }
 
     const result = await ExportService.startExport(workspaceId)
@@ -157,7 +160,8 @@ router.get('/workspace/:workspaceId/summary', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const approvedCaptions = AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
+    const approvedCaptions =
+      AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
     const assets = AuthModel.getAssetsByWorkspace(workspaceId)
 
     // Estimate file size
@@ -165,7 +169,7 @@ router.get('/workspace/:workspaceId/summary', requireAuth, async (req, res) => {
     estimatedBytes += approvedCaptions.length * 500 // ~500 bytes per caption
 
     for (const caption of approvedCaptions) {
-      const asset = assets.find(a => a.id === caption.assetId)
+      const asset = assets.find((a) => a.id === caption.assetId)
       if (asset) {
         estimatedBytes += asset.size || 0
       }
@@ -189,7 +193,10 @@ router.get('/workspace/:workspaceId/summary', requireAuth, async (req, res) => {
       totalAssets: assets.length,
       estimatedSize: formatSize(estimatedBytes),
       recentExports: AuthModel.getExportJobsByWorkspace(workspaceId)
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        )
         .slice(0, 5),
     })
   } catch (error) {
@@ -266,7 +273,7 @@ router.get('/workspace/:workspaceId/history', requireAuth, async (req, res) => {
 
     res.json({
       workspaceId,
-      ...history
+      ...history,
     })
   } catch (error) {
     console.error('Get export history error:', error)
@@ -275,32 +282,36 @@ router.get('/workspace/:workspaceId/history', requireAuth, async (req, res) => {
 })
 
 // GET /api/export/workspace/:workspaceId/statistics - Get export statistics
-router.get('/workspace/:workspaceId/statistics', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { workspaceId } = req.params
+router.get(
+  '/workspace/:workspaceId/statistics',
+  requireAuth,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { workspaceId } = req.params
 
-    // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
-    if (!workspace) {
-      return res.status(404).json({ error: 'Workspace not found' })
+      // Verify workspace belongs to current agency
+      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' })
+      }
+
+      if (workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+
+      const statistics = AuthModel.getExportStatistics(workspaceId)
+
+      res.json({
+        workspaceId,
+        ...statistics,
+      })
+    } catch (error) {
+      console.error('Get export statistics error:', error)
+      res.status(500).json({ error: 'Internal server error' })
     }
-
-    if (workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
-
-    const statistics = AuthModel.getExportStatistics(workspaceId)
-
-    res.json({
-      workspaceId,
-      ...statistics
-    })
-  } catch (error) {
-    console.error('Get export statistics error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // GET /api/export/workspace/:workspaceId/jobs - List all export jobs
 router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
@@ -324,11 +335,14 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
 
     // Filter by status if provided
     if (status) {
-      jobs = jobs.filter(job => job.status === status)
+      jobs = jobs.filter((job) => job.status === status)
     }
 
     // Sort by creation date (most recent first)
-    jobs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    jobs.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
 
     // Apply limit
     jobs = jobs.slice(0, limit)
@@ -339,8 +353,8 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
       count: jobs.length,
       filters: {
         status: status || 'all',
-        limit
-      }
+        limit,
+      },
     })
   } catch (error) {
     console.error('Get export jobs error:', error)

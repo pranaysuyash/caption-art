@@ -40,8 +40,30 @@ export interface BrandKit {
     url: string
     position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
   }
+
+  // Existing fields
   voicePrompt: string // AI caption tone instruction
-  maskingModel?: 'rembg-replicate' | 'sam3' | 'rf-detr' | 'roboflow' | 'hf-model-id'
+  maskingModel?:
+    | 'rembg-replicate'
+    | 'sam3'
+    | 'rf-detr'
+    | 'roboflow'
+    | 'hf-model-id'
+
+  // BrandKit v2 - Campaign Brain fields
+  brandPersonality?: string // "Bold, witty, slightly irreverent"
+  targetAudience?: string // "Working moms 28-40 in Tier 1 cities"
+  valueProposition?: string // "Saves 2 hours a day on X"
+  forbiddenPhrases?: string[] // "Do not say 'cheap', 'discount'"
+  preferredPhrases?: string[] // "Always call our users 'creators'"
+  toneStyle?:
+    | 'professional'
+    | 'playful'
+    | 'bold'
+    | 'minimal'
+    | 'luxury'
+    | 'edgy'
+
   createdAt: Date
   updatedAt: Date
 }
@@ -78,7 +100,12 @@ export interface BatchJob {
   status: 'pending' | 'processing' | 'completed' | 'failed'
   processedCount: number
   totalCount: number
-  template?: 'punchy' | 'descriptive' | 'hashtag-heavy' | 'storytelling' | 'question'
+  template?:
+    | 'punchy'
+    | 'descriptive'
+    | 'hashtag-heavy'
+    | 'storytelling'
+    | 'question'
   startedAt?: Date
   completedAt?: Date
   errorMessage?: string
@@ -117,6 +144,81 @@ export interface ExportJob {
   completedAt?: Date
 }
 
+// Campaign Management v2
+export interface Campaign {
+  id: string
+  workspaceId: string
+  brandKitId: string
+  name: string
+  description?: string
+
+  // Campaign objective and context
+  objective: 'awareness' | 'traffic' | 'conversion' | 'engagement'
+  launchType: 'new-launch' | 'evergreen' | 'seasonal' | 'sale' | 'event'
+  funnelStage: 'cold' | 'warm' | 'hot'
+
+  // Offer and CTA
+  primaryOffer?: string // "Flat 20% off", "New summer collection"
+  primaryCTA?: string // "Shop now", "Sign up", "Learn more"
+  secondaryCTA?: string
+
+  // Targeting and placement
+  targetAudience?: string // More specific TA for this campaign
+  placements: ('ig-feed' | 'ig-story' | 'fb-feed' | 'fb-story' | 'li-feed')[]
+
+  // Creative constraints
+  headlineMaxLength?: number
+  bodyMaxLength?: number
+  mustIncludePhrases?: string[]
+  mustExcludePhrases?: string[]
+
+  status: 'draft' | 'active' | 'paused' | 'completed'
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface ReferenceCreative {
+  id: string
+  workspaceId: string
+  campaignId?: string
+  name: string
+  notes?: string // "We love the headline placement and color blocking here"
+  imageUrl: string
+  thumbnailUrl: string
+
+  // Extracted style information
+  extractedColors?: string[]
+  detectedLayout?: 'center-focus' | 'bottom-text' | 'top-text' | 'split'
+  textDensity?: 'minimal' | 'moderate' | 'heavy'
+
+  // Style analysis results
+  styleTags?: string[] // ['high-contrast', 'bold-typography', 'minimal']
+
+  createdAt: Date
+}
+
+export interface AdCreative extends GeneratedAsset {
+  // Campaign-specific fields
+  campaignId?: string
+  placement: 'ig-feed' | 'ig-story' | 'fb-feed' | 'fb-story' | 'li-feed'
+
+  // Slot-based content (ad structure)
+  headline: string
+  subheadline?: string
+  bodyText: string
+  ctaText: string
+
+  // Ad-specific metadata
+  objective?: 'awareness' | 'traffic' | 'conversion' | 'engagement'
+  offerText?: string
+
+  // Performance tracking
+  impressions?: number
+  clicks?: number
+  conversions?: number
+  spend?: number
+}
+
 // In-memory storage for v1 (replace with database later)
 const users = new Map<string, User>()
 const agencies = new Map<string, Agency>()
@@ -127,6 +229,11 @@ const captions = new Map<string, Caption>()
 const batchJobs = new Map<string, BatchJob>()
 const generatedAssets = new Map<string, GeneratedAsset>()
 const exportJobs = new Map<string, ExportJob>()
+
+// Campaign Management v2 storage
+const campaigns = new Map<string, Campaign>()
+const referenceCreatives = new Map<string, ReferenceCreative>()
+const adCreatives = new Map<string, AdCreative>()
 
 export class AuthModel {
   private static saltRounds = 12
@@ -426,7 +533,7 @@ export class AuthModel {
       status: 'pending',
       processedCount: 0,
       totalCount: assetIds.length,
-      createdAt: new Date()
+      createdAt: new Date(),
     }
 
     batchJobs.set(jobId, batchJob)
@@ -438,10 +545,15 @@ export class AuthModel {
   }
 
   static getBatchJobsByWorkspace(workspaceId: string): BatchJob[] {
-    return Array.from(batchJobs.values()).filter(job => job.workspaceId === workspaceId)
+    return Array.from(batchJobs.values()).filter(
+      (job) => job.workspaceId === workspaceId
+    )
   }
 
-  static updateBatchJob(id: string, updates: Partial<BatchJob>): BatchJob | null {
+  static updateBatchJob(
+    id: string,
+    updates: Partial<BatchJob>
+  ): BatchJob | null {
     const job = batchJobs.get(id)
     if (!job) {
       return null
@@ -449,7 +561,7 @@ export class AuthModel {
 
     const updatedJob = {
       ...job,
-      ...updates
+      ...updates,
     }
 
     batchJobs.set(id, updatedJob)
@@ -467,7 +579,7 @@ export class AuthModel {
       text: '',
       status: 'pending',
       approvalStatus: 'pending',
-      createdAt: new Date()
+      createdAt: new Date(),
     }
 
     captions.set(captionId, caption)
@@ -479,11 +591,13 @@ export class AuthModel {
   }
 
   static getCaptionsByWorkspace(workspaceId: string): Caption[] {
-    return Array.from(captions.values()).filter(c => c.workspaceId === workspaceId)
+    return Array.from(captions.values()).filter(
+      (c) => c.workspaceId === workspaceId
+    )
   }
 
   static getCaptionsByAsset(assetId: string): Caption[] {
-    return Array.from(captions.values()).filter(c => c.assetId === assetId)
+    return Array.from(captions.values()).filter((c) => c.assetId === assetId)
   }
 
   static updateCaption(id: string, updates: Partial<Caption>): Caption | null {
@@ -494,7 +608,7 @@ export class AuthModel {
 
     const updatedCaption = {
       ...caption,
-      ...updates
+      ...updates,
     }
 
     captions.set(id, updatedCaption)
@@ -506,7 +620,9 @@ export class AuthModel {
   }
 
   static deleteCaptionsByWorkspace(workspaceId: string): number {
-    const workspaceCaptions = Array.from(captions.values()).filter(c => c.workspaceId === workspaceId)
+    const workspaceCaptions = Array.from(captions.values()).filter(
+      (c) => c.workspaceId === workspaceId
+    )
     let deletedCount = 0
 
     for (const caption of workspaceCaptions) {
@@ -536,7 +652,7 @@ export class AuthModel {
     const approvedCaption = {
       ...caption,
       approvalStatus: 'approved' as const,
-      approvedAt: new Date()
+      approvedAt: new Date(),
     }
 
     captions.set(captionId, approvedCaption)
@@ -553,14 +669,17 @@ export class AuthModel {
       ...caption,
       approvalStatus: 'rejected' as const,
       rejectedAt: new Date(),
-      errorMessage: reason || 'Rejected by user'
+      errorMessage: reason || 'Rejected by user',
     }
 
     captions.set(captionId, rejectedCaption)
     return rejectedCaption
   }
 
-  static batchApproveCaptions(captionIds: string[]): { approved: number; failed: number } {
+  static batchApproveCaptions(captionIds: string[]): {
+    approved: number
+    failed: number
+  } {
     let approved = 0
     let failed = 0
 
@@ -575,7 +694,10 @@ export class AuthModel {
     return { approved, failed }
   }
 
-  static batchRejectCaptions(captionIds: string[], reason?: string): { rejected: number; failed: number } {
+  static batchRejectCaptions(
+    captionIds: string[],
+    reason?: string
+  ): { rejected: number; failed: number } {
     let rejected = 0
     let failed = 0
 
@@ -592,12 +714,17 @@ export class AuthModel {
 
   static getApprovedCaptionsByWorkspace(workspaceId: string): Caption[] {
     return Array.from(captions.values()).filter(
-      c => c.workspaceId === workspaceId && c.approvalStatus === 'approved'
+      (c) => c.workspaceId === workspaceId && c.approvalStatus === 'approved'
     )
   }
 
   // Export job methods
-  static createExportJob(workspaceId: string, assetCount: number, captionCount: number, generatedAssetCount: number = 0): ExportJob {
+  static createExportJob(
+    workspaceId: string,
+    assetCount: number,
+    captionCount: number,
+    generatedAssetCount: number = 0
+  ): ExportJob {
     const exportId = `export_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     const exportJob: ExportJob = {
@@ -607,7 +734,7 @@ export class AuthModel {
       assetCount,
       captionCount,
       generatedAssetCount,
-      createdAt: new Date()
+      createdAt: new Date(),
     }
 
     exportJobs.set(exportId, exportJob)
@@ -620,7 +747,10 @@ export class AuthModel {
 
   // Export jobs retrieval remains implemented once above
 
-  static updateExportJob(id: string, updates: Partial<ExportJob>): ExportJob | null {
+  static updateExportJob(
+    id: string,
+    updates: Partial<ExportJob>
+  ): ExportJob | null {
     const job = exportJobs.get(id)
     if (!job) {
       return null
@@ -628,7 +758,7 @@ export class AuthModel {
 
     const updatedJob = {
       ...job,
-      ...updates
+      ...updates,
     }
 
     exportJobs.set(id, updatedJob)
@@ -662,10 +792,15 @@ export class AuthModel {
   }
 
   static getExportJobsByWorkspace(workspaceId: string): ExportJob[] {
-    return Array.from(exportJobs.values()).filter(job => job.workspaceId === workspaceId)
+    return Array.from(exportJobs.values()).filter(
+      (job) => job.workspaceId === workspaceId
+    )
   }
 
-  static getExportHistory(workspaceId: string, limit: number = 10): {
+  static getExportHistory(
+    workspaceId: string,
+    limit: number = 10
+  ): {
     total: number
     exports: ExportJob[]
     recentActivity: {
@@ -677,19 +812,23 @@ export class AuthModel {
     const workspaceExports = this.getExportJobsByWorkspace(workspaceId)
 
     // Sort by creation date (most recent first)
-    const sortedExports = workspaceExports.sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    const sortedExports = workspaceExports.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     )
 
     // Group by date for activity summary
     const activityMap = new Map<string, { count: number; status: string }>()
 
-    sortedExports.forEach(exp => {
+    sortedExports.forEach((exp) => {
       const dateKey = exp.createdAt.toISOString().split('T')[0]
-      const existing = activityMap.get(dateKey) || { count: 0, status: 'completed' }
+      const existing = activityMap.get(dateKey) || {
+        count: 0,
+        status: 'completed',
+      }
       activityMap.set(dateKey, {
         count: existing.count + 1,
-        status: exp.status === 'completed' ? 'completed' : existing.status
+        status: exp.status === 'completed' ? 'completed' : existing.status,
       })
     })
 
@@ -697,13 +836,13 @@ export class AuthModel {
       .slice(0, 7) // Last 7 days
       .map(([date, data]) => ({
         date,
-        ...data
+        ...data,
       }))
 
     return {
       total: workspaceExports.length,
       exports: sortedExports.slice(0, limit),
-      recentActivity
+      recentActivity,
     }
   }
 
@@ -718,24 +857,34 @@ export class AuthModel {
   } {
     const workspaceExports = this.getExportJobsByWorkspace(workspaceId)
 
-    const completed = workspaceExports.filter(job => job.status === 'completed')
-    const failed = workspaceExports.filter(job => job.status === 'failed')
+    const completed = workspaceExports.filter(
+      (job) => job.status === 'completed'
+    )
+    const failed = workspaceExports.filter((job) => job.status === 'failed')
 
     // Calculate average processing time for completed exports
     const processingTimes = completed
-      .filter(job => job.completedAt && job.createdAt)
-      .map(job => {
+      .filter((job) => job.completedAt && job.createdAt)
+      .map((job) => {
         const start = new Date(job.createdAt!).getTime()
         const end = new Date(job.completedAt!).getTime()
         return (end - start) / 1000 // Convert to seconds
       })
 
-    const averageTime = processingTimes.length > 0
-      ? processingTimes.reduce((sum, time) => sum + time, 0) / processingTimes.length
-      : 0
+    const averageTime =
+      processingTimes.length > 0
+        ? processingTimes.reduce((sum, time) => sum + time, 0) /
+          processingTimes.length
+        : 0
 
-    const totalAssets = workspaceExports.reduce((sum, job) => sum + job.assetCount, 0)
-    const totalGeneratedAssets = workspaceExports.reduce((sum, job) => sum + (job.generatedAssetCount || 0), 0)
+    const totalAssets = workspaceExports.reduce(
+      (sum, job) => sum + job.assetCount,
+      0
+    )
+    const totalGeneratedAssets = workspaceExports.reduce(
+      (sum, job) => sum + (job.generatedAssetCount || 0),
+      0
+    )
 
     return {
       totalExports: workspaceExports.length,
@@ -744,18 +893,23 @@ export class AuthModel {
       averageProcessingTime: Math.round(averageTime),
       totalAssetsExported: totalAssets,
       totalGeneratedAssetsExported: totalGeneratedAssets,
-      successRate: workspaceExports.length > 0 ? (completed.length / workspaceExports.length) * 100 : 0
+      successRate:
+        workspaceExports.length > 0
+          ? (completed.length / workspaceExports.length) * 100
+          : 0,
     }
   }
 
   // GeneratedAsset methods
-  static createGeneratedAsset(data: Omit<GeneratedAsset, 'id' | 'createdAt'>): GeneratedAsset {
+  static createGeneratedAsset(
+    data: Omit<GeneratedAsset, 'id' | 'createdAt'>
+  ): GeneratedAsset {
     const assetId = `generated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
     const generatedAsset: GeneratedAsset = {
       id: assetId,
       ...data,
-      createdAt: new Date()
+      createdAt: new Date(),
     }
 
     generatedAssets.set(assetId, generatedAsset)
@@ -767,20 +921,28 @@ export class AuthModel {
   }
 
   static getGeneratedAssetsByJob(jobId: string): GeneratedAsset[] {
-    return Array.from(generatedAssets.values()).filter(asset => asset.jobId === jobId)
+    return Array.from(generatedAssets.values()).filter(
+      (asset) => asset.jobId === jobId
+    )
   }
 
   static getGeneratedAssetsByWorkspace(workspaceId: string): GeneratedAsset[] {
-    return Array.from(generatedAssets.values()).filter(asset => asset.workspaceId === workspaceId)
+    return Array.from(generatedAssets.values()).filter(
+      (asset) => asset.workspaceId === workspaceId
+    )
   }
 
   static getApprovedGeneratedAssets(workspaceId: string): GeneratedAsset[] {
     return Array.from(generatedAssets.values()).filter(
-      asset => asset.workspaceId === workspaceId && asset.approvalStatus === 'approved'
+      (asset) =>
+        asset.workspaceId === workspaceId && asset.approvalStatus === 'approved'
     )
   }
 
-  static updateGeneratedAsset(id: string, updates: Partial<GeneratedAsset>): GeneratedAsset | null {
+  static updateGeneratedAsset(
+    id: string,
+    updates: Partial<GeneratedAsset>
+  ): GeneratedAsset | null {
     const asset = generatedAssets.get(id)
     if (!asset) {
       return null
@@ -788,7 +950,7 @@ export class AuthModel {
 
     const updatedAsset = {
       ...asset,
-      ...updates
+      ...updates,
     }
 
     generatedAssets.set(id, updatedAsset)
@@ -798,18 +960,21 @@ export class AuthModel {
   static approveGeneratedAsset(id: string): GeneratedAsset | null {
     return this.updateGeneratedAsset(id, {
       approvalStatus: 'approved',
-      approvedAt: new Date()
+      approvedAt: new Date(),
     })
   }
 
   static rejectGeneratedAsset(id: string): GeneratedAsset | null {
     return this.updateGeneratedAsset(id, {
       approvalStatus: 'rejected',
-      rejectedAt: new Date()
+      rejectedAt: new Date(),
     })
   }
 
-  static batchApproveGeneratedAssets(assetIds: string[]): { approved: number; failed: number } {
+  static batchApproveGeneratedAssets(assetIds: string[]): {
+    approved: number
+    failed: number
+  } {
     let approved = 0
     let failed = 0
 
@@ -824,7 +989,10 @@ export class AuthModel {
     return { approved, failed }
   }
 
-  static batchRejectGeneratedAssets(assetIds: string[]): { rejected: number; failed: number } {
+  static batchRejectGeneratedAssets(assetIds: string[]): {
+    rejected: number
+    failed: number
+  } {
     let rejected = 0
     let failed = 0
 
@@ -890,5 +1058,227 @@ export class AuthModel {
 
   static getAllGeneratedAssets(): GeneratedAsset[] {
     return Array.from(generatedAssets.values())
+  }
+
+  // Campaign Management v2 Methods
+  static async createCampaign(
+    campaignData: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt' | 'status'>
+  ): Promise<Campaign> {
+    const id = `campaign_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const now = new Date()
+
+    const campaign: Campaign = {
+      ...campaignData,
+      id,
+      status: 'draft',
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    campaigns.set(id, campaign)
+    return campaign
+  }
+
+  static getCampaignById(id: string): Campaign | null {
+    return campaigns.get(id) || null
+  }
+
+  static getCampaignsByWorkspace(workspaceId: string): Campaign[] {
+    return Array.from(campaigns.values()).filter(
+      (c) => c.workspaceId === workspaceId
+    )
+  }
+
+  static getCampaignsByAgency(agencyId: string): Campaign[] {
+    const agencyWorkspaces = Array.from(workspaces.values()).filter(
+      (w) => w.agencyId === agencyId
+    )
+    const workspaceIds = agencyWorkspaces.map((w) => w.id)
+    return Array.from(campaigns.values()).filter((c) =>
+      workspaceIds.includes(c.workspaceId)
+    )
+  }
+
+  static async updateCampaign(
+    id: string,
+    updates: Partial<Omit<Campaign, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<Campaign> {
+    const campaign = campaigns.get(id)
+    if (!campaign) {
+      throw new Error('Campaign not found')
+    }
+
+    const updatedCampaign: Campaign = {
+      ...campaign,
+      ...updates,
+      updatedAt: new Date(),
+    }
+
+    campaigns.set(id, updatedCampaign)
+    return updatedCampaign
+  }
+
+  static deleteCampaign(id: string): boolean {
+    return campaigns.delete(id)
+  }
+
+  // Reference Creative Methods
+  static async createReferenceCreative(
+    referenceData: Omit<ReferenceCreative, 'id' | 'createdAt'>
+  ): Promise<ReferenceCreative> {
+    const id = `ref_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const now = new Date()
+
+    const referenceCreative: ReferenceCreative = {
+      ...referenceData,
+      id,
+      createdAt: now,
+    }
+
+    referenceCreatives.set(id, referenceCreative)
+    return referenceCreative
+  }
+
+  static getReferenceCreativeById(id: string): ReferenceCreative | null {
+    return referenceCreatives.get(id) || null
+  }
+
+  static getReferenceCreativesByWorkspace(
+    workspaceId: string
+  ): ReferenceCreative[] {
+    return Array.from(referenceCreatives.values()).filter(
+      (r) => r.workspaceId === workspaceId
+    )
+  }
+
+  static getReferenceCreativesByCampaign(
+    campaignId: string
+  ): ReferenceCreative[] {
+    return Array.from(referenceCreatives.values()).filter(
+      (r) => r.campaignId === campaignId
+    )
+  }
+
+  static async updateReferenceCreative(
+    id: string,
+    updates: Partial<Omit<ReferenceCreative, 'id' | 'createdAt'>>
+  ): Promise<ReferenceCreative> {
+    const referenceCreative = referenceCreatives.get(id)
+    if (!referenceCreative) {
+      throw new Error('Reference creative not found')
+    }
+
+    const updatedReferenceCreative: ReferenceCreative = {
+      ...referenceCreative,
+      ...updates,
+    }
+
+    referenceCreatives.set(id, updatedReferenceCreative)
+    return updatedReferenceCreative
+  }
+
+  static deleteReferenceCreative(id: string): boolean {
+    const referenceCreative = referenceCreatives.get(id)
+    if (!referenceCreative) {
+      return false
+    }
+
+    // Delete files if they exist
+    try {
+      const fs = require('fs')
+      if (fs.existsSync(referenceCreative.imageUrl)) {
+        fs.unlinkSync(referenceCreative.imageUrl)
+      }
+      if (fs.existsSync(referenceCreative.thumbnailUrl)) {
+        fs.unlinkSync(referenceCreative.thumbnailUrl)
+      }
+    } catch (error) {
+      console.error('Error deleting reference creative files:', error)
+    }
+
+    return referenceCreatives.delete(id)
+  }
+
+  // Ad Creative Methods
+  static async createAdCreative(
+    adCreativeData: Omit<AdCreative, 'id'>
+  ): Promise<AdCreative> {
+    const id = `ad_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    const adCreative: AdCreative = {
+      ...adCreativeData,
+      id,
+    }
+
+    adCreatives.set(id, adCreative)
+    return adCreative
+  }
+
+  static getAdCreativeById(id: string): AdCreative | null {
+    return adCreatives.get(id) || null
+  }
+
+  static getAdCreativesByCampaign(campaignId: string): AdCreative[] {
+    return Array.from(adCreatives.values()).filter(
+      (ad) => ad.campaignId === campaignId
+    )
+  }
+
+  static getAdCreativesByWorkspace(workspaceId: string): AdCreative[] {
+    return Array.from(adCreatives.values()).filter(
+      (ad) => ad.workspaceId === workspaceId
+    )
+  }
+
+  static async updateAdCreative(
+    id: string,
+    updates: Partial<Omit<AdCreative, 'id'>>
+  ): Promise<AdCreative> {
+    const adCreative = adCreatives.get(id)
+    if (!adCreative) {
+      throw new Error('Ad creative not found')
+    }
+
+    const updatedAdCreative: AdCreative = {
+      ...adCreative,
+      ...updates,
+    }
+
+    adCreatives.set(id, updatedAdCreative)
+    return updatedAdCreative
+  }
+
+  static deleteAdCreative(id: string): boolean {
+    const adCreative = adCreatives.get(id)
+    if (!adCreative) {
+      return false
+    }
+
+    // Delete files if they exist
+    try {
+      const fs = require('fs')
+      if (fs.existsSync(adCreative.imageUrl)) {
+        fs.unlinkSync(adCreative.imageUrl)
+      }
+      if (fs.existsSync(adCreative.thumbnailUrl)) {
+        fs.unlinkSync(adCreative.thumbnailUrl)
+      }
+    } catch (error) {
+      console.error('Error deleting ad creative files:', error)
+    }
+
+    return adCreatives.delete(id)
+  }
+
+  static getAllCampaigns(): Campaign[] {
+    return Array.from(campaigns.values())
+  }
+
+  static getAllReferenceCreatives(): ReferenceCreative[] {
+    return Array.from(referenceCreatives.values())
+  }
+
+  static getAllAdCreatives(): AdCreative[] {
+    return Array.from(adCreatives.values())
   }
 }

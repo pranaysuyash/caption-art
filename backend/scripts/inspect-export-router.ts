@@ -5,7 +5,9 @@ console.log('exportRouter.stack length:', stack ? stack.length : 0)
 
 function formatLayer(layer: any): any {
   if (layer.route) {
-    const methods = Object.keys(layer.route.methods).map((m) => m.toUpperCase()).join(',')
+    const methods = Object.keys(layer.route.methods)
+      .map((m) => m.toUpperCase())
+      .join(',')
     return `${methods} ${layer.route.path}`
   }
   if (layer.name === 'router' && layer.handle && layer.handle.stack) {
