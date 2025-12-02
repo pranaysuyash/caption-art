@@ -8,6 +8,7 @@ const openai = new OpenAI({
 })
 
 export type CaptionTemplate = 'punchy' | 'descriptive' | 'hashtag-heavy' | 'storytelling' | 'question'
+export type CaptionAngle = 'emotional' | 'data-driven' | 'question-based' | 'cta-focused' | 'educational'
 
 export interface GenerationRequest {
   assetId: string
@@ -16,6 +17,16 @@ export interface GenerationRequest {
   assetUrl?: string
   assetDescription?: string
   template?: CaptionTemplate
+  angle?: CaptionAngle
+  // Campaign context for quality
+  campaignObjective?: string
+  funnelStage?: string
+  targetAudience?: string
+  brandPersonality?: string
+  valueProposition?: string
+  mustIncludePhrases?: string[]
+  mustExcludePhrases?: string[]
+  platform?: string
 }
 
 export const CAPTION_TEMPLATES = {
@@ -51,6 +62,110 @@ export const CAPTION_TEMPLATES = {
   }
 }
 
+export const CAPTION_ANGLES = {
+  emotional: {
+    name: 'Emotional',
+    prompt: 'Appeal to emotions, desires, and aspirations. Use evocative language, sensory words, and emotional triggers. Connect on a personal level.',
+    focus: 'Feelings, dreams, personal connection'
+  },
+  'data-driven': {
+    name: 'Data-Driven',
+    prompt: 'Lead with facts, statistics, or specific benefits. Use numbers, percentages, and concrete evidence. Build credibility through data.',
+    focus: 'Numbers, facts, measurable results'
+  },
+  'question-based': {
+    name: 'Question-Based',
+    prompt: 'Start with a compelling question that engages the audience. Create curiosity and encourage responses. Make it thought-provoking.',
+    focus: 'Curiosity, engagement, conversation'
+  },
+  'cta-focused': {
+    name: 'CTA-Focused',
+    prompt: 'Drive immediate action with clear, urgent calls-to-action. Use imperative verbs and action-oriented language. Create urgency.',
+    focus: 'Action, urgency, conversion'
+  },
+  educational: {
+    name: 'Educational',
+    prompt: 'Teach something valuable. Share tips, insights, or how-to information. Position as helpful expert. Provide actionable value.',
+    focus: 'Knowledge, tips, value delivery'
+  }
+}
+
+export const PLATFORM_PRESETS = {
+  'ig-feed': {
+    name: 'Instagram Feed',
+    maxLength: 2200,
+    idealLength: 125,
+    tone: 'casual and visual-first',
+    hashtagStrategy: 'Include 5-10 relevant hashtags',
+    emojiUsage: 'Use emojis liberally to add personality',
+    style: 'Short paragraphs, conversational, story-driven',
+    guidelines: [
+      'First line is critical (shown in preview)',
+      'Use line breaks for readability',
+      'Include call-to-action or question',
+      'Hashtags at end or integrated naturally'
+    ]
+  },
+  'ig-story': {
+    name: 'Instagram Story',
+    maxLength: 500,
+    idealLength: 60,
+    tone: 'urgent and direct',
+    hashtagStrategy: '1-3 hashtags max',
+    emojiUsage: 'Minimal emojis for emphasis',
+    style: 'Very short, punchy, immediate',
+    guidelines: [
+      'Grab attention in 2-3 seconds',
+      'Swipe-up or action-focused',
+      'Time-sensitive language'
+    ]
+  },
+  'fb-feed': {
+    name: 'Facebook Feed',
+    maxLength: 63206,
+    idealLength: 200,
+    tone: 'community-focused and conversational',
+    hashtagStrategy: 'Use 1-3 hashtags sparingly',
+    emojiUsage: 'Moderate emoji use',
+    style: 'Longer-form storytelling, personal',
+    guidelines: [
+      'Tell a complete story',
+      'Ask questions to drive comments',
+      'Tag relevant people/pages',
+      'Use natural language'
+    ]
+  },
+  'fb-story': {
+    name: 'Facebook Story',
+    maxLength: 500,
+    idealLength: 50,
+    tone: 'casual and immediate',
+    hashtagStrategy: 'No hashtags needed',
+    emojiUsage: 'Minimal emojis',
+    style: 'Very brief, action-oriented',
+    guidelines: [
+      'Quick consumption',
+      'Clear single message'
+    ]
+  },
+  'li-feed': {
+    name: 'LinkedIn Feed',
+    maxLength: 3000,
+    idealLength: 150,
+    tone: 'professional and value-driven',
+    hashtagStrategy: '3-5 professional hashtags',
+    emojiUsage: 'Minimal or no emojis',
+    style: 'Professional, insights-focused, educational',
+    guidelines: [
+      'Lead with value proposition',
+      'Industry insights or expertise',
+      'Professional call-to-action',
+      'Avoid overly casual language',
+      'Data and credibility matter'
+    ]
+  }
+}
+
 export class CaptionGenerator {
   /**
    * Generate a caption for a single asset using AI
@@ -78,12 +193,62 @@ export class CaptionGenerator {
 
       // Get template instructions
       const templateConfig = CAPTION_TEMPLATES[template]
+      
+      // Get angle instructions if specified
+      const angleConfig = request.angle ? CAPTION_ANGLES[request.angle] : null
+      const angleContext = angleConfig
+        ? `
 
-      // Build the AI prompt
+Caption Angle: ${angleConfig.name}
+${angleConfig.prompt}
+Focus: ${angleConfig.focus}`
+        : ''
+
+      // Build enhanced AI prompt with campaign context
+      const campaignContext = request.campaignObjective
+        ? `
+
+Campaign Context:
+- Primary Objective: ${request.campaignObjective} (optimize caption for this goal)
+- Funnel Stage: ${request.funnelStage || 'awareness'} (adjust messaging depth accordingly)
+- Target Audience: ${request.targetAudience || 'general audience'}
+- Brand Personality: ${request.brandPersonality || 'professional'}
+- Value Proposition: ${request.valueProposition || 'quality and innovation'}`
+        : ''
+
+      const constraintsContext = request.mustIncludePhrases || request.mustExcludePhrases
+        ? `
+
+Required Constraints:
+${request.mustIncludePhrases && request.mustIncludePhrases.length > 0 ? `- MUST include these phrases: ${request.mustIncludePhrases.join(', ')}` : ''}
+${request.mustExcludePhrases && request.mustExcludePhrases.length > 0 ? `- MUST NOT include these phrases: ${request.mustExcludePhrases.join(', ')}` : ''}`
+        : ''
+
+      // Get platform preset if specified
+      const platformPreset = request.platform ? PLATFORM_PRESETS[request.platform as keyof typeof PLATFORM_PRESETS] : null
+      const platformContext = platformPreset
+        ? `
+
+Platform: ${platformPreset.name}
+- Tone: ${platformPreset.tone}
+- Ideal Length: ~${platformPreset.idealLength} characters (max ${platformPreset.maxLength})
+- Hashtag Strategy: ${platformPreset.hashtagStrategy}
+- Emoji Usage: ${platformPreset.emojiUsage}
+- Style: ${platformPreset.style}
+- Guidelines: ${platformPreset.guidelines.join('; ')}`
+        : request.platform
+        ? `
+
+Platform: ${request.platform}
+${request.platform === 'ig-feed' || request.platform === 'ig-story' ? '- Use casual, visual-first language with emojis' : ''}
+${request.platform === 'fb-feed' || request.platform === 'fb-story' ? '- Use community-focused, conversational tone' : ''}
+${request.platform === 'li-feed' ? '- Use professional, value-driven language, minimal emojis' : ''}`
+        : ''
+
       const systemPrompt = `You are a professional social media caption writer. Your task is to create engaging, on-brand captions for visual content.
 
 Brand Voice Instructions:
-${brandVoicePrompt}
+${brandVoicePrompt}${campaignContext}${constraintsContext}${platformContext}${angleContext}
 
 Template Style: ${templateConfig.name}
 ${templateConfig.prompt}
@@ -93,9 +258,10 @@ Style Guide: ${templateConfig.style}
 Guidelines:
 - Follow the template style exactly
 - Match the brand voice consistently
+- Align with campaign objective and funnel stage${angleConfig ? `\n- Use the ${angleConfig.name} angle to differentiate this variation` : ''}
 - Focus on the visual content's story or message
-- Make it suitable for platforms like Instagram, Facebook, LinkedIn
-- Write compelling content that drives engagement`
+- Write compelling content that drives engagement
+- Respect all required constraints (must include/exclude phrases)`
 
       const userPrompt = `Write a social media caption for this ${assetTypeDescription}. ${
         assetDescription ? `Additional context: ${assetDescription}` : ''
@@ -136,6 +302,171 @@ Create a caption that aligns with the brand voice and would work well for social
 
       throw error
     }
+  }
+
+  /**
+   * Generate structured ad copy (headline, body, CTA)
+   */
+  static async generateAdCopy(
+    request: GenerationRequest,
+    angle?: CaptionAngle
+  ): Promise<{ headline: string; bodyText: string; ctaText: string }> {
+    const { assetId, workspaceId, brandVoicePrompt } = request
+
+    const asset = AuthModel.getAssetById(assetId)
+    if (!asset) {
+      throw new Error(`Asset ${assetId} not found`)
+    }
+
+    try {
+      // Create asset type description
+      let assetTypeDescription = ''
+      if (asset.mimeType.startsWith('image/')) {
+        assetTypeDescription = `image named "${asset.originalName}"`
+      } else if (asset.mimeType.startsWith('video/')) {
+        assetTypeDescription = `video named "${asset.originalName}"`
+      } else {
+        assetTypeDescription = `media file named "${asset.originalName}"`
+      }
+
+      // Get angle instructions if specified
+      const angleConfig = angle ? CAPTION_ANGLES[angle] : null
+      const angleContext = angleConfig
+        ? `\n\nCaption Angle: ${angleConfig.name}\n${angleConfig.prompt}\nFocus: ${angleConfig.focus}`
+        : ''
+
+      // Build campaign context
+      const campaignContext = request.campaignObjective
+        ? `\n\nCampaign Context:\n- Primary Objective: ${request.campaignObjective}\n- Funnel Stage: ${request.funnelStage || 'awareness'}\n- Target Audience: ${request.targetAudience || 'general audience'}\n- Brand Personality: ${request.brandPersonality || 'professional'}\n- Value Proposition: ${request.valueProposition || 'quality and innovation'}`
+        : ''
+
+      const constraintsContext = request.mustIncludePhrases || request.mustExcludePhrases
+        ? `\n\nRequired Constraints:\n${request.mustIncludePhrases && request.mustIncludePhrases.length > 0 ? `- MUST include: ${request.mustIncludePhrases.join(', ')}` : ''}\n${request.mustExcludePhrases && request.mustExcludePhrases.length > 0 ? `- MUST NOT include: ${request.mustExcludePhrases.join(', ')}` : ''}`
+        : ''
+
+      // Get platform preset
+      const platformPreset = request.platform ? PLATFORM_PRESETS[request.platform as keyof typeof PLATFORM_PRESETS] : null
+      const platformContext = platformPreset
+        ? `\n\nPlatform: ${platformPreset.name}\n- Tone: ${platformPreset.tone}\n- Style: ${platformPreset.style}\n- Emoji Usage: ${platformPreset.emojiUsage}`
+        : request.platform
+        ? `\n\nPlatform: ${request.platform}\n${request.platform === 'ig-feed' || request.platform === 'ig-story' ? '- Casual, visual-first with emojis' : ''}\n${request.platform === 'fb-feed' || request.platform === 'fb-story' ? '- Community-focused, conversational' : ''}\n${request.platform === 'li-feed' ? '- Professional, value-driven, minimal emojis' : ''}`
+        : ''
+
+      const systemPrompt = `You are a professional ad copywriter specializing in social media advertising.
+
+Brand Voice Instructions:
+${brandVoicePrompt}${campaignContext}${constraintsContext}${platformContext}${angleContext}
+
+Your task is to create structured ad copy with three distinct components:
+
+1. HEADLINE (5-10 words):
+   - Attention-grabbing and benefit-focused
+   - Clear value proposition
+   - Strong emotional hook or compelling question
+
+2. BODY TEXT (50-125 characters):
+   - Expand on the headline
+   - Include key benefit or feature
+   - Create desire or urgency
+   - Must be concise and punchy
+
+3. CALL-TO-ACTION (2-4 words):
+   - Action-oriented and clear
+   - Aligned with campaign objective
+   - Creates urgency when appropriate
+
+Guidelines:
+- Match brand voice consistently across all components
+- Align with campaign objective${angleConfig ? ` and ${angleConfig.name} angle` : ''}
+- Respect all required constraints
+- Keep each component within character limits
+- Make it suitable for paid social media ads
+
+Return ONLY in this exact format:
+HEADLINE: [your headline here]
+BODY: [your body text here]
+CTA: [your call-to-action here]`
+
+      const userPrompt = `Create structured ad copy for this ${assetTypeDescription}.`
+
+      const completion = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+        max_tokens: 200,
+        temperature: 0.7,
+      })
+
+      const content = completion.choices[0]?.message?.content?.trim()
+      if (!content) {
+        throw new Error('No content returned from AI')
+      }
+
+      // Parse structured response
+      const headlineMatch = content.match(/HEADLINE:\s*(.+?)(?:\n|$)/i)
+      const bodyMatch = content.match(/BODY:\s*(.+?)(?:\n|$)/i)
+      const ctaMatch = content.match(/CTA:\s*(.+?)(?:\n|$)/i)
+
+      const headline = headlineMatch?.[1]?.trim() || 'Discover Something Amazing'
+      const bodyText = bodyMatch?.[1]?.trim() || 'Transform your experience with quality you can trust.'
+      const ctaText = ctaMatch?.[1]?.trim() || 'Learn More'
+
+      return {
+        headline: headline.slice(0, 60),
+        bodyText: bodyText.slice(0, 125),
+        ctaText: ctaText.slice(0, 20)
+      }
+
+    } catch (error) {
+      console.error(`Error generating ad copy for asset ${assetId}:`, error)
+      // Return fallback ad copy
+      return {
+        headline: 'Discover Something Amazing',
+        bodyText: 'Experience quality and innovation designed for you.',
+        ctaText: 'Learn More'
+      }
+    }
+  }
+
+  /**
+   * Generate multiple caption variations for a single asset
+   */
+  static async generateVariations(
+    request: GenerationRequest,
+    count: number
+  ): Promise<string[]> {
+    const angles: CaptionAngle[] = ['emotional', 'data-driven', 'question-based', 'cta-focused', 'educational']
+    const variations: string[] = []
+
+    // Generate variations using different angles
+    for (let i = 0; i < count; i++) {
+      const angle = angles[i % angles.length]
+      try {
+        const caption = await this.generateCaption({
+          ...request,
+          angle,
+        })
+        variations.push(caption)
+        
+        // Small delay between API calls to avoid rate limits
+        if (i < count - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+        }
+      } catch (error) {
+        console.error(`Failed to generate variation ${i + 1}:`, error)
+        // Continue with other variations even if one fails
+      }
+    }
+
+    return variations
   }
 
   /**
@@ -190,12 +521,24 @@ Create a caption that aligns with the brand voice and would work well for social
             status: 'generating',
           })
 
-          // Generate caption using AI
+          // Get campaign context if available
+          const campaign = job.campaignId ? AuthModel.getCampaignById(job.campaignId) : null
+
+          // Generate caption using AI with full context
           const captionText = await this.generateCaption({
             assetId,
             workspaceId: job.workspaceId,
             brandVoicePrompt: brandKit.voicePrompt,
-            template: job.template || 'descriptive'
+            template: job.template || 'descriptive',
+            // Campaign context for quality
+            campaignObjective: campaign?.objective,
+            funnelStage: campaign?.funnelStage,
+            targetAudience: campaign?.targetAudience || brandKit.targetAudience,
+            brandPersonality: brandKit.brandPersonality,
+            valueProposition: brandKit.valueProposition,
+            mustIncludePhrases: campaign?.mustIncludePhrases,
+            mustExcludePhrases: campaign?.mustExcludePhrases,
+            platform: campaign?.placements?.[0]
           })
 
           // Update caption with generated text

@@ -29,6 +29,7 @@ export interface CreativeEngineInput {
   objectives?: ('awareness' | 'traffic' | 'conversion' | 'engagement')[]
   platforms?: ('ig-feed' | 'ig-story' | 'fb-feed' | 'fb-story' | 'li-feed')[]
   outputCount?: number // How many variations to generate
+  mode?: 'caption' | 'ad-copy' // Generation mode
 
   // Creative constraints
   mustIncludePhrases?: string[]
@@ -230,45 +231,78 @@ export class CreativeEngine {
     // Generate combinations of format + platform + style
     const formats = ['instagram-square', 'instagram-story'] as const
     const platforms = context.styleConstraints.platforms
-    const outputCount = input.outputCount || 5
+    const variationsPerAsset = input.outputCount || 3
 
     let creativeIndex = 0
 
     for (const sourceAsset of context.sourceAssets) {
-      if (creativeIndex >= outputCount) break
+      // Generate multiple variations for each asset using different angles
+      const generationRequest = {
+        assetId: sourceAsset.id,
+        workspaceId: sourceAsset.workspaceId,
+        brandVoicePrompt: context.styleConstraints.toneStyle || 'Professional and engaging',
+        template: 'descriptive' as const,
+        campaignObjective: context.styleConstraints.objectives?.[0],
+        funnelStage: context.styleConstraints.funnelStage || 'awareness',
+        targetAudience: context.styleConstraints.targetAudience,
+        brandPersonality: context.styleConstraints.brandPersonality,
+        valueProposition: context.styleConstraints.valueProposition,
+        mustIncludePhrases: context.styleConstraints.mustInclude,
+        mustExcludePhrases: context.styleConstraints.mustExclude,
+        platform: platforms[0]
+      }
 
-      for (const platform of platforms) {
-        if (creativeIndex >= outputCount) break
+      try {
+        const angles: Array<'emotional' | 'data-driven' | 'question-based' | 'cta-focused' | 'educational'> = 
+          ['emotional', 'data-driven', 'question-based', 'cta-focused', 'educational']
 
-        for (const format of formats) {
-          if (creativeIndex >= outputCount) break
+        // Generate variations based on mode
+        for (let i = 0; i < variationsPerAsset; i++) {
+          const angle = angles[i % angles.length]
+          const platform = platforms[i % platforms.length]
+          const format = formats[i % formats.length]
 
-          // Check format-platform compatibility
-          if (!this.isFormatCompatible(format, platform)) continue
+          let headline: string
+          let bodyText: string
+          let ctaText: string
+          let caption: string
+
+          if (input.mode === 'ad-copy') {
+            // Generate structured ad copy
+            const adCopy = await CaptionGenerator.generateAdCopy(generationRequest, angle)
+            headline = adCopy.headline
+            bodyText = adCopy.bodyText
+            ctaText = adCopy.ctaText
+            caption = `${headline}\n\n${bodyText}\n\n${ctaText}`
+          } else {
+            // Generate regular caption
+            const fullCaption = await CaptionGenerator.generateCaption({
+              ...generationRequest,
+              angle,
+            })
+            // Parse caption into components
+            const lines = fullCaption.split('.').map(l => l.trim()).filter(l => l.length > 0)
+            headline = lines[0] || 'Discover Something Amazing'
+            bodyText = lines.slice(1).join('. ') || fullCaption
+            ctaText = this.selectCTA(context.styleConstraints)
+            caption = fullCaption
+          }
 
           try {
-            // 1. Generate ad copy using learned style + campaign context
-            const adCopy = await this.generateAdCopy(
-              sourceAsset,
-              styleProfile,
-              context.styleConstraints,
-              format
-            )
-
-            // 2. Render the creative with the brand style
+            // Render the creative with the brand style
             const renderResult = await ImageRenderer.renderImage(
               sourceAsset.url,
               {
                 format,
                 layout: styleProfile.layout.commonPatterns[0] || 'center-focus',
-                caption: adCopy.bodyText,
+                caption: bodyText,
                 brandKit: context.brandKit,
                 watermark: false, // Agency plan
                 workspaceId: input.workspaceId
               }
             )
 
-            // 3. Create AdCreative record
+            // Create AdCreative record
             const adCreative: AdCreative = {
               id: `ad_${Date.now()}_${creativeIndex}`,
               jobId: `engine_${Date.now()}`,
@@ -279,10 +313,10 @@ export class CreativeEngine {
               placement: platform,
 
               // Ad structure
-              headline: adCopy.headline,
-              subheadline: adCopy.subheadline,
-              bodyText: adCopy.bodyText,
-              ctaText: adCopy.ctaText,
+              headline,
+              subheadline: context.campaign?.primaryOffer,
+              bodyText,
+              ctaText,
               objective: context.styleConstraints.objectives[0],
               offerText: context.campaign?.primaryOffer || undefined,
 
@@ -290,7 +324,7 @@ export class CreativeEngine {
               approvalStatus: 'pending',
               format,
               layout: styleProfile.layout.commonPatterns[0] || 'center-focus',
-              caption: `${adCopy.headline} ${adCopy.bodyText} ${adCopy.ctaText}`,
+              caption,
               imageUrl: renderResult.imageUrl,
               thumbnailUrl: renderResult.thumbnailUrl,
               watermark: false,
@@ -300,11 +334,19 @@ export class CreativeEngine {
             adCreatives.push(adCreative)
             creativeIndex++
 
+            // Small delay between API calls
+            if (i < variationsPerAsset - 1) {
+              await new Promise(resolve => setTimeout(resolve, 500))
+            }
+
           } catch (error) {
-            console.error('Failed to generate creative:', error)
-            // Continue with next combination
+            console.error('Failed to render creative:', error)
+            // Continue with next variation
           }
         }
+      } catch (error) {
+        console.error(`Failed to generate variations for asset ${sourceAsset.id}:`, error)
+        // Continue with next asset
       }
     }
 
@@ -325,16 +367,77 @@ export class CreativeEngine {
     bodyText: string
     ctaText: string
   }> {
-    // Build comprehensive prompt from style profile
-    const prompt = this.buildCopyPrompt(styleProfile, constraints, format)
+    // Use CaptionGenerator for AI-powered copy generation with full context
+    try {
+      const fullCaption = await CaptionGenerator.generateCaption({
+        assetId: sourceAsset.id,
+        workspaceId: sourceAsset.workspaceId,
+        brandVoicePrompt: constraints.toneStyle || 'Professional and engaging',
+        template: 'descriptive',
+        // Campaign context for quality
+        campaignObjective: constraints.objectives?.[0],
+        funnelStage: constraints.funnelStage || 'awareness',
+        targetAudience: constraints.targetAudience,
+        brandPersonality: constraints.brandPersonality,
+        valueProposition: constraints.valueProposition,
+        mustIncludePhrases: constraints.mustInclude,
+        mustExcludePhrases: constraints.mustExclude,
+        platform: constraints.platforms?.[0]
+      })
 
-    // In a real implementation, you'd use your AI service to generate copy
-    // For now, use a simplified template-based approach
+      // Parse AI-generated caption into structured ad copy
+      const lines = fullCaption.split('.').map(l => l.trim()).filter(l => l.length > 0)
+      
+      // First line as headline, rest as body, add CTA
+      const headline = lines[0] || 'Discover Something Amazing'
+      const bodyText = lines.slice(1).join('. ') || fullCaption
+      const ctaText = this.selectCTA(constraints)
 
-    const ctas = constraints.mustExclude && constraints.mustExclude.length > 0
-      ? ['Learn More', 'Discover More', 'Get Started']
-      : ['Shop Now', 'Buy Now', 'Learn More', 'Get Started']
+      return {
+        headline: headline.slice(0, 60), // Limit headline length
+        subheadline: constraints.campaign?.primaryOffer,
+        bodyText: bodyText.slice(0, 125), // Limit body length for ads
+        ctaText
+      }
+    } catch (error) {
+      console.error('AI caption generation failed, using fallback:', error)
+      // Fallback to template-based approach
+      return this.generateFallbackCopy(constraints)
+    }
+  }
 
+  /**
+   * Select appropriate CTA based on constraints
+   */
+  private selectCTA(constraints: any): string {
+    const objective = constraints.objectives?.[0]
+    
+    if (constraints.mustExclude && constraints.mustExclude.some((p: string) => 
+      p.toLowerCase().includes('buy') || p.toLowerCase().includes('shop')
+    )) {
+      return 'Learn More'
+    }
+
+    const ctaMap: Record<string, string[]> = {
+      'conversion': ['Shop Now', 'Buy Now', 'Get Started', 'Sign Up'],
+      'traffic': ['Learn More', 'Discover More', 'Explore Now', 'Read More'],
+      'engagement': ['Join Us', 'Get Involved', 'Share Your Story', 'Tell Us'],
+      'awareness': ['Discover', 'Explore', 'Learn More', 'Find Out']
+    }
+
+    const options = ctaMap[objective] || ctaMap['awareness']
+    return options[Math.floor(Math.random() * options.length)]
+  }
+
+  /**
+   * Generate fallback copy when AI generation fails
+   */
+  private generateFallbackCopy(constraints: any): {
+    headline: string
+    subheadline?: string
+    bodyText: string
+    ctaText: string
+  } {
     const headlines = [
       `${constraints.brandPersonality || 'Elevate'} Your Style`,
       `Discover ${constraints.valueProposition || 'Something Amazing'}`,
@@ -352,32 +455,8 @@ export class CreativeEngine {
       headline: headlines[Math.floor(Math.random() * headlines.length)],
       subheadline: constraints.campaign?.primaryOffer || undefined,
       bodyText: bodyTexts[Math.floor(Math.random() * bodyTexts.length)],
-      ctaText: ctas[Math.floor(Math.random() * ctas.length)]
+      ctaText: this.selectCTA(constraints)
     }
-  }
-
-  /**
-   * Build comprehensive copy generation prompt
-   */
-  private buildCopyPrompt(styleProfile: StyleProfile, constraints: any, format: string): string {
-    const parts = [
-      `Generate ad copy for ${constraints.targetAudience}`,
-      `Brand personality: ${constraints.brandPersonality}`,
-      `Value proposition: ${constraints.valueProposition}`,
-      `Tone: ${styleProfile.tone.voice.join(', ')}`,
-      `CTA style: ${styleProfile.tone.ctaStyle}`,
-      `Format: ${format} (${format === 'instagram-story' ? 'vertical' : 'square'})`
-    ]
-
-    if (constraints.mustInclude.length > 0) {
-      parts.push(`Must include: ${constraints.mustInclude.join(', ')}`)
-    }
-
-    if (constraints.mustExclude.length > 0) {
-      parts.push(`Must exclude: ${constraints.mustExclude.join(', ')}`)
-    }
-
-    return parts.join('. ')
   }
 
   /**

@@ -4,59 +4,59 @@
  */
 
 // Get base URL for API calls
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001'
-const API_URL = `${API_BASE}/api`
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
+const API_URL = `${API_BASE}/api`;
 
 // Export job statuses
-export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed'
+export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 
 // Export job response from backend
 export interface ExportJob {
-  id: string
-  workspaceId: string
-  status: ExportStatus
-  createdAt: string
-  completedAt?: string
-  zipFilePath?: string
-  totalCaptions: number
-  totalAssets: number
-  error?: string
+  id: string;
+  workspaceId: string;
+  status: ExportStatus;
+  createdAt: string;
+  completedAt?: string;
+  zipFilePath?: string;
+  totalCaptions: number;
+  totalAssets: number;
+  error?: string;
 }
 
 // Export summary response
 export interface ExportSummary {
   workspace: {
-    id: string
-    clientName: string
-  }
-  readyForExport: boolean
-  totalApproved: number
-  totalAssets: number
-  estimatedSize: string
-  recentExports: ExportJob[]
+    id: string;
+    clientName: string;
+  };
+  readyForExport: boolean;
+  totalApproved: number;
+  totalAssets: number;
+  estimatedSize: string;
+  recentExports: ExportJob[];
 }
 
 // Export statistics
 export interface ExportStatistics {
-  workspaceId: string
-  totalExports: number
-  successfulExports: number
-  failedExports: number
-  totalCaptionsExported: number
-  totalAssetsExported: number
-  averageExportTime: number
-  lastExportDate?: string
+  workspaceId: string;
+  totalExports: number;
+  successfulExports: number;
+  failedExports: number;
+  totalCaptionsExported: number;
+  totalAssetsExported: number;
+  averageExportTime: number;
+  lastExportDate?: string;
 }
 
 /**
  * Get authentication headers with JWT token
  */
 function getHeaders(): HeadersInit {
-  const token = localStorage.getItem('authToken')
+  const token = localStorage.getItem('authToken');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  }
+  };
 }
 
 /**
@@ -71,15 +71,17 @@ export async function startExport(workspaceId: string): Promise<ExportJob> {
       method: 'POST',
       headers: getHeaders(),
     }
-  )
+  );
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to start export' }))
-    throw new Error(error.error || 'Failed to start export')
+    const error = await response
+      .json()
+      .catch(() => ({ error: 'Failed to start export' }));
+    throw new Error(error.error || 'Failed to start export');
   }
 
-  const data = await response.json()
-  return data.job || data
+  const data = await response.json();
+  return data.job || data;
 }
 
 /**
@@ -88,21 +90,20 @@ export async function startExport(workspaceId: string): Promise<ExportJob> {
  * @returns Promise resolving to the export job
  */
 export async function getJobStatus(jobId: string): Promise<ExportJob> {
-  const response = await fetch(
-    `${backendClient.baseURL}/export/jobs/${jobId}`,
-    {
-      method: 'GET',
-      headers: getHeaders(),
-    }
-  )
+  const response = await fetch(`${API_URL}/export/jobs/${jobId}`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to get job status' }))
-    throw new Error(error.error || 'Failed to get job status')
+    const error = await response
+      .json()
+      .catch(() => ({ error: 'Failed to get job status' }));
+    throw new Error(error.error || 'Failed to get job status');
   }
 
-  const data = await response.json()
-  return data.job
+  const data = await response.json();
+  return data.job;
 }
 
 /**
@@ -120,33 +121,33 @@ export async function pollJobStatus(
   return new Promise((resolve, reject) => {
     const poll = async () => {
       try {
-        const job = await getJobStatus(jobId)
-        
+        const job = await getJobStatus(jobId);
+
         // Notify progress callback
         if (onProgress) {
-          onProgress(job)
+          onProgress(job);
         }
 
         // Check if job is done
         if (job.status === 'completed') {
-          resolve(job)
-          return
+          resolve(job);
+          return;
         }
 
         if (job.status === 'failed') {
-          reject(new Error(job.error || 'Export failed'))
-          return
+          reject(new Error(job.error || 'Export failed'));
+          return;
         }
 
         // Continue polling
-        setTimeout(poll, pollInterval)
+        setTimeout(poll, pollInterval);
       } catch (error) {
-        reject(error)
+        reject(error);
       }
-    }
+    };
 
-    poll()
-  })
+    poll();
+  });
 }
 
 /**
@@ -155,16 +156,16 @@ export async function pollJobStatus(
  * @returns Promise resolving when download starts
  */
 export async function downloadExport(jobId: string): Promise<void> {
-  const token = localStorage.getItem('authToken')
-  const url = `${backendClient.baseURL}/export/jobs/${jobId}/download`
-  
+  const token = localStorage.getItem('authToken');
+  const url = `${API_URL}/export/jobs/${jobId}/download`;
+
   // Create a temporary link and trigger download
-  const link = document.createElement('a')
-  link.href = token ? `${url}?token=${encodeURIComponent(token)}` : url
-  link.download = '' // Let browser determine filename from Content-Disposition header
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
+  const link = document.createElement('a');
+  link.href = token ? `${url}?token=${encodeURIComponent(token)}` : url;
+  link.download = ''; // Let browser determine filename from Content-Disposition header
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 /**
@@ -172,21 +173,25 @@ export async function downloadExport(jobId: string): Promise<void> {
  * @param workspaceId - ID of the workspace
  * @returns Promise resolving to export summary
  */
-export async function getExportSummary(workspaceId: string): Promise<ExportSummary> {
+export async function getExportSummary(
+  workspaceId: string
+): Promise<ExportSummary> {
   const response = await fetch(
-    `${backendClient.baseURL}/export/workspace/${workspaceId}/summary`,
+    `${API_URL}/export/workspace/${workspaceId}/summary`,
     {
       method: 'GET',
       headers: getHeaders(),
     }
-  )
+  );
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to get export summary' }))
-    throw new Error(error.error || 'Failed to get export summary')
+    const error = await response
+      .json()
+      .catch(() => ({ error: 'Failed to get export summary' }));
+    throw new Error(error.error || 'Failed to get export summary');
   }
 
-  return response.json()
+  return response.json();
 }
 
 /**
@@ -199,25 +204,27 @@ export async function getWorkspaceJobs(
   workspaceId: string,
   options?: { status?: ExportStatus; limit?: number }
 ): Promise<ExportJob[]> {
-  const params = new URLSearchParams()
-  if (options?.status) params.set('status', options.status)
-  if (options?.limit) params.set('limit', options.limit.toString())
+  const params = new URLSearchParams();
+  if (options?.status) params.set('status', options.status);
+  if (options?.limit) params.set('limit', options.limit.toString());
 
   const response = await fetch(
-    `${backendClient.baseURL}/export/workspace/${workspaceId}/jobs?${params}`,
+    `${API_URL}/export/workspace/${workspaceId}/jobs?${params}`,
     {
       method: 'GET',
       headers: getHeaders(),
     }
-  )
+  );
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to get workspace jobs' }))
-    throw new Error(error.error || 'Failed to get workspace jobs')
+    const error = await response
+      .json()
+      .catch(() => ({ error: 'Failed to get workspace jobs' }));
+    throw new Error(error.error || 'Failed to get workspace jobs');
   }
 
-  const data = await response.json()
-  return data.jobs || []
+  const data = await response.json();
+  return data.jobs || [];
 }
 
 /**
@@ -225,21 +232,25 @@ export async function getWorkspaceJobs(
  * @param workspaceId - ID of the workspace
  * @returns Promise resolving to export statistics
  */
-export async function getExportStatistics(workspaceId: string): Promise<ExportStatistics> {
+export async function getExportStatistics(
+  workspaceId: string
+): Promise<ExportStatistics> {
   const response = await fetch(
-    `${backendClient.baseURL}/export/workspace/${workspaceId}/statistics`,
+    `${API_URL}/export/workspace/${workspaceId}/statistics`,
     {
       method: 'GET',
       headers: getHeaders(),
     }
-  )
+  );
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to get export statistics' }))
-    throw new Error(error.error || 'Failed to get export statistics')
+    const error = await response
+      .json()
+      .catch(() => ({ error: 'Failed to get export statistics' }));
+    throw new Error(error.error || 'Failed to get export statistics');
   }
 
-  return response.json()
+  return response.json();
 }
 
 /**
@@ -248,17 +259,16 @@ export async function getExportStatistics(workspaceId: string): Promise<ExportSt
  * @returns Promise resolving when job is deleted
  */
 export async function deleteJob(jobId: string): Promise<void> {
-  const response = await fetch(
-    `${backendClient.baseURL}/export/jobs/${jobId}`,
-    {
-      method: 'DELETE',
-      headers: getHeaders(),
-    }
-  )
+  const response = await fetch(`${API_URL}/export/jobs/${jobId}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Failed to delete job' }))
-    throw new Error(error.error || 'Failed to delete job')
+    const error = await response
+      .json()
+      .catch(() => ({ error: 'Failed to delete job' }));
+    throw new Error(error.error || 'Failed to delete job');
   }
 }
 
@@ -272,4 +282,4 @@ export const exportClient = {
   getWorkspaceJobs,
   getExportStatistics,
   deleteJob,
-}
+};

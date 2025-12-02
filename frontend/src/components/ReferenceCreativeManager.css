@@ -1,0 +1,355 @@
+/* ReferenceCreativeManager Styles */
+
+.reference-creative-manager {
+    padding: 24px;
+}
+
+.reference-creative-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+}
+
+.reference-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.reference-header h2 {
+    margin: 0 0 4px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.reference-count {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.btn-add-reference {
+    padding: 10px 20px;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-add-reference:hover {
+    background: #2563eb;
+}
+
+.reference-grid-loading,
+.reference-grid-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+}
+
+.reference-grid-empty .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.reference-grid-empty h3 {
+    margin: 0 0 8px 0;
+    color: #374151;
+}
+
+.reference-grid-empty p {
+    margin: 0 0 24px 0;
+}
+
+.reference-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.reference-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+}
+
+.reference-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.reference-preview {
+    width: 100%;
+    aspect-ratio: 4/5;
+    object-fit: cover;
+    background: #f3f4f6;
+}
+
+.reference-info {
+    padding: 12px;
+}
+
+.reference-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.reference-notes {
+    font-size: 12px;
+    color: #6b7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 24px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 32px;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.close-button:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.upload-form {
+    padding: 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: border-color 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.error-message {
+    padding: 12px;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    color: #dc2626;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-primary,
+.btn-secondary {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-primary {
+    background: #3b82f6;
+    color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #2563eb;
+}
+
+.btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background: #e5e7eb;
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .reference-creative-manager {
+        padding: 16px;
+    }
+
+    .reference-header {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .btn-add-reference {
+        width: 100%;
+    }
+
+    .reference-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 12px;
+    }
+
+    .modal-content {
+        width: 95%;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    .reference-header h2 {
+        color: #f3f4f6;
+    }
+
+    .reference-count {
+        color: #9ca3af;
+    }
+
+    .reference-card {
+        background: #1f2937;
+        border-color: #374151;
+    }
+
+    .reference-card:hover {
+        border-color: #3b82f6;
+    }
+
+    .reference-name {
+        color: #f3f4f6;
+    }
+
+    .reference-notes {
+        color: #9ca3af;
+    }
+
+    .modal-content {
+        background: #1f2937;
+    }
+
+    .modal-header {
+        border-bottom-color: #374151;
+    }
+
+    .modal-header h2 {
+        color: #f3f4f6;
+    }
+
+    .close-button:hover {
+        background: #374151;
+        color: #d1d5db;
+    }
+
+    .form-group label {
+        color: #f3f4f6;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        background: #374151;
+        border-color: #4b5563;
+        color: #f3f4f6;
+    }
+
+    .modal-actions {
+        border-top-color: #374151;
+    }
+
+    .btn-secondary {
+        background: #374151;
+        color: #f3f4f6;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        background: #4b5563;
+    }
+}

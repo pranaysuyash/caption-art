@@ -19,6 +19,7 @@ export function ReviewGrid() {
   const [generating, setGenerating] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  const [showExportModal, setShowExportModal] = useState(false)
 
   useEffect(() => {
     loadCreatives()
@@ -184,6 +185,7 @@ export function ReviewGrid() {
           </button>
         ) : approvedCount > 0 && (
           <button
+            onClick={() => setShowExportModal(true)}
             className="button button-primary"
             style={{
               padding: '0.75rem 1.5rem',
@@ -535,6 +537,117 @@ export function ReviewGrid() {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+
+      {/* Simple Export Modal */}
+      {showExportModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'var(--color-surface, white)',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '1.5rem'
+            }}>
+              <h2 style={{
+                fontFamily: 'var(--font-heading, sans-serif)',
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                color: 'var(--color-text, #1f2937)',
+                margin: 0
+              }}>
+                Export Creatives
+              </h2>
+              <button
+                onClick={() => setShowExportModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: 'var(--color-text-secondary, #6b7280)',
+                  padding: '0.5rem'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
+              <h3 style={{
+                fontFamily: 'var(--font-heading, sans-serif)',
+                fontSize: '1.25rem',
+                color: 'var(--color-primary, #2563eb)',
+                margin: '0 0 0.5rem 0'
+              }}>
+                Ready for Export
+              </h3>
+              <p style={{
+                color: 'var(--color-text, #1f2937)',
+                margin: '0 0 1.5rem 0'
+              }}>
+                {approvedCount} approved creative{approvedCount !== 1 ? 's' : ''} ready for delivery
+              </p>
+              <button
+                onClick={async () => {
+                  try {
+                    // Start export
+                    const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}/api/export/workspace/${workspaceId}/start`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                      }
+                    })
+
+                    if (response.ok) {
+                      const data = await response.json()
+                      console.log('Export started:', data)
+                      // Simple download after short delay
+                      setTimeout(() => {
+                        window.open(`${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}/api/export/jobs/${data.jobId}/download`, '_blank')
+                        setShowExportModal(false)
+                      }, 2000)
+                    }
+                  } catch (error) {
+                    console.error('Export failed:', error)
+                  }
+                }}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: 'var(--color-primary, #2563eb)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Start Export
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -20,6 +20,7 @@ const generateCreativesSchema = z.object({
   objectives: z.array(z.enum(['awareness', 'traffic', 'conversion', 'engagement'])).optional(),
   platforms: z.array(z.enum(['ig-feed', 'ig-story', 'fb-feed', 'fb-story', 'li-feed'])).optional(),
   outputCount: z.number().min(1).max(50).optional(),
+  mode: z.enum(['caption', 'ad-copy']).optional(),
   mustIncludePhrases: z.array(z.string()).optional(),
   mustExcludePhrases: z.array(z.string()).optional(),
   styleTags: z.array(z.string()).optional(),
