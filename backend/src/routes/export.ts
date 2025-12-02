@@ -7,10 +7,24 @@ import { ExportService } from '../services/exportService'
 import path from 'path'
 
 const router = Router()
+console.log('Initializing export router')
 const requireAuth = createAuthMiddleware() as any
+
+// Debug: log every request into export router
+router.use((req, res, next) => {
+  console.log('EXPORT ROUTER REQ:', req.method, req.path)
+  next()
+})
+
+// Debug: generic catch-all on export router
+router.use((req, res, next) => {
+  console.log('EXPORT ROUTER CATCHALL:', req.method, req.path)
+  next()
+})
 
 // POST /api/export/workspace/:workspaceId/start - Start export job
 router.post('/workspace/:workspaceId/start', requireAuth, async (req, res) => {
+  console.log('Incoming POST /workspace/:workspaceId/start')
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { workspaceId } = req.params

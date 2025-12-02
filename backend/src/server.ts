@@ -16,7 +16,10 @@ import brandKitsRouter from './routes/brandKits'
 import assetsRouter from './routes/assets'
 import batchRouter from './routes/batch'
 import approvalRouter from './routes/approval'
-import exportRouter from './routes/export'
+import exportRouter, { } from './routes/export'
+import { createAuthMiddleware } from './routes/auth'
+import { ExportService } from './services/exportService'
+import { AuthModel } from './models/auth'
 import generatedAssetsRouter from './routes/generatedAssets'
 import captionRouter from './routes/caption'
 import maskRouter from './routes/mask'
@@ -59,6 +62,38 @@ export function createServer(
   app.use('/api/assets', assetsRouter)
   app.use('/api/batch', batchRouter)
   app.use('/api/approval', approvalRouter)
+
+  // Fallback server-level POST route for starting export, to prevent 404 when router route matching fails for POST. This duplicates exportRouter POST handler for now.
+  const requireAuthInline = createAuthMiddleware() as any
+  app.post('/api/export/workspace/:workspaceId/start', requireAuthInline, async (req, res) => {
+    try {
+      const authenticatedReq: any = req
+      const { workspaceId } = req.params
+
+      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' })
+      }
+
+      if (workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+
+      const approvedCaptions = AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
+      if (approvedCaptions.length === 0) {
+        return res.status(400).json({ error: 'No approved captions found for export' })
+      }
+
+      const result = await ExportService.startExport(workspaceId)
+      res.status(201).json(result)
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message })
+      }
+      console.error('Start export error (fallback route):', error)
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  })
   app.use('/api/export', exportRouter)
   app.use('/api/generated-assets', generatedAssetsRouter)
   app.use('/api/caption', captionRouter)
@@ -67,47 +102,40 @@ export function createServer(
   app.use('/api/health', healthRouter)
   app.use('/api/story', storyRouter)
 
+  // Simple test route to debug route registration
+  if (process.env.NODE_ENV !== 'production') {
+     app.get('/api/_test', (_, res) => {
+      res.json({ message: 'Route registration working', timestamp: new Date().toISOString() })
+    })
+      // Detailed route listing with stack and regexp info
+      app.get('/api/_routes_full', (_, res) => {
+        try {
+          const stack = (app as any)._router ? (app as any)._router.stack : []
+          const layers = stack.map((layer: any) => {
+            const info: any = { name: layer.name }
+            if (layer.regexp) info.regexp = layer.regexp.source
+            if (layer.route && layer.route.path) {
+              info.route = { path: layer.route.path, methods: Object.keys(layer.route.methods) }
+            }
+            if (layer.handle && layer.handle.stack) {
+              info.handleStack = layer.handle.stack.map((nested: any) => ({
+                name: nested.name,
+                regexp: nested.regexp ? nested.regexp.source : undefined,
+                route: nested.route ? { path: nested.route.path, methods: Object.keys(nested.route.methods) } : undefined,
+              }))
+            }
+            return info
+          })
+          res.json({ layers })
+        } catch (err) {
+          console.error('Error listing full routes', err)
+          res.status(500).json({ error: 'Failed to list routes' })
+        }
+      })
+  }
+
   // Error handling middleware - must be last
   app.use(errorHandler)
-
-  // Dev helper: list registered routes for debugging
-  if (process.env.NODE_ENV !== 'production') {
-    app.get('/api/_routes', (_, res) => {
-      try {
-        // Express mounts are in app._router.stack
-        const routes: Array<{ method: string; path: string }> = []
-        if ((app as any)._router && (app as any)._router.stack) {
-          for (const layer of (app as any)._router.stack) {
-            if (layer.route && layer.route.path) {
-              const routePath = layer.route.path
-              const methods = Object.keys(layer.route.methods)
-              for (const method of methods) {
-                routes.push({ method: method.toUpperCase(), path: routePath })
-              }
-            } else if (layer.name === 'router' && layer.handle && layer.handle.stack) {
-              // nested router
-              for (const nested of layer.handle.stack) {
-                if (nested.route && nested.route.path) {
-                  const routePath = nested.route.path
-                  const methods = Object.keys(nested.route.methods)
-                  for (const method of methods) {
-                    // include base path of the router if available
-                    const basePath = layer.regexp && layer.regexp.source ? (layer.regexp.source === '^\\/\\?$', '' ) : ''
-                    routes.push({ method: method.toUpperCase(), path: routePath })
-                  }
-                }
-              }
-            }
-          }
-        }
-
-        res.json({ routes })
-      } catch (err) {
-        console.error('Error listing routes', err)
-        res.status(500).json({ error: 'Failed to list routes' })
-      }
-    })
-  }
 
   return app
 }
