@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { AuthModel, Campaign, BrandKit } from '../models/auth'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
-import validateRequest from '../middleware/validateRequest'
+import { validateRequest } from '../middleware/validation'
 import {
   CampaignBriefGenerator,
   CreativeRequirements,
@@ -71,11 +71,11 @@ const generateRequirementsSchema = z.object({
 router.put(
   '/:campaignId',
   requireAuth,
-  validateRequest(updateCampaignBriefSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  validateRequest({ body: z.object({ brief: updateCampaignBriefSchema.shape.brief }) }),
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId } = req.params
-      const { brief } = (req as any).validatedData
+      const { brief } = req.body
 
       // Validate campaign exists and user has access
       const campaign = AuthModel.getCampaignById(campaignId)
@@ -118,7 +118,7 @@ router.put(
 router.post(
   '/:campaignId/generate-requirements',
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId } = req.params
 
@@ -176,7 +176,7 @@ router.post(
 router.get(
   '/:campaignId',
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId } = req.params
 
@@ -226,7 +226,7 @@ router.get(
 router.delete(
   '/:campaignId',
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId } = req.params
 
@@ -271,7 +271,7 @@ router.delete(
 router.post(
   '/:campaignId/validate',
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId } = req.params
 
@@ -423,7 +423,7 @@ router.post(
  * GET /api/campaign-briefs/health
  * Health check endpoint
  */
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', (req: Request, res: any) => {
   res.json({
     status: 'ok',
     service: 'campaign-brief-service',

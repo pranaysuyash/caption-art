@@ -25,6 +25,7 @@ export interface VideoScriptGenerationRequest {
   }
   includeStoryboard: boolean
   visualStyle?: string // for image generation
+  customInstructions?: string
 }
 
 export interface VideoScriptGenerationResult {
@@ -180,6 +181,7 @@ Video Length: ${request.videoLength} seconds
 Product: ${request.product.name} (${request.product.category})
 Scene Structure: 5 scenes (Hook → Problem → Benefit → Demo → CTA)
 Platform: ${request.platforms.join(', ')}
+${request.customInstructions ? `Custom Instructions: ${request.customInstructions}` : ''}
 
 SCENE BREAKDOWN:
 - Scene 1 (Hook): 2-4 seconds - Grab attention immediately
@@ -265,6 +267,7 @@ Length: ${request.videoLength} seconds
 Platforms: ${request.platforms.join(', ')}
 Objective: ${request.objective}
 Tone: ${request.tone.join(', ')}
+${request.customInstructions ? `Custom Instructions: ${request.customInstructions}` : ''}
 
 TARGET AUDIENCE:
 ${request.targetAudience ? `
@@ -400,11 +403,11 @@ Generate an engaging, conversion-focused video script.
 
       return {
         scenes: [
-          { sceneNumber: 1, type: 'hook' as const, duration: 3, ...baseScene },
-          { sceneNumber: 2, type: 'problem' as const, duration: 4, ...baseScene },
-          { sceneNumber: 3, type: 'benefit' as const, duration: 4, ...baseScene },
-          { sceneNumber: 4, type: 'demo' as const, duration: 5, ...baseScene },
-          { sceneNumber: 5, type: 'cta' as const, duration: 2, ...baseScene },
+          { sceneNumber: 1, type: 'hook' as const, duration: 3, description: 'Hook scene', ...baseScene },
+          { sceneNumber: 2, type: 'problem' as const, duration: 4, description: 'Problem scene', ...baseScene },
+          { sceneNumber: 3, type: 'benefit' as const, duration: 4, description: 'Benefit scene', ...baseScene },
+          { sceneNumber: 4, type: 'demo' as const, duration: 5, description: 'Demo scene', ...baseScene },
+          { sceneNumber: 5, type: 'cta' as const, duration: 2, description: 'Call to action scene', ...baseScene },
         ],
         totalDuration: 18,
         cta: 'Learn more about our product',

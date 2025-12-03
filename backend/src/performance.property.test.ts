@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import * as fc from 'fast-check'
 import express, { Express } from 'express'
 import request from 'supertest'
-import { createServer } from './server'
 import * as replicateService from './services/replicate'
 import * as openaiService from './services/openai'
 import * as gumroadService from './services/gumroad'
@@ -16,8 +15,14 @@ import * as gumroadService from './services/gumroad'
 describe('Performance Properties', () => {
   let app: Express
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+
+    // Dynamic import to avoid circular dependency
+    const serverModule = await import('./server.ts')
+    const createServer =
+      (serverModule as any).createServer ||
+      (serverModule as any).default?.createServer
 
     // Mock external services to isolate backend performance
     vi.spyOn(replicateService, 'generateBaseCaption').mockResolvedValue(

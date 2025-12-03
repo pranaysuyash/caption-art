@@ -18,6 +18,9 @@ export interface Config {
   cors: {
     origin: string | string[]
   }
+  waf: {
+    enable: boolean
+  }
 }
 
 function requireEnv(name: string): string {
@@ -43,7 +46,13 @@ export const config: Config = {
   openai: {
     apiKey: requireEnv('OPENAI_API_KEY'),
     model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
-    temperature: parseFloat(process.env.OPENAI_TEMPERATURE || '0.8'),
+    temperature: (() => {
+      const temp = parseFloat(process.env.OPENAI_TEMPERATURE || '0.8')
+      // Validate and clamp temperature to valid OpenAI range (0-2)
+      // Handle NaN by returning default
+      if (isNaN(temp)) return 0.8
+      return Math.max(0, Math.min(2, temp))
+    })(),
   },
   gumroad: {
     productPermalink: requireEnv('GUMROAD_PRODUCT_PERMALINK'),

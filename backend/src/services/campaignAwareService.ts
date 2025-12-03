@@ -46,7 +46,7 @@ export class CampaignAwareService {
       psychographics: brief?.primaryAudience?.psychographics || '',
       painPoints: brief?.primaryAudience?.painPoints || [],
       motivations: brief?.primaryAudience?.motivations || [],
-      challenges: brief?.primaryAudience?.challenges || [],
+      challenges: brief?.primaryAudience?.painPoints || [],
     }
 
     // Build messaging strategy from campaign and brand data

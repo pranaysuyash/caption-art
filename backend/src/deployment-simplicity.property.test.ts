@@ -87,7 +87,10 @@ describe('Property 23: Deployment simplicity', () => {
             requiredEnv.GUMROAD_PRODUCT_PERMALINK
 
           // Import server module
-          const { createServer } = await import('./server.ts')
+          const serverModule = await import('./server.ts')
+          const createServer =
+            (serverModule as any).createServer ||
+            (serverModule as any).default?.createServer
 
           // Create server - should not throw
           const app = createServer()
@@ -117,7 +120,10 @@ describe('Property 23: Deployment simplicity', () => {
 
     // Import config and server
     const { config } = await import('./config')
-    const { createServer } = await import('./server.ts')
+    const serverModule = await import('./server.ts')
+    const createServer =
+      (serverModule as any).createServer ||
+      (serverModule as any).default?.createServer
 
     // Verify no AWS-specific dependencies are required
     expect(config).not.toHaveProperty('aws')
@@ -155,7 +161,10 @@ describe('Property 23: Deployment simplicity', () => {
             requiredEnv.GUMROAD_PRODUCT_PERMALINK
 
           // Import and create server
-          const { createServer } = await import('./server.ts')
+          const serverModule = await import('./server.ts')
+          const createServer =
+            (serverModule as any).createServer ||
+            (serverModule as any).default?.createServer
           const app = createServer()
 
           // Verify server works in any Node.js environment
@@ -214,7 +223,10 @@ describe('Property 23: Deployment simplicity', () => {
     process.env.GUMROAD_PRODUCT_PERMALINK = 'test-product'
 
     // Import server
-    const { createServer } = await import('./server.ts')
+    const serverModule = await import('./server.ts')
+    const createServer =
+      (serverModule as any).createServer ||
+      (serverModule as any).default?.createServer
 
     // Create server
     const app = createServer()
@@ -241,7 +253,7 @@ describe('Property 23: Deployment simplicity', () => {
         async (envVars) => {
           // Set all environment variables
           Object.entries(envVars).forEach(([key, value]) => {
-            process.env[key] = value
+            process.env[key] = String(value)
           })
 
           // Import config

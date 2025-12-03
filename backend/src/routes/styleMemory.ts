@@ -102,7 +102,7 @@ router.post(
   '/learn',
   requireAuth,
   validateRequest(styleLearningRequestSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const requestData = (req as any).validatedData as StyleLearningRequest
 
@@ -162,7 +162,7 @@ router.post(
 router.get(
   '/profiles',
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { brandKitId, page = 1, limit = 20 } = req.query
 
@@ -225,7 +225,7 @@ router.get(
   '/profiles/:profileId',
   requireAuth,
   validateRequest(styleProfileIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { profileId } = (req as any).validatedData
 
@@ -264,7 +264,7 @@ router.post(
   '/templates/match',
   requireAuth,
   validateRequest(templateMatchingRequestSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const requestData = (req as any).validatedData as TemplateMatchingRequest
 
@@ -324,7 +324,7 @@ router.post(
 router.get(
   '/templates',
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { category, industry, page = 1, limit = 20, search } = req.query
 
@@ -411,7 +411,7 @@ router.get(
   '/templates/:templateId',
   requireAuth,
   validateRequest(templateIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { templateId } = (req as any).validatedData
 
@@ -439,7 +439,7 @@ router.post(
   '/consistency/score',
   requireAuth,
   validateRequest(consistencyScoreRequestSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const requestData = (req as any).validatedData as ConsistencyScoreRequest
 
@@ -500,7 +500,7 @@ router.post(
   '/templates/:templateId/use',
   requireAuth,
   validateRequest(templateIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { templateId } = (req as any).validatedData
 
@@ -534,7 +534,7 @@ router.post(
   '/templates/:templateId/review',
   requireAuth,
   validateRequest(templateIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { templateId } = (req as any).validatedData
       const { rating, comment } = req.body
@@ -583,7 +583,7 @@ router.post(
  * GET /api/style-memory/health
  * Health check endpoint
  */
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', (req: Request, res: any) => {
   res.json({
     status: 'ok',
     service: 'style-memory-service',

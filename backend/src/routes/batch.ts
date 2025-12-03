@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { z } from 'zod'
 import { AuthModel } from '../models/auth'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
@@ -206,9 +207,10 @@ router.put('/captions/:captionId', requireAuth, async (req, res) => {
     // For backward compatibility and manual editing, add a new variation with the edited text
     const updatedCaption = AuthModel.addCaptionVariation(captionId, {
       text: (safeText || text || '').trim(),
+      label: 'main',
       status: 'completed',
       approvalStatus: 'pending',
-      createdAt: new Date(),
+      approved: false,
     })
 
     if (!updatedCaption) {

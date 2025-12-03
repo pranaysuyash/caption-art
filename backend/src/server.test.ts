@@ -37,8 +37,12 @@ describe('Server', () => {
 
   describe('createServer', () => {
     it('should create an Express application', async () => {
-      const { createServer } = await import('./server.ts')
-      const app = createServer()
+      const serverModule = await import('./server.ts')
+      const createServer =
+        (serverModule as any).createServer ||
+        (serverModule as any).default?.createServer
+      // Disable rate limiter in tests to avoid requiring rate-limiter internals
+      const app = createServer({ enableRateLimiter: false, loadRoutes: false })
       expect(app).toBeDefined()
       expect(typeof app.listen).toBe('function')
     })
@@ -61,8 +65,14 @@ describe('Server', () => {
             return new Promise<void>(async (resolve, reject) => {
               try {
                 // Import server module dynamically
-                const { createServer } = await import('./server.ts')
-                const app = createServer()
+                const serverModule = await import('./server.ts')
+                const createServer =
+                  (serverModule as any).createServer ||
+                  (serverModule as any).default?.createServer
+                const app = createServer({
+                  enableRateLimiter: false,
+                  loadRoutes: false,
+                })
 
                 const server = app.listen(port, () => {
                   try {

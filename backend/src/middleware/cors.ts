@@ -26,13 +26,21 @@ export function corsMiddleware(
   }
 
   // Set CORS headers
+  let allowCredentials = false
   if (Array.isArray(origin)) {
     const requestOrigin = req.headers.origin
     if (requestOrigin && origin.includes(requestOrigin)) {
       res.setHeader('Access-Control-Allow-Origin', requestOrigin)
+      allowCredentials = true // Allow credentials only for explicit allowlist
     }
-  } else {
+  } else if (origin !== '*') {
+    // Specific origin (not wildcard) - safe to allow credentials
     res.setHeader('Access-Control-Allow-Origin', origin)
+    allowCredentials = true
+  } else {
+    // Wildcard origin - do not allow credentials (CORS spec violation)
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    allowCredentials = false
   }
 
   res.setHeader(
@@ -40,7 +48,11 @@ export function corsMiddleware(
     'GET, POST, PUT, DELETE, OPTIONS'
   )
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  res.setHeader('Access-Control-Allow-Credentials', 'true')
+
+  // Only allow credentials when origin is explicit (not wildcard)
+  if (allowCredentials) {
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+  }
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {

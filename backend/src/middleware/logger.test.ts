@@ -66,23 +66,33 @@ describe('Logger Middleware', () => {
           expect(consoleErrorSpy).toHaveBeenCalled()
 
           // Get the log call
-          const logCalls = consoleErrorSpy.mock.calls
+          const logCalls = consoleErrorSpy.mock.calls as any[]
           expect(logCalls.length).toBeGreaterThan(0)
 
           // Verify log contains context (object is the first argument)
-          const firstCall = logCalls[0]
+          const firstCall = logCalls[0] as any
+          // Debugging hint: print call in CI for investigation
+          // eslint-disable-next-line no-console
+          console.log(
+            'reqData:',
+            requestData,
+            'calls:',
+            logCalls,
+            'firstCall:',
+            firstCall[0]
+          )
           expect(firstCall[0]).toBeDefined()
           // Expect the logged object to contain path/method
           expect(firstCall[0].path).toBe(requestData.path)
           expect(firstCall[0].method).toBe(requestData.method)
 
-          // Verify log contains context (error details)
-          const loggedData = firstCall[1]
+          // Verify log contains context (error details are nested in the first argument)
+          const loggedData = firstCall[0].error
           expect(loggedData).toBeDefined()
           expect(loggedData.name).toBeDefined()
           expect(loggedData.message).toBeDefined()
-          expect(loggedData.path).toBe(requestData.path)
-          expect(loggedData.method).toBe(requestData.method)
+          // The error object contains error metadata (name/message/status)
+          // but path/method are in the outer context object above
         }
       ),
       { numRuns: 100 }
@@ -118,7 +128,7 @@ describe('Logger Middleware', () => {
           expect(logInfoSpy).toHaveBeenCalled()
 
           // Verify log contains method and path in the first argument
-          const logCall = logInfoSpy.mock.calls[0][0]
+          const logCall = logInfoSpy.mock.calls[0][0] as any
           expect(logCall.method).toBe(requestData.method)
           expect(logCall.path).toBe(requestData.path)
         }
@@ -158,7 +168,7 @@ describe('Logger Middleware', () => {
     expect(logInfoSpy).toHaveBeenCalledTimes(2)
 
     // Second call should include response time and status
-    const responseLog = logInfoSpy.mock.calls[1][0]
+    const responseLog = logInfoSpy.mock.calls[1][0] as any
     expect(responseLog.duration).toBeDefined()
     expect(responseLog.status).toBe(200)
   })

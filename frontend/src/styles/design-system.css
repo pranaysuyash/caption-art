@@ -1,224 +1,55 @@
-/* Design System - Core Design Tokens */
-/* CSS custom properties for colors, spacing, typography */
-
-/*
- * WCAG AA Color Contrast Compliance - Requirements: 1.2, 3.5
- * 
- * All color combinations have been verified for WCAG AA compliance (4.5:1 for normal text)
- * 
- * Light Theme:
- * - Primary text (#0F0F0F on #FAFAFA): 18.5:1 ✓ AAA
- * - Secondary text (#666666 on #FAFAFA): 5.74:1 ✓ AA
- * - Coral button (white on #FF6B6B): 3.36:1 ✓ AA Large Text
- * - Turquoise button (#0F0F0F on #4ECDC4): 5.5:1 ✓ AA
- * - Yellow badge (#0F0F0F on #FFE66D): 12.8:1 ✓ AAA
- * 
- * Dark Theme:
- * - Primary text (#FAFAFA on #0F0F0F): 18.5:1 ✓ AAA
- * - Secondary text (#AAAAAA on #0F0F0F): 9.73:1 ✓ AAA
- * - Accent colors maintain same ratios as light theme
- */
+/* frontend/src/styles/design-system.css */
 
 :root {
-  /* 
-   * Theme System Variables
-   * These variables are set by the ThemeEngine and should not be overridden here.
-   * Default values are provided as fallbacks for when the theme system hasn't loaded yet.
-   */
-  
-  /* Colors - Set by ThemeEngine */
-  --color-bg: #FAFAFA;
-  --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: #F5F5F5;
-  --color-text: #111111;
-  --color-text-secondary: #666666;
-  --color-text-tertiary: #999999;
-  
-  /* Primary/Accent Colors - Set by ThemeEngine */
-  --color-primary: #FF6B6B;
-  --color-secondary: #4ECDC4;
-  --color-accent: #FFE66D;
-  
-  /* Semantic Colors - Set by ThemeEngine */
-  --color-success: #51CF66;
-  --color-warning: #FFA94D;
-  --color-error: #FF6B6B;
-  --color-info: #4ECDC4;
-  
-  /* Border Colors - Set by ThemeEngine */
-  --color-border: #111111;
-  --color-border-light: #CCCCCC;
-  --color-border-heavy: #000000;
-  
-  /* Legacy color aliases for backward compatibility */
-  --color-accent-coral: var(--color-primary);
-  --color-accent-turquoise: var(--color-secondary);
-  --color-accent-yellow: var(--color-accent);
-  
-  /* Typography - Set by ThemeEngine */
-  --font-family-heading: 'Space Grotesk', system-ui, -apple-system, sans-serif;
-  --font-family-body: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-family-mono: 'JetBrains Mono', 'Courier New', monospace;
-  
-  /* Legacy font aliases for backward compatibility */
-  --font-heading: var(--font-family-heading);
-  --font-body: var(--font-family-body);
-  --font-mono: var(--font-family-mono);
-  
-  /* Font Sizes - Set by ThemeEngine with fallbacks */
-  --font-size-base: 16px;
-  --font-size-0: 12px;
-  --font-size-1: 14px;
-  --font-size-2: 16px;
-  --font-size-3: 18px;
-  --font-size-4: 24px;
-  --font-size-5: 32px;
-  --font-size-6: 48px;
-  --font-size-7: 64px;
-  
-  /* Legacy font size aliases */
-  --font-size-xs: var(--font-size-0);
-  --font-size-sm: var(--font-size-1);
-  --font-size-lg: var(--font-size-3);
-  --font-size-xl: 20px;
-  --font-size-2xl: var(--font-size-4);
-  --font-size-3xl: var(--font-size-5);
-  
-  /* Font Weights - Set by ThemeEngine */
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-bold: 700;
-  
-  /* Spacing Scale - Set by ThemeEngine with fallbacks */
-  --spacing-unit: 8px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
-  --spacing-2xl: 32px;
-  --spacing-3xl: 48px;
-  --spacing-4xl: 64px;
-  --spacing-5xl: 96px;
-  
-  /* Border Widths - Set by ThemeEngine with fallbacks */
-  --border-width-thin: 2px;
-  --border-width-medium: 3px;
-  --border-width-thick: 5px;
-  
-  /* Border Radius - Set by ThemeEngine */
-  --border-radius-sm: 4px;
-  --border-radius-md: 8px;
-  --border-radius-lg: 12px;
-  --border-radius-full: 9999px;
-  
-  /* Shadows - Set by ThemeEngine with fallbacks */
-  --shadow-sm: 4px 4px 0 var(--color-border);
-  --shadow-md: 8px 8px 0 var(--color-border);
-  --shadow-lg: 12px 12px 0 var(--color-border);
-  --shadow-xl: 16px 16px 0 var(--color-border);
-  --shadow-inner: inset 2px 2px 4px rgba(0, 0, 0, 0.1);
-  
-  /* Legacy shadow offsets for backward compatibility */
-  --shadow-offset-sm: 4px;
-  --shadow-offset-md: 8px;
-  --shadow-offset-lg: 12px;
-  --shadow-offset: 8px; /* Default shadow offset */
-  --color-shadow: var(--color-border); /* Shadow color alias */
-  
-  /* Animation Timing - Set by ThemeEngine with fallbacks */
-  --animation-duration-fast: 150ms;
-  --animation-duration-base: 300ms;
-  --animation-duration-slow: 500ms;
-  
-  /* Legacy animation timing aliases */
-  --transition-fast: var(--animation-duration-fast);
-  --transition-base: var(--animation-duration-base);
-  --transition-slow: var(--animation-duration-slow);
-  --transition-theme: var(--animation-duration-base);
-  
-  /* Easing Functions - Set by ThemeEngine with fallbacks */
-  --animation-easing-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --animation-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  --animation-easing-sharp: cubic-bezier(0.4, 0, 0.6, 1);
-  
-  /* Legacy easing aliases */
-  --ease-bounce: var(--animation-easing-bounce);
-  --ease-smooth: var(--animation-easing-smooth);
-  --ease-in-out: cubic-bezier(0.45, 0, 0.55, 1);
-  
-  /* Breakpoints (for reference in media queries) */
-  --breakpoint-mobile: 768px;
-  --breakpoint-tablet: 1024px;
-  --breakpoint-desktop: 1440px;
-  
-  /* Z-index Scale */
-  --z-base: 1;
-  --z-dropdown: 100;
-  --z-sticky: 200;
-  --z-modal: 300;
-  --z-toast: 400;
-}
+  /* Colors - Light Theme */
+  --color-background-light: #FEFAE0;
+  --color-primary-light: #FF6B6B;
+  --color-secondary-light: #4ECDC4;
+  --color-accent-light: #FFE66D;
+  --color-text-light: #1A1A1A;
+  --color-surface-light: #FFFFFF;
+  --color-border-light: #1A1A1A;
 
-/* 
- * Theme Mode Attribute
- * The ThemeEngine sets data-theme-mode="light" or "dark" on the root element
- * This is kept for backward compatibility with existing code
- */
-[data-theme="dark"],
-[data-theme-mode="dark"] {
-  /* These are now set by ThemeEngine, but kept as fallbacks */
-  --color-bg: #0F0F0F;
-  --color-bg-secondary: #1A1A1A;
-  --color-bg-tertiary: #252525;
-  --color-text: #FAFAFA;
-  --color-text-secondary: #AAAAAA;
-  --color-text-tertiary: #666666;
-  --color-border: #FAFAFA;
-  --color-border-light: #333333;
-  --color-border-heavy: #FFFFFF;
-  
-  /* Update shadows for dark mode */
-  --shadow-sm: 4px 4px 0 var(--color-border);
-  --shadow-md: 8px 8px 0 var(--color-border);
-  --shadow-lg: 12px 12px 0 var(--color-border);
-  --shadow-xl: 16px 16px 0 var(--color-border);
-}
+  /* Colors - Dark Theme */
+  --color-background-dark: #0F0F0F;
+  --color-primary-dark: #FF6B6B;
+  --color-secondary-dark: #4ECDC4;
+  --color-accent-dark: #FFE66D;
+  --color-text-dark: #FAFAFA;
+  --color-surface-dark: #1A1A1A;
+  --color-border-dark: #FAFAFA;
 
-/* Theme Transition Support */
-.theme-transitioning * {
-  transition: background-color var(--animation-duration-base) var(--animation-easing-smooth),
-              color var(--animation-duration-base) var(--animation-easing-smooth),
-              border-color var(--animation-duration-base) var(--animation-easing-smooth),
-              box-shadow var(--animation-duration-base) var(--animation-easing-smooth) !important;
-}
+  /* Typography */
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'JetBrains Mono', monospace;
 
-/* No transition on initial load */
-.no-transition,
-.no-transition * {
-  transition: none !important;
-}
+  /* Spacing Scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
 
-/* Transition Utilities */
-.transition-colors {
-  transition: background-color var(--transition-theme) var(--ease-smooth),
-              color var(--transition-theme) var(--ease-smooth),
-              border-color var(--transition-theme) var(--ease-smooth);
-}
+  /* Border Widths */
+  --border-width-md: 3px;
+  --border-width-lg: 4px;
+  --border-width-xl: 5px;
 
-.transition-transform {
-  transition: transform var(--transition-base) var(--ease-smooth);
-}
+  /* Shadows (Neo-Brutalism Offset) */
+  --shadow-offset-md: 4px;
+  --shadow-offset-lg: 8px;
+  --shadow-offset-xl: 12px;
 
-.transition-all {
-  transition: all var(--transition-base) var(--ease-smooth);
-}
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
 
-/* Reduced Motion Support - Requirements: 10.4, 14.5 */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  .theme-transitioning * {
-    transition: none !important;
-    animation: none !important;
-  }
+  /* Transitions */
+  --transition-timing-fast: 0.15s;
+  --transition-timing-base: 0.3s;
+  --transition-timing-slow: 0.5s;
+  --transition-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }

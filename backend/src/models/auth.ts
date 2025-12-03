@@ -1,6 +1,10 @@
 import bcrypt from 'bcrypt'
 import { log } from '../middleware/logger'
 
+import { Workspace } from './Workspace'
+export { Workspace }
+import { WorkspaceModel } from './Workspace'
+
 export interface User {
   id: string
   email: string
@@ -17,13 +21,12 @@ export interface Agency {
   createdAt: Date
 }
 
-export interface Workspace {
-  id: string
-  agencyId: string
-  clientName: string
-  brandKitId: string
-  createdAt: Date
-}
+import { Asset } from './Asset'
+export { Asset }
+import { AssetModel } from './Asset'
+import { BatchJob } from './BatchJob'
+export { BatchJob }
+import { BatchJobModel } from './BatchJob'
 
 export interface BrandKit {
   id: string
@@ -65,168 +68,328 @@ export interface BrandKit {
     | 'luxury'
     | 'edgy'
 
+  // Extended fields for CampaignAwareService
+  uniqueValue?: string
+  keywords?: string[]
+  name?: string
+  values?: string[]
+  toneOfVoice?: string
+  keyDifferentiators?: string[]
+  imageryStyle?: string
+
   createdAt: Date
   updatedAt: Date
 }
 
-// Phase 1: Variation Engine + Ad Copy Types
-export interface AdCopyContent {
-  headline: string
-  subheadline?: string
-  primaryText: string
-  ctaText: string
-  platformSpecific?: {
-    instagram?: {
-      headline: string
-      primaryText: string
-      ctaText: string
-    }
-    facebook?: {
-      headline: string
-      primaryText: string
-      ctaText: string
-    }
-    linkedin?: {
-      headline: string
-      primaryText: string
-      ctaText: string
-    }
+import { Caption, CaptionVariation, AdCopyContent } from './Caption'
+// Export caption interfaces
+export { Caption, CaptionVariation, AdCopyContent } from './Caption'
+export * from './Video'
+import { CaptionModel } from './Caption'
+
+// Extended Video Rendering Interfaces for Phase 2.4
+
+export interface VideoScene {
+  sceneNumber: number
+  type: 'hook' | 'problem' | 'benefit' | 'demo' | 'cta'
+  duration: number // in seconds
+  description: string
+  visualDescription?: string
+  script: string
+  visualNotes?: string
+  voiceover?: string
+  tone?:
+    | 'neutral'
+    | 'energetic'
+    | 'dramatic'
+    | 'warm'
+    | 'professional'
+    | 'playful'
+  transition?: VideoTransitions
+}
+
+export interface VideoTransitions {
+  type: 'fade' | 'slide' | 'dissolve' | 'cut' | 'zoom'
+  duration: number // in seconds
+  direction?: 'forward' | 'backward' | 'left' | 'right' | 'up' | 'down'
+}
+
+export interface VideoAudioSpec {
+  type: 'voiceover' | 'background' | 'music' | 'effects'
+  volume: number // 0-1
+  fadeIn?: number // in seconds
+  fadeOut?: number // in seconds
+}
+
+export type VideoRenderFormat = 'square' | 'landscape' | 'portrait' | 'stories'
+export type VideoRenderQuality = 'low' | 'medium' | 'high'
+
+export interface VideoRenderSpec {
+  format: VideoRenderFormat
+  quality: VideoRenderQuality
+  resolution?: string // e.g., '1080p', '4K'
+}
+
+export interface VideoRenderRequest {
+  duration: number // in seconds
+  format: VideoRenderFormat
+  quality: VideoRenderQuality
+  platform: string
+  tone: string
+  customStyle?: {
+    visualStyle: string
+    colorScheme: string
+    compositionStyle?: string
+    transitionStyle?: string
   }
+  includeAudio: boolean
+  customInstructions?: string
+  spec: VideoRenderSpec
+}
+
+export interface VideoRenderResult {
+  success: boolean
+  videoUrl: string
+  metadata: {
+    duration: number
+    format: VideoRenderFormat
+    quality: VideoRenderQuality
+    scenes: number
+    size: string
+    processingTime: number
+    hasAudio: boolean
+    platform: string
+  }
+  assets: {
+    storyboard: VideoStoryboard
+    script: VideoScript
+    renderedScenes: number
+  }
+  quality: {
+    visualQuality: number
+    audioQuality?: number
+    renderScore: number
+    technicalMetrics: any
+  }
+  recommendations: string[]
+}
+
+export interface VideoScriptGenerationRequest {
+  duration: number
+  format: VideoRenderFormat
+  platform: string
+  tone: string
+  includeStoryboard: boolean
+  customInstructions?: string
 }
 
 export interface VideoScript {
-  scenes: {
-    sceneNumber: number
-    type: 'hook' | 'problem' | 'benefit' | 'demo' | 'cta'
-    duration: number // in seconds
-    script: string
-    visualNotes?: string
-  }[]
+  scenes: VideoScene[]
   totalDuration: number
-  cta: string
+  estimatedDuration?: number
+  hook?: string
+  callToAction?: string
   platform: string
+  tone?: string
 }
 
 export interface VideoStoryboard {
-  videoScriptId: string
   scenes: {
     sceneNumber: number
-    type: 'hook' | 'problem' | 'benefit' | 'demo' | 'cta'
+    description: string
+    visualDescription: string
     duration: number
-    script: string
-    imageUrl: string // Generated frame image
-    thumbnailUrl?: string
+    imageUrl: string
+    shotType: string
+    composition: string
+    lighting: string
+    colorPalette: string[]
+    elements: string[]
   }[]
   totalDuration: number
-}
-
-export interface Asset {
-  id: string
-  workspaceId: string
-  filename: string
-  originalName: string
-  mimeType: string
-  size: number
-  url: string
-  uploadedAt: Date
-}
-
-export interface CaptionVariation {
-  id: string
-  label: 'main' | 'alt1' | 'alt2' | 'alt3' | 'punchy' | 'short' | 'story'
-  text: string
-  status: 'pending' | 'generating' | 'completed' | 'failed'
-  approvalStatus: 'pending' | 'approved' | 'rejected'
-  approved: boolean // For backward compatibility
-  qualityScore?: number // 1-10 quality score
-  scoreBreakdown?: {
-    clarity: number
-    originality: number
-    brandConsistency: number
-    platformRelevance: number
+  aspectRatio: string
+  style: {
+    visualStyle: string
+    colorScheme: string
+    pacing: string
+    transitionStyle: string
   }
-  metadata?: {
-    readingGrade?: number
-    toneClassification?: string[]
-    platform?: string[]
-  }
-  adCopy?: AdCopyContent
-  generatedAt?: Date
-  approvedAt?: Date
-  rejectedAt?: Date
-  createdAt: Date
+  notes: string
 }
 
-export interface Caption {
+// Phase 2: Multi-Format Static Outputs + Reference Style Synthesis
+export interface MultiFormatOutput {
   id: string
-  assetId: string
-  workspaceId: string
-  variations: CaptionVariation[] // Array of 7 variation types: main, alt1-alt3, punchy, short, story
-  primaryVariationId?: string // ID of the primary/selected variation
-  status: 'pending' | 'generating' | 'completed' | 'failed'
-  approvalStatus: 'pending' | 'approved' | 'rejected'
-  errorMessage?: string
-  generatedAt?: Date
-  approvedAt?: Date
-  rejectedAt?: Date
-  createdAt: Date
-  // Phase 1.1: Additional metadata for variation engine
-  generationMode?: 'caption' | 'adcopy' | 'video-script' | 'storyboard'
-  brandKitId?: string // Brand kit used for generation
-}
-
-export interface BatchJob {
-  id: string
-  workspaceId: string
-  assetIds: string[]
-  status: 'pending' | 'processing' | 'completed' | 'failed'
-  processedCount: number
-  totalCount: number
-  campaignId?: string // Optional campaign association
-  template?:
-    | 'punchy'
-    | 'descriptive'
-    | 'hashtag-heavy'
-    | 'storytelling'
-    | 'question'
-  // Phase 1.1: Variation Engine extensions
-  variations?: {
-    variationType: 'main' | 'alt1' | 'alt2' | 'alt3' | 'punchy' | 'short' | 'story'
-    count: number // Number of variations of this type to generate
-  }[]
-  generationMode?: 'caption' | 'adcopy' | 'video-script' | 'storyboard'
-  brandKitId?: string // Brand kit for campaign-aware prompting
-  startedAt?: Date
-  completedAt?: Date
-  errorMessage?: string
-  createdAt: Date
-}
-
-export interface GeneratedAsset {
-  id: string
-  jobId: string
   sourceAssetId: string
   workspaceId: string
-  captionId: string
-  approvalStatus: 'pending' | 'approved' | 'rejected'
-  format: 'instagram-square' | 'instagram-story'
-  layout: 'center-focus' | 'bottom-text' | 'top-text'
-  caption: string
-  imageUrl: string
-  thumbnailUrl: string
-  watermark: boolean
-  qualityScore?: number // 1-10 quality score
-  scoreBreakdown?: {
-    brandVoiceMatch: number
-    objectiveAlignment: number
-    lengthCompliance: number
-    constraintCompliance: number
+  formats: {
+    square: {
+      url: string
+      thumbnailUrl: string
+      dimensions: { width: 1080; height: 1080 }
+      platform: 'instagram-feed' | 'facebook-feed' | 'linkedin'
+    }
+    story: {
+      url: string
+      thumbnailUrl: string
+      dimensions: { width: 1080; height: 1920 }
+      platform: 'instagram-story' | 'facebook-story' | 'tiktok'
+    }
+    landscape: {
+      url: string
+      thumbnailUrl: string
+      dimensions: { width: 1920; height: 1080 }
+      platform: 'youtube-thumbnail' | 'facebook-banner' | 'linkedin-banner'
+    }
   }
-  createdAt: Date
-  generatedAt?: Date
-  approvedAt?: Date
-  rejectedAt?: Date
+  captionVariationId?: string
+  qualityMetrics: {
+    brandConsistency: number
+    visualAppeal: number
+    textReadability: number
+    overallScore: number
+  }
+  generatedAt: Date
 }
+
+export interface StyleReference {
+  id: string
+  workspaceId: string
+  name: string
+  description: string
+  referenceImages: string[] // URLs to reference images
+  extractedStyles: {
+    colorPalette: {
+      primary: string[]
+      secondary: string[]
+      accent: string[]
+    }
+    typography: {
+      fonts: string[]
+      weights: ('light' | 'regular' | 'medium' | 'bold' | 'black')[]
+      sizes: string[]
+    }
+    composition: {
+      layout:
+        | 'centered'
+        | 'rule-of-thirds'
+        | 'asymmetrical'
+        | 'minimal'
+        | 'dense'
+      spacing: 'tight' | 'normal' | 'loose'
+      balance: 'symmetrical' | 'asymmetrical'
+    }
+    visualElements: {
+      gradients: boolean
+      shadows: boolean
+      borders: boolean
+      patterns: boolean
+      illustration: boolean
+      photography: boolean
+    }
+  }
+  usageCount: number
+  lastUsedAt?: Date
+  createdAt: Date
+}
+
+export interface StyleSynthesisRequest {
+  workspaceId: string
+  sourceAssetId: string
+  styleReferences: string[] // Style reference IDs to blend
+  synthesisMode: 'dominant' | 'balanced' | 'creative' | 'conservative'
+  targetPlatforms: ('instagram' | 'facebook' | 'linkedin' | 'tiktok')[]
+  outputFormats: ('square' | 'story' | 'landscape')[]
+  brandKitId?: string // Optional brand kit for brand consistency
+}
+
+export interface CampaignTemplate {
+  id: string
+  name: string
+  category:
+    | 'product-launch'
+    | 'brand-awareness'
+    | 'lead-generation'
+    | 'event-promotion'
+    | 'sale'
+    | 'content-series'
+  description: string
+  industry?: string // Tech, Fashion, Food, etc.
+  templateStructure: {
+    contentTypes: ('image' | 'carousel' | 'story' | 'video')[]
+    captionPatterns: {
+      hook: string[] // Opening line patterns
+      body: string[] // Main content patterns
+      cta: string[] // Call-to-action patterns
+      hashtags: string[] // Hashtag strategies
+    }
+    visualStyle: {
+      colorStrategy: 'brand-colors' | 'trend-colors' | 'monochrome' | 'gradient'
+      layoutPattern: 'grid' | 'diagonal' | 'radial' | 'minimal'
+      textTreatment: 'bold-headlines' | 'elegant-copy' | 'minimal-text'
+    }
+    suggestedAssets: {
+      types: ('product' | 'lifestyle' | 'behind-scenes' | 'user-generated')[]
+      layouts: (
+        | 'product-focused'
+        | 'lifestyle-integrated'
+        | 'brand-heavy'
+        | 'text-heavy'
+      )[]
+    }
+  }
+  placeholderVariables: {
+    [key: string]: {
+      type: 'text' | 'image' | 'color' | 'number'
+      description: string
+      example: string
+      required: boolean
+    }
+  }
+  usageStats: {
+    timesUsed: number
+    successRate: number
+    avgEngagement: number
+    lastUsed?: Date
+  }
+  isPremium: boolean // Premium templates require higher tier
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface CampaignTemplateInstance {
+  id: string
+  templateId: string
+  workspaceId: string
+  campaignId?: string
+  name: string
+  filledVariables: {
+    [key: string]: string | string[] | boolean | number
+  }
+  customizations: {
+    brandKitId?: string
+    colorOverrides?: {
+      primary?: string
+      secondary?: string
+      accent?: string
+    }
+    layoutModifications?: {
+      spacing?: 'tight' | 'normal' | 'loose'
+      textAlignment?: 'left' | 'center' | 'right'
+      logoPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+    }
+  }
+  generatedContent: {
+    captions: string[]
+    imagePrompts: string[]
+    storyboard?: any
+  }
+  status: 'draft' | 'generating' | 'completed' | 'failed'
+  generatedAt?: Date
+  createdAt: Date
+}
+
+
 
 export interface ExportJob {
   id: string
@@ -239,6 +402,82 @@ export interface ExportJob {
   errorMessage?: string
   createdAt: Date
   completedAt?: Date
+}
+
+// Template Memory System for Stage 4 - Template Memory & Style Learning
+export interface Template {
+  id: string
+  name: string
+  workspaceId: string
+  campaignId?: string
+  brandKitId: string
+  // Template components
+  captionStructure: {
+    toneStyle: string
+    lengthPreferences: {
+      min: number
+      max: number
+      ideal: number
+    }
+    wordChoicePatterns: string[]
+    emotionalAppeal: string
+  }
+  layoutPreferences: {
+    format: ('instagram-square' | 'instagram-story')[]
+    layout: ('center-focus' | 'bottom-text' | 'top-text')[]
+    textPositioning: string
+  }
+  performanceMetrics: {
+    engagementRate?: number
+    approvalRate: number
+    reuseCount: number
+    averageScore: number
+  }
+  createdAt: Date
+  lastUsedAt?: Date
+}
+
+export interface StyleProfile {
+  id: string
+  name: string
+  workspaceId: string
+  campaignId?: string
+  learnedFromCreativeId: string
+  // Visual style elements
+  colors: {
+    primaryPalette: string[] // Top 5 colors
+    secondaryPalette: string[]
+    accentColors: string[]
+    contrastPreferences: 'high' | 'medium' | 'low'
+  }
+  typography: {
+    fontHierarchy: {
+      headings: string[]
+      body: string[]
+      accents: string[]
+    }
+    spacingPreferences: {
+      lineSpacing: number
+      paragraphSpacing: number
+      marginPaddingRatios: number
+    }
+  }
+  layout: {
+    compositionStyle: 'symmetrical' | 'asymmetrical' | 'grid-based' | 'freeform'
+    elementHierarchy:
+      | 'text-over-image'
+      | 'image-over-text'
+      | 'side-by-side'
+      | 'layered'
+    whiteSpaceUsage: 'minimal' | 'balanced' | 'generous'
+  }
+  brandAlignment: {
+    personalityMatch: number // 0-1
+    valuePropositionIncorporation: number // 0-1
+    targetAudienceResonance: number // 0-1
+  }
+  createdAt: Date
+  lastAppliedAt?: Date
 }
 
 // Campaign Management v2
@@ -287,6 +526,11 @@ export interface Campaign {
     keyMessage?: string // "Premium sustainable fashion for conscious consumers"
     supportingPoints?: string[] // ["Ethically sourced materials", "Timeless designs", "Fair trade pricing"]
     emotionalAppeal?: string // "Empowerment through conscious fashion choices"
+    socialProof?: string[] // ["Featured in Vogue", "5-star reviews"]
+    keywords?: string[]
+    tone?: string[]
+    style?: string[]
+    avoidWords?: string[] // Alias for mandatoryExclusions in some contexts
 
     // Mandatories & Constraints
     mandatoryInclusions?: string[] // ["Brand logo visible", "Price point mentioned", "Sustainability message"]
@@ -350,10 +594,32 @@ export interface ReferenceCreative {
   createdAt: Date
 }
 
+export interface GeneratedAsset {
+  id: string
+  jobId: string
+  sourceAssetId: string
+  workspaceId: string
+  captionId?: string
+  campaignId?: string
+  approvalStatus: 'pending' | 'approved' | 'rejected'
+  approvedAt?: Date
+  rejectedAt?: Date
+  format: string
+  layout: string
+  caption: string
+  imageUrl: string
+  thumbnailUrl: string
+  watermark: boolean
+  createdAt: Date
+}
+
 export interface AdCreative extends GeneratedAsset {
   // Campaign-specific fields
   campaignId?: string
   placement: 'ig-feed' | 'ig-story' | 'fb-feed' | 'fb-story' | 'li-feed'
+  primaryPlatform?: string // Added for compatibility
+  slots?: any[] // Added for compatibility
+  brandKitId?: string // Added for compatibility
 
   // Slot-based content (ad structure)
   headline: string
@@ -370,16 +636,25 @@ export interface AdCreative extends GeneratedAsset {
   clicks?: number
   conversions?: number
   spend?: number
+
+  // Quality scoring
+  qualityScore?: number
+  scoreBreakdown?: {
+    brandVoiceMatch: number
+    objectiveAlignment: number
+    lengthCompliance: number
+    constraintCompliance: number
+  }
 }
 
 // In-memory storage for v1 (replace with database later)
 const users = new Map<string, User>()
 const agencies = new Map<string, Agency>()
-const workspaces = new Map<string, Workspace>()
+// workspaces moved to Workspace.ts - use WorkspaceModel functions
 const brandKits = new Map<string, BrandKit>()
-const assets = new Map<string, Asset>()
-const captions = new Map<string, Caption>()
-const batchJobs = new Map<string, BatchJob>()
+// assets moved to Asset.ts - use AssetModel functions
+// captions moved to Caption.ts - use CaptionModel functions
+// batchJobs moved to BatchJob.ts - use BatchJobModel functions
 const generatedAssets = new Map<string, GeneratedAsset>()
 const exportJobs = new Map<string, ExportJob>()
 
@@ -387,6 +662,10 @@ const exportJobs = new Map<string, ExportJob>()
 const campaigns = new Map<string, Campaign>()
 const referenceCreatives = new Map<string, ReferenceCreative>()
 const adCreatives = new Map<string, AdCreative>()
+
+// Template Memory & Style Learning System (Stage 4)
+const templates = new Map<string, Template>()
+const styleProfiles = new Map<string, StyleProfile>()
 
 export class AuthModel {
   private static saltRounds = 12
@@ -459,38 +738,22 @@ export class AuthModel {
     agencyId: string,
     clientName: string
   ): Promise<Workspace> {
-    const workspaceId = `workspace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    const workspace: Workspace = {
-      id: workspaceId,
-      agencyId,
-      clientName,
-      brandKitId: '', // Will be set when brand kit is created
-      createdAt: new Date(),
-    }
-
-    workspaces.set(workspaceId, workspace)
-    return workspace
+    return WorkspaceModel.createWorkspace(agencyId, clientName)
   }
 
   static getWorkspacesByAgency(agencyId: string): Workspace[] {
-    return Array.from(workspaces.values()).filter(
-      (w) => w.agencyId === agencyId
-    )
+    return WorkspaceModel.getWorkspacesByAgency(agencyId)
   }
 
   static getWorkspaceById(id: string): Workspace | null {
-    return workspaces.get(id) || null
+    return WorkspaceModel.getWorkspaceById(id)
   }
 
   static updateWorkspace(
     workspaceId: string,
     updates: Partial<Workspace>
   ): void {
-    const workspace = workspaces.get(workspaceId)
-    if (workspace) {
-      Object.assign(workspace, updates)
-    }
+    return WorkspaceModel.updateWorkspace(workspaceId, updates)
   }
 
   // Brand Kit methods
@@ -500,7 +763,7 @@ export class AuthModel {
     const { workspaceId } = brandKitData
 
     // Verify workspace exists
-    const workspace = workspaces.get(workspaceId)
+    const workspace = WorkspaceModel.getWorkspaceById(workspaceId)
     if (!workspace) {
       throw new Error('Workspace not found')
     }
@@ -573,7 +836,7 @@ export class AuthModel {
     }
 
     // Clear brand kit reference from workspace
-    const workspace = workspaces.get(brandKit.workspaceId)
+    const workspace = WorkspaceModel.getWorkspaceById(brandKit.workspaceId)
     if (workspace) {
       workspace.brandKitId = ''
     }
@@ -596,209 +859,86 @@ export class AuthModel {
   }
 
   static getAllWorkspaces(): Workspace[] {
-    return Array.from(workspaces.values())
+    return WorkspaceModel.getAllWorkspaces()
   }
 
   // Asset methods
   static async createAsset(
     assetData: Omit<Asset, 'id' | 'uploadedAt'>
   ): Promise<Asset> {
-    const { workspaceId } = assetData
-
-    // Verify workspace exists
-    const workspace = workspaces.get(workspaceId)
-    if (!workspace) {
-      throw new Error('Workspace not found')
-    }
-
-    // Check workspace asset limit (20 files max for v1)
-    const existingAssets = Array.from(assets.values()).filter(
-      (a) => a.workspaceId === workspaceId
-    )
-    if (existingAssets.length >= 20) {
-      throw new Error('Maximum 20 assets allowed per workspace')
-    }
-
-    const assetId = `asset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    const asset: Asset = {
-      id: assetId,
-      workspaceId,
-      filename: assetData.filename,
-      originalName: assetData.originalName,
-      mimeType: assetData.mimeType,
-      size: assetData.size,
-      url: assetData.url,
-      uploadedAt: new Date(),
-    }
-
-    assets.set(assetId, asset)
-    return asset
+    return AssetModel.createAsset(assetData)
   }
 
   static getAssetById(id: string): Asset | null {
-    return assets.get(id) || null
+    return AssetModel.getAssetById(id)
   }
 
   static getAssetsByWorkspace(workspaceId: string): Asset[] {
-    return Array.from(assets.values()).filter(
-      (a) => a.workspaceId === workspaceId
-    )
+    return AssetModel.getAssetsByWorkspace(workspaceId)
   }
 
   static deleteAsset(id: string): boolean {
-    const asset = assets.get(id)
-    if (!asset) {
-      return false
-    }
-
-    assets.delete(id)
-    return true
+    return AssetModel.deleteAsset(id)
   }
 
   static deleteAssetsByWorkspace(workspaceId: string): number {
-    const workspaceAssets = Array.from(assets.values()).filter(
-      (a) => a.workspaceId === workspaceId
-    )
-    let deletedCount = 0
-
-    for (const asset of workspaceAssets) {
-      if (assets.delete(asset.id)) {
-        deletedCount++
-      }
-    }
-
-    return deletedCount
+    return AssetModel.deleteAssetsByWorkspace(workspaceId)
   }
 
   static getAllAssets(): Asset[] {
-    return Array.from(assets.values())
+    return AssetModel.getAllAssets()
   }
 
   // Batch job methods
   static createBatchJob(workspaceId: string, assetIds: string[]): BatchJob {
-    const jobId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    const batchJob: BatchJob = {
-      id: jobId,
-      workspaceId,
-      assetIds,
-      status: 'pending',
-      processedCount: 0,
-      totalCount: assetIds.length,
-      createdAt: new Date(),
-    }
-
-    batchJobs.set(jobId, batchJob)
-    return batchJob
+    return BatchJobModel.createBatchJob(workspaceId, assetIds)
   }
 
   static getBatchJobById(id: string): BatchJob | null {
-    return batchJobs.get(id) || null
+    return BatchJobModel.getBatchJobById(id)
   }
 
   static getBatchJobsByWorkspace(workspaceId: string): BatchJob[] {
-    return Array.from(batchJobs.values()).filter(
-      (job) => job.workspaceId === workspaceId
-    )
+    return BatchJobModel.getBatchJobsByWorkspace(workspaceId)
   }
 
   static updateBatchJob(
     id: string,
     updates: Partial<BatchJob>
   ): BatchJob | null {
-    const job = batchJobs.get(id)
-    if (!job) {
-      return null
-    }
-
-    const updatedJob = {
-      ...job,
-      ...updates,
-    }
-
-    batchJobs.set(id, updatedJob)
-    return updatedJob
+    return BatchJobModel.updateBatchJob(id, updates)
   }
 
   // Caption methods
-  static createCaption(assetId: string, workspaceId: string): Caption {
-    const captionId = `caption_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    const caption: Caption = {
-      id: captionId,
-      assetId,
-      workspaceId,
-      variations: [],
-      status: 'pending',
-      approvalStatus: 'pending',
-      createdAt: new Date(),
-    }
-
-    captions.set(captionId, caption)
-    return caption
+  static createCaption(
+    assetId: string,
+    workspaceId: string,
+    campaignId?: string
+  ): Caption {
+    return CaptionModel.createCaption(assetId, workspaceId, campaignId)
   }
 
   static getCaptionById(id: string): Caption | null {
-    return captions.get(id) || null
+    return CaptionModel.getCaptionById(id)
   }
 
   static getCaptionsByWorkspace(workspaceId: string): Caption[] {
-    return Array.from(captions.values()).filter(
-      (c) => c.workspaceId === workspaceId
-    )
+    return CaptionModel.getCaptionsByWorkspace(workspaceId)
   }
 
   static getCaptionsByAsset(assetId: string): Caption[] {
-    return Array.from(captions.values()).filter((c) => c.assetId === assetId)
+    return CaptionModel.getCaptionsByAsset(assetId)
   }
 
   static updateCaption(id: string, updates: Partial<Caption>): Caption | null {
-    const caption = captions.get(id)
-    if (!caption) {
-      return null
-    }
-
-    const updatedCaption = {
-      ...caption,
-      ...updates,
-    }
-
-    captions.set(id, updatedCaption)
-    return updatedCaption
+    return CaptionModel.updateCaption(id, updates)
   }
 
   static addCaptionVariation(
     captionId: string,
     variation: Omit<CaptionVariation, 'id' | 'createdAt'>
   ): Caption | null {
-    const caption = captions.get(captionId)
-    if (!caption) {
-      return null
-    }
-
-    const variationId = `var_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    const newVariation: CaptionVariation = {
-      ...variation,
-      id: variationId,
-      createdAt: new Date(),
-      status: variation.status || 'completed',
-      approvalStatus: variation.approvalStatus || 'pending',
-    }
-
-    const updatedCaption = {
-      ...caption,
-      variations: [...caption.variations, newVariation],
-    }
-
-    // If this is the first variation, set it as primary
-    if (caption.variations.length === 0) {
-      updatedCaption.primaryVariationId = variationId
-    }
-
-    captions.set(captionId, updatedCaption)
-    return updatedCaption
+    return CaptionModel.addCaptionVariation(captionId, variation)
   }
 
   static updateCaptionVariation(
@@ -806,96 +946,36 @@ export class AuthModel {
     variationId: string,
     updates: Partial<CaptionVariation>
   ): Caption | null {
-    const caption = captions.get(captionId)
-    if (!caption) {
-      return null
-    }
-
-    const variationIndex = caption.variations.findIndex(
-      (v) => v.id === variationId
-    )
-    if (variationIndex === -1) {
-      return null
-    }
-
-    const updatedVariations = [...caption.variations]
-    updatedVariations[variationIndex] = {
-      ...updatedVariations[variationIndex],
-      ...updates,
-    }
-
-    const updatedCaption = {
-      ...caption,
-      variations: updatedVariations,
-    }
-
-    captions.set(captionId, updatedCaption)
-    return updatedCaption
+    return CaptionModel.updateCaptionVariation(captionId, variationId, updates)
   }
 
   static setPrimaryCaptionVariation(
     captionId: string,
     variationId: string
   ): Caption | null {
-    const caption = captions.get(captionId)
-    if (!caption) {
-      return null
-    }
-
-    // Verify the variation exists
-    const variationExists = caption.variations.some((v) => v.id === variationId)
-    if (!variationExists) {
-      return null
-    }
-
-    const updatedCaption = {
-      ...caption,
-      primaryVariationId: variationId,
-    }
-
-    captions.set(captionId, updatedCaption)
-    return updatedCaption
+    return CaptionModel.setPrimaryCaptionVariation(captionId, variationId)
   }
 
   static getPrimaryCaptionVariation(
     captionId: string
   ): CaptionVariation | null {
-    const caption = captions.get(captionId)
-    if (!caption || !caption.primaryVariationId) {
-      return null
-    }
-
-    const variation = caption.variations.find(
-      (v) => v.id === caption.primaryVariationId
-    )
-    return variation || null
+    return CaptionModel.getPrimaryCaptionVariation(captionId)
   }
 
   static deleteCaption(id: string): boolean {
-    return captions.delete(id)
+    return CaptionModel.deleteCaption(id)
   }
 
   static deleteCaptionsByWorkspace(workspaceId: string): number {
-    const workspaceCaptions = Array.from(captions.values()).filter(
-      (c) => c.workspaceId === workspaceId
-    )
-    let deletedCount = 0
-
-    for (const caption of workspaceCaptions) {
-      if (captions.delete(caption.id)) {
-        deletedCount++
-      }
-    }
-
-    return deletedCount
+    return CaptionModel.deleteCaptionsByWorkspace(workspaceId)
   }
 
   static getAllBatchJobs(): BatchJob[] {
-    return Array.from(batchJobs.values())
+    return BatchJobModel.getAllBatchJobs()
   }
 
   static getAllCaptions(): Caption[] {
-    return Array.from(captions.values())
+    return CaptionModel.getAllCaptions()
   }
 
   // Approval methods
@@ -903,88 +983,14 @@ export class AuthModel {
     captionId: string,
     variationId?: string
   ): Caption | null {
-    const caption = captions.get(captionId)
-    if (!caption) {
-      return null
-    }
-
-    // If no variation ID is specified, approve the primary variation or the first one
-    if (!variationId) {
-      if (caption.primaryVariationId) {
-        return this.approveCaptionVariation(
-          captionId,
-          caption.primaryVariationId
-        )
-      } else if (caption.variations.length > 0) {
-        return this.approveCaptionVariation(captionId, caption.variations[0].id)
-      } else {
-        // If no variations exist, approve the caption at the main level
-        const approvedCaption = {
-          ...caption,
-          approvalStatus: 'approved' as const,
-          approvedAt: new Date(),
-        }
-
-        captions.set(captionId, approvedCaption)
-        return approvedCaption
-      }
-    } else {
-      return this.approveCaptionVariation(captionId, variationId)
-    }
+    return CaptionModel.approveCaption(captionId, variationId)
   }
 
   static approveCaptionVariation(
     captionId: string,
     variationId: string
   ): Caption | null {
-    const caption = captions.get(captionId)
-    if (!caption) {
-      return null
-    }
-
-    const variationIndex = caption.variations.findIndex(
-      (v) => v.id === variationId
-    )
-    if (variationIndex === -1) {
-      return null
-    }
-
-    // Update the specific variation to approved
-    const updatedVariations = [...caption.variations]
-    updatedVariations[variationIndex] = {
-      ...updatedVariations[variationIndex],
-      approvalStatus: 'approved' as const,
-      approvedAt: new Date(),
-    }
-
-    // Update the main caption approval status based on variations
-    const hasApprovedVariation = updatedVariations.some(
-      (v) => v.approvalStatus === 'approved'
-    )
-    const allVariationsRejected = updatedVariations.every(
-      (v) => v.approvalStatus === 'rejected'
-    )
-
-    let newApprovalStatus: 'pending' | 'approved' | 'rejected' = 'pending'
-    if (hasApprovedVariation) {
-      newApprovalStatus = 'approved'
-    } else if (allVariationsRejected) {
-      newApprovalStatus = 'rejected'
-    }
-
-    const approvedCaption = {
-      ...caption,
-      variations: updatedVariations,
-      approvalStatus: newApprovalStatus,
-      approvedAt:
-        newApprovalStatus === 'approved' ? new Date() : caption.approvedAt,
-    }
-
-    // Set this variation as the primary one when approved
-    approvedCaption.primaryVariationId = variationId
-
-    captions.set(captionId, approvedCaption)
-    return approvedCaption
+    return CaptionModel.approveCaptionVariation(captionId, variationId)
   }
 
   static rejectCaption(
@@ -992,40 +998,7 @@ export class AuthModel {
     reason?: string,
     variationId?: string
   ): Caption | null {
-    const caption = captions.get(captionId)
-    if (!caption) {
-      return null
-    }
-
-    // If no variation ID is specified, reject the primary variation or the first one
-    if (!variationId) {
-      if (caption.primaryVariationId) {
-        return this.rejectCaptionVariation(
-          captionId,
-          reason,
-          caption.primaryVariationId
-        )
-      } else if (caption.variations.length > 0) {
-        return this.rejectCaptionVariation(
-          captionId,
-          reason,
-          caption.variations[0].id
-        )
-      } else {
-        // If no variations exist, reject the caption at the main level
-        const rejectedCaption = {
-          ...caption,
-          approvalStatus: 'rejected' as const,
-          rejectedAt: new Date(),
-          errorMessage: reason || 'Rejected by user',
-        }
-
-        captions.set(captionId, rejectedCaption)
-        return rejectedCaption
-      }
-    } else {
-      return this.rejectCaptionVariation(captionId, reason, variationId)
-    }
+    return CaptionModel.rejectCaption(captionId, reason, variationId)
   }
 
   static rejectCaptionVariation(
@@ -1033,92 +1006,25 @@ export class AuthModel {
     reason: string | undefined,
     variationId: string
   ): Caption | null {
-    const caption = captions.get(captionId)
-    if (!caption) {
-      return null
-    }
-
-    const variationIndex = caption.variations.findIndex(
-      (v) => v.id === variationId
-    )
-    if (variationIndex === -1) {
-      return null
-    }
-
-    // Update the specific variation to rejected
-    const updatedVariations = [...caption.variations]
-    updatedVariations[variationIndex] = {
-      ...updatedVariations[variationIndex],
-      approvalStatus: 'rejected' as const,
-      rejectedAt: new Date(),
-      errorMessage: reason,
-    }
-
-    // Update the main caption approval status based on variations
-    const hasApprovedVariation = updatedVariations.some(
-      (v) => v.approvalStatus === 'approved'
-    )
-    const allVariationsRejected = updatedVariations.every(
-      (v) => v.approvalStatus === 'rejected'
-    )
-
-    let newApprovalStatus: 'pending' | 'approved' | 'rejected' = 'pending'
-    if (hasApprovedVariation) {
-      newApprovalStatus = 'approved'
-    } else if (allVariationsRejected) {
-      newApprovalStatus = 'rejected'
-    }
-
-    const rejectedCaption = {
-      ...caption,
-      variations: updatedVariations,
-      approvalStatus: newApprovalStatus,
-      rejectedAt:
-        newApprovalStatus === 'rejected' ? new Date() : caption.rejectedAt,
-    }
-
-    captions.set(captionId, rejectedCaption)
-    return rejectedCaption
+    return CaptionModel.rejectCaptionVariation(captionId, reason, variationId)
   }
 
   static batchApproveCaptions(captionIds: string[]): {
     approved: number
     failed: number
   } {
-    let approved = 0
-    let failed = 0
-
-    for (const captionId of captionIds) {
-      if (this.approveCaption(captionId)) {
-        approved++
-      } else {
-        failed++
-      }
-    }
-
-    return { approved, failed }
+    return CaptionModel.batchApproveCaptions(captionIds)
   }
 
   static batchRejectCaptions(
     captionIds: string[],
     reason?: string
   ): { rejected: number; failed: number } {
-    let rejected = 0
-    let failed = 0
-
-    for (const captionId of captionIds) {
-      if (this.rejectCaption(captionId, reason)) {
-        rejected++
-      } else {
-        failed++
-      }
-    }
-
-    return { rejected, failed }
+    return CaptionModel.batchRejectCaptions(captionIds, reason)
   }
 
   static getApprovedCaptionsByWorkspace(workspaceId: string): Caption[] {
-    return Array.from(captions.values()).filter(
+    return CaptionModel.getAllCaptions().filter(
       (c) => c.workspaceId === workspaceId && c.approvalStatus === 'approved'
     )
   }
@@ -1347,6 +1253,15 @@ export class AuthModel {
     )
   }
 
+  static getApprovedGeneratedAssetsByCampaign(
+    campaignId: string
+  ): GeneratedAsset[] {
+    return Array.from(generatedAssets.values()).filter(
+      (asset) =>
+        asset.campaignId === campaignId && asset.approvalStatus === 'approved'
+    )
+  }
+
   static updateGeneratedAsset(
     id: string,
     updates: Partial<GeneratedAsset>
@@ -1501,9 +1416,7 @@ export class AuthModel {
   }
 
   static getCampaignsByAgency(agencyId: string): Campaign[] {
-    const agencyWorkspaces = Array.from(workspaces.values()).filter(
-      (w) => w.agencyId === agencyId
-    )
+    const agencyWorkspaces = WorkspaceModel.getWorkspacesByAgency(agencyId)
     const workspaceIds = agencyWorkspaces.map((w) => w.id)
     return Array.from(campaigns.values()).filter((c) =>
       workspaceIds.includes(c.workspaceId)
@@ -1697,5 +1610,130 @@ export class AuthModel {
 
   static getAllAdCreatives(): AdCreative[] {
     return Array.from(adCreatives.values())
+  }
+
+  // Template Memory System (added for Stage 4 - Template Memory & Style Learning)
+  static getTemplateById(id: string): Template | null {
+    return templates.get(id) || null
+  }
+
+  static getTemplatesByWorkspace(workspaceId: string): Template[] {
+    return Array.from(templates.values()).filter(
+      (t) => t.workspaceId === workspaceId
+    )
+  }
+
+  static async createTemplate(
+    template: Omit<Template, 'id' | 'createdAt'>
+  ): Promise<Template> {
+    const id = `tmpl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const newTemplate: Template = {
+      ...template,
+      id,
+      createdAt: new Date(),
+    }
+
+    templates.set(id, newTemplate)
+    return newTemplate
+  }
+
+  static async updateTemplate(
+    id: string,
+    updates: Partial<Omit<Template, 'id' | 'createdAt'>>
+  ): Promise<Template> {
+    const template = templates.get(id)
+    if (!template) {
+      throw new Error('Template not found')
+    }
+
+    const updatedTemplate: Template = {
+      ...template,
+      ...updates,
+    }
+
+    templates.set(id, updatedTemplate)
+    return updatedTemplate
+  }
+
+  static deleteTemplate(id: string): boolean {
+    return templates.delete(id)
+  }
+
+  static getAllTemplates(): Template[] {
+    return Array.from(templates.values())
+  }
+
+  // Style Profile System (added for Stage 4 - Template Memory & Style Learning)
+  static getStyleProfileById(id: string): StyleProfile | null {
+    return styleProfiles.get(id) || null
+  }
+
+  static getStyleProfilesByWorkspace(workspaceId: string): StyleProfile[] {
+    return Array.from(styleProfiles.values()).filter(
+      (s) => s.workspaceId === workspaceId
+    )
+  }
+
+  static async createStyleProfile(
+    styleProfile: Omit<StyleProfile, 'id' | 'createdAt'>
+  ): Promise<StyleProfile> {
+    const id = `style_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    const newStyleProfile: StyleProfile = {
+      ...styleProfile,
+      id,
+      createdAt: new Date(),
+    }
+
+    styleProfiles.set(id, newStyleProfile)
+    return newStyleProfile
+  }
+
+  static async updateStyleProfile(
+    id: string,
+    updates: Partial<Omit<StyleProfile, 'id' | 'createdAt'>>
+  ): Promise<StyleProfile> {
+    const styleProfile = styleProfiles.get(id)
+    if (!styleProfile) {
+      throw new Error('Style profile not found')
+    }
+
+    const updatedStyleProfile: StyleProfile = {
+      ...styleProfile,
+      ...updates,
+    }
+
+    styleProfiles.set(id, updatedStyleProfile)
+    return updatedStyleProfile
+  }
+
+  static deleteStyleProfile(id: string): boolean {
+    return styleProfiles.delete(id)
+  }
+
+  static getAllStyleProfiles(): StyleProfile[] {
+    return Array.from(styleProfiles.values())
+  }
+
+  // Additional methods needed for TemplateMemoryService
+  static getCaptionsByCampaignAndStatus(
+    campaignId: string,
+    status: 'pending' | 'approved' | 'rejected'
+  ): Caption[] {
+    return CaptionModel.getAllCaptions().filter(
+      (c) =>
+        c.campaignId === campaignId &&
+        (status ? c.approvalStatus === status : true)
+    )
+  }
+
+  static getGeneratedAssetsByCampaignAndStatus(
+    campaignId: string,
+    status: 'pending' | 'approved' | 'rejected'
+  ): GeneratedAsset[] {
+    return Array.from(generatedAssets.values()).filter(
+      (ga) =>
+        ga.campaignId === campaignId &&
+        (status ? ga.approvalStatus === status : true)
+    )
   }
 }

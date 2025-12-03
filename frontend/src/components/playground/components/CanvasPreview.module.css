@@ -1,0 +1,54 @@
+.canvasPreview {
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  margin: 0;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.license {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.licensePremium {
+  composes: license;
+  color: #10b981;
+}
+
+.licenseFree {
+  composes: license;
+  color: #6b7280;
+}
+
+.canvasContainer {
+  display: flex;
+  justify-content: center;
+  background-color: #f8fafc;
+  padding: 2rem;
+  border-radius: 8px;
+  border: 2px solid #e5e7eb;
+}
+
+.canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}

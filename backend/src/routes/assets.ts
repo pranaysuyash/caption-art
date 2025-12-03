@@ -73,9 +73,10 @@ router.post(
       )
 
       if (!validation.success) {
+        const err = (validation as any).error
         return res.status(400).json({
           error: 'Validation error',
-          details: validation.error.issues.map((issue) => ({
+          details: err.issues.map((issue: any) => ({
             field: issue.path.join('.'),
             message: issue.message,
           })),

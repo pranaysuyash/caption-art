@@ -15,6 +15,11 @@ export function CampaignList() {
   const [loading, setLoading] = useState(true)
   const [showCreateForm, setShowCreateForm] = useState(false)
 
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    objective: 'awareness'
+  })
+
   useEffect(() => {
     loadCampaigns()
   }, [workspaceId])
@@ -22,27 +27,54 @@ export function CampaignList() {
   const loadCampaigns = async () => {
     try {
       setLoading(true)
-      // Mock data for now
-      setCampaigns([
-        {
-          id: 'campaign-1',
-          name: 'Summer Collection Launch',
-          status: 'active',
-          objective: 'awareness',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          id: 'campaign-2',
-          name: 'Holiday Promotion',
-          status: 'draft',
-          objective: 'conversion',
-          lastUpdated: new Date(Date.now() - 86400000).toISOString()
+      
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}/api/campaigns?workspaceId=${workspaceId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
         }
-      ])
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to load campaigns')
+      }
+
+      const data = await response.json()
+      setCampaigns(data.campaigns || [])
     } catch (error) {
       console.error('Error loading campaigns:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleCreateCampaign = async (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}/api/campaigns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({
+          ...createForm,
+          workspaceId,
+          brandKitId: 'temp-id', // Needs a real brand kit ID, but for now this might fail or we need to handle it
+          status: 'draft'
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create campaign')
+      }
+
+      const newCampaign = await response.json()
+      setCampaigns(prev => [...prev, newCampaign])
+      setShowCreateForm(false)
+      setCreateForm({ name: '', objective: 'awareness' })
+    } catch (error) {
+      console.error('Error creating campaign:', error)
     }
   }
 
@@ -99,6 +131,138 @@ export function CampaignList() {
           + New Campaign
         </button>
       </div>
+
+      {/* Create Campaign Modal */}
+      {showCreateForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'var(--color-surface, white)',
+            padding: '2rem',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+          }}>
+            <h2 style={{
+              fontFamily: 'var(--font-heading, sans-serif)',
+              fontSize: '1.5rem',
+              fontWeight: 'bold',
+              color: 'var(--color-text, #1f2937)',
+              margin: '0 0 1.5rem 0'
+            }}>
+              Create New Campaign
+            </h2>
+
+            <form onSubmit={handleCreateCampaign} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '500',
+                  color: 'var(--color-text, #1f2937)'
+                }}>
+                  Campaign Name
+                </label>
+                <input
+                  type="text"
+                  value={createForm.name}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Spring Sale 2025"
+                  className="input"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--color-border, #d1d5db)',
+                    borderRadius: '6px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '0.5rem',
+                  fontWeight: '500',
+                  color: 'var(--color-text, #1f2937)'
+                }}>
+                  Objective
+                </label>
+                <select
+                  value={createForm.objective}
+                  onChange={(e) => setCreateForm(prev => ({ ...prev, objective: e.target.value }))}
+                  className="input"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--color-border, #d1d5db)',
+                    borderRadius: '6px',
+                    fontSize: '1rem'
+                  }}
+                >
+                  <option value="awareness">Brand Awareness</option>
+                  <option value="conversion">Conversions / Sales</option>
+                  <option value="traffic">Website Traffic</option>
+                  <option value="engagement">Engagement</option>
+                </select>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '1rem',
+                justifyContent: 'flex-end',
+                marginTop: '1rem'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateForm(false)}
+                  className="button button-secondary"
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    border: '1px solid var(--color-border, #d1d5db)',
+                    backgroundColor: 'transparent',
+                    color: 'var(--color-text, #1f2937)',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!createForm.name}
+                  className="button button-primary"
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    backgroundColor: 'var(--color-primary, #2563eb)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    cursor: !createForm.name ? 'not-allowed' : 'pointer',
+                    opacity: !createForm.name ? 0.5 : 1
+                  }}
+                >
+                  Create Campaign
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Campaigns Grid */}
       {loading ? (

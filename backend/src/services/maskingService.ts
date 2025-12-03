@@ -10,10 +10,49 @@ export type MaskingModel =
   | 'roboflow'
   | 'hf-model-id'
 
+// Model configuration types
+export interface RembgConfig {
+  model?: 'u2net' | 'u2netp' | 'silueta'
+  alphaMattingEnabled?: boolean
+  alphaMattingForegroundThreshold?: number
+  alphaMattingBackgroundThreshold?: number
+}
+
+export interface SAM3Config {
+  points?: Array<{ x: number; y: number }>
+  labels?: number[]
+  boxes?: Array<{ x: number; y: number; width: number; height: number }>
+}
+
+export interface RFDETRConfig {
+  confidence?: number
+  classes?: string[]
+}
+
+export interface RoboflowConfig {
+  apiKey?: string
+  model?: string
+  version?: string
+  confidence?: number
+}
+
+export interface HuggingFaceConfig {
+  modelId: string
+  revision?: string
+  token?: string
+}
+
+export type ModelConfig =
+  | RembgConfig
+  | SAM3Config
+  | RFDETRConfig
+  | RoboflowConfig
+  | HuggingFaceConfig
+
 export interface MaskingRequest {
   imagePath: string
   model: MaskingModel
-  modelConfig?: Record<string, any>
+  modelConfig?: ModelConfig
 }
 
 export interface MaskingResult {
@@ -32,14 +71,16 @@ export class MaskingService {
     const startTime = Date.now()
 
     // Create cache key based on input parameters
-    const cacheKey = `mask_${createHash('md5').update(`${imagePath}_${model}_${JSON.stringify(modelConfig)}`).digest('hex')}`;
-    const cacheService = CacheService.getInstance();
+    const cacheKey = `mask_${createHash('md5')
+      .update(`${imagePath}_${model}_${JSON.stringify(modelConfig)}`)
+      .digest('hex')}`
+    const cacheService = CacheService.getInstance()
 
     // Try to get from cache first
-    const cachedResult = await cacheService.get<MaskingResult>(cacheKey);
+    const cachedResult = await cacheService.get<MaskingResult>(cacheKey)
     if (cachedResult) {
-      log.info({ cacheKey, imagePath }, 'Masking result served from cache');
-      return cachedResult;
+      log.info({ cacheKey, imagePath }, 'Masking result served from cache')
+      return cachedResult
     }
 
     try {
@@ -47,23 +88,23 @@ export class MaskingService {
 
       switch (model) {
         case 'rembg-replicate':
-          maskPath = await this.applyRembgReplicate(imagePath, modelConfig)
+          maskPath = await this.applyRembgReplicate(imagePath, modelConfig as RembgConfig)
           break
 
         case 'sam3':
-          maskPath = await this.applySAM3(imagePath, modelConfig)
+          maskPath = await this.applySAM3(imagePath, modelConfig as SAM3Config)
           break
 
         case 'rf-detr':
-          maskPath = await this.applyRFDETR(imagePath, modelConfig)
+          maskPath = await this.applyRFDETR(imagePath, modelConfig as RFDETRConfig)
           break
 
         case 'roboflow':
-          maskPath = await this.applyRoboflow(imagePath, modelConfig)
+          maskPath = await this.applyRoboflow(imagePath, modelConfig as RoboflowConfig)
           break
 
         case 'hf-model-id':
-          maskPath = await this.applyHuggingFaceModel(imagePath, modelConfig)
+          maskPath = await this.applyHuggingFaceModel(imagePath, modelConfig as HuggingFaceConfig)
           break
 
         default:
@@ -171,7 +212,7 @@ export class MaskingService {
    */
   private static async applyRembgReplicate(
     imagePath: string,
-    config: any
+    config: RembgConfig
   ): Promise<string> {
     // Simple fallback implementation for now
     // In production, this would call Replicate service
@@ -184,11 +225,11 @@ export class MaskingService {
    */
   private static async applySAM3(
     imagePath: string,
-    config: any
+    config: SAM3Config
   ): Promise<string> {
     // Placeholder for SAM3 integration
     log.info('SAM3 masking not yet implemented, falling back to rembg')
-    return this.applyRembgReplicate(imagePath, config)
+    return this.applyRembgReplicate(imagePath, {})
   }
 
   /**
@@ -196,11 +237,11 @@ export class MaskingService {
    */
   private static async applyRFDETR(
     imagePath: string,
-    config: any
+    config: RFDETRConfig
   ): Promise<string> {
     // Placeholder for RF-DETR integration
     log.info('RF-DETR masking not yet implemented, falling back to rembg')
-    return this.applyRembgReplicate(imagePath, config)
+    return this.applyRembgReplicate(imagePath, {})
   }
 
   /**
@@ -208,11 +249,11 @@ export class MaskingService {
    */
   private static async applyRoboflow(
     imagePath: string,
-    config: any
+    config: RoboflowConfig
   ): Promise<string> {
     // Placeholder for Roboflow integration
     log.info('Roboflow masking not yet implemented, falling back to rembg')
-    return this.applyRembgReplicate(imagePath, config)
+    return this.applyRembgReplicate(imagePath, {})
   }
 
   /**
@@ -220,11 +261,11 @@ export class MaskingService {
    */
   private static async applyHuggingFaceModel(
     imagePath: string,
-    config: any
+    config: HuggingFaceConfig
   ): Promise<string> {
     // Placeholder for HuggingFace integration
     log.info('HuggingFace masking not yet implemented, falling back to rembg')
-    return this.applyRembgReplicate(imagePath, config)
+    return this.applyRembgReplicate(imagePath, {})
   }
 
   /**

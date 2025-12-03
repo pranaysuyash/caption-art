@@ -55,7 +55,7 @@ router.post(
   '/generate',
   requireAuth,
   validateRequest(generateVideoScriptSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const requestData = (req as any).validatedData as VideoScriptGenerationRequest
 
@@ -166,7 +166,7 @@ router.post(
 router.get(
   '/',
   requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId, platform, status, page = 1, limit = 20 } = req.query
 
@@ -238,7 +238,7 @@ router.get(
   '/:videoScriptId',
   requireAuth,
   validateRequest(videoScriptIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { videoScriptId } = (req as any).validatedData
 
@@ -282,7 +282,7 @@ router.post(
   '/:videoScriptId/duplicate',
   requireAuth,
   validateRequest(videoScriptIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { videoScriptId } = (req as any).validatedData
 
@@ -342,7 +342,7 @@ router.delete(
   '/:videoScriptId',
   requireAuth,
   validateRequest(videoScriptIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { videoScriptId } = (req as any).validatedData
 
@@ -389,7 +389,7 @@ router.delete(
  * GET /api/video-scripts/health
  * Health check endpoint
  */
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', (req: Request, res: any) => {
   res.json({
     status: 'ok',
     service: 'video-script-service',

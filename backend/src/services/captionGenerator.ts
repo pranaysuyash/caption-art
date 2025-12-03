@@ -4,11 +4,20 @@ import { log } from '../middleware/logger'
 import { ImageRenderer } from './imageRenderer'
 import { StyleAnalyzer, StyleProfile } from './styleAnalyzer'
 import { CacheService } from './CacheService'
+import { MetricsService } from './MetricsService'
+import { CaptionScorer } from './CaptionScorer'
 import path from 'path'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
+
+// Ad copy character limits
+const AD_COPY_LIMITS = {
+  HEADLINE_MAX: 60,
+  BODY_TEXT_MAX: 125,
+  CTA_MAX: 20,
+} as const
 
 export type CaptionTemplate =
   | 'punchy'
@@ -391,7 +400,11 @@ Create a caption that aligns with the brand voice and would work well for social
 
     try {
       // Try to get from cache first
-      const cachedAdCopy = await cacheService.get<{ headline: string; bodyText: string; ctaText: string }>(cacheKey)
+      const cachedAdCopy = await cacheService.get<{
+        headline: string
+        bodyText: string
+        ctaText: string
+      }>(cacheKey)
       if (cachedAdCopy) {
         log.info({ assetId, cacheKey }, 'Ad copy served from cache')
         return cachedAdCopy
@@ -503,9 +516,9 @@ CTA: [your call-to-action here]`
       const ctaText = ctaMatch?.[1]?.trim() || 'Learn More'
 
       const result = {
-        headline: headline.slice(0, 60),
-        bodyText: bodyText.slice(0, 125),
-        ctaText: ctaText.slice(0, 20),
+        headline: headline.slice(0, AD_COPY_LIMITS.HEADLINE_MAX),
+        bodyText: bodyText.slice(0, AD_COPY_LIMITS.BODY_TEXT_MAX),
+        ctaText: ctaText.slice(0, AD_COPY_LIMITS.CTA_MAX),
       }
 
       // Cache the generated ad copy for future requests
@@ -600,6 +613,8 @@ CTA: [your call-to-action here]`
 
           await AuthModel.addCaptionVariation(captionId, {
             text: caption,
+            label: 'main',
+            approved: false,
             status: 'completed',
             approvalStatus: 'pending',
             qualityScore: scores?.totalScore,
@@ -678,7 +693,11 @@ CTA: [your call-to-action here]`
           // Create or get caption for this asset
           let caption = AuthModel.getCaptionsByAsset(assetId)[0]
           if (!caption) {
-            caption = AuthModel.createCaption(assetId, job.workspaceId)
+            caption = AuthModel.createCaption(
+              assetId,
+              job.workspaceId,
+              job.campaignId
+            )
           }
 
           // Update caption status to generating
@@ -711,9 +730,13 @@ CTA: [your call-to-action here]`
           // Generate primary caption first
           const captionText = await this.generateCaption(generationRequest)
 
+          const startCaptionGenTime = Date.now()
+
           // Add the primary generated caption as a variation
           AuthModel.addCaptionVariation(caption.id, {
             text: captionText,
+            label: 'main',
+            approved: false,
             status: 'completed',
             approvalStatus: 'pending',
             generatedAt: new Date(),
@@ -741,6 +764,14 @@ CTA: [your call-to-action here]`
             caption.id
           )
 
+          // Track caption generation metrics
+          const durationSec = (Date.now() - startCaptionGenTime) / 1000
+          MetricsService.trackCaptionGeneration(
+            job.workspaceId,
+            job.campaignId,
+            durationSec
+          )
+
           // Generate rendered images if we have an agency for watermark logic
           if (agency) {
             const assetPath = path.join(process.cwd(), asset.url)
@@ -760,6 +791,7 @@ CTA: [your call-to-action here]`
                 jobId: jobId,
                 sourceAssetId: assetId,
                 workspaceId: job.workspaceId,
+                campaignId: job.campaignId, // Pass campaign ID to connect the asset to the campaign
                 captionId: caption.id,
                 approvalStatus: 'pending',
                 format: rendered.format as

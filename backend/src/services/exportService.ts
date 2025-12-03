@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { AuthModel, Caption, Asset, GeneratedAsset } from '../models/auth'
 import { log } from '../middleware/logger'
+import { MetricsService } from './MetricsService'
 
 export interface ExportOptions {
   includeAssets: boolean
@@ -247,6 +248,8 @@ Thank you for using caption-art!
    * Process an export job asynchronously
    */
   static async processExportJob(jobId: string): Promise<void> {
+    const startTime = Date.now();
+
     try {
       const job = AuthModel.getExportJobById(jobId)
       if (!job) {
@@ -259,6 +262,7 @@ Thank you for using caption-art!
       })
 
       // Create the export
+      const durationBeforeExport = (Date.now() - startTime) / 1000;
       const { zipFilePath } = await this.createExport(job.workspaceId, {
         includeAssets: false, // Don't include original assets by default
         includeCaptions: true,
@@ -266,13 +270,21 @@ Thank you for using caption-art!
         format: 'zip',
       })
 
+      // Calculate total export duration including preparation time
+      const exportDurationSec = (Date.now() - startTime) / 1000;
+
       // Update job with completed status
       AuthModel.updateExportJob(jobId, {
         status: 'completed',
         zipFilePath,
         completedAt: new Date(),
       })
+
+      // Track export metrics
+      MetricsService.trackExportJob(job.workspaceId, 'completed');
     } catch (error) {
+      const exportDurationSec = (Date.now() - startTime) / 1000;
+
       log.error({ err: error, jobId }, `Error processing export job`)
 
       // Mark job as failed
@@ -281,6 +293,12 @@ Thank you for using caption-art!
         completedAt: new Date(),
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
       })
+
+      // Track failed export metrics
+      const job = AuthModel.getExportJobById(jobId);
+      if (job) {
+        MetricsService.trackExportJob(job.workspaceId, 'failed');
+      }
     }
   }
 

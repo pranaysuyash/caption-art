@@ -7,9 +7,9 @@ import { Request, Response, NextFunction } from 'express'
 import { z, ZodSchema } from 'zod'
 
 export interface ValidationOptions {
-  body?: ZodSchema
-  params?: ZodSchema
-  query?: ZodSchema
+  body?: ZodSchema | { schema: ZodSchema }
+  params?: ZodSchema | { schema: ZodSchema }
+  query?: ZodSchema | { schema: ZodSchema }
 }
 
 /**
@@ -20,41 +20,47 @@ export function validateRequest(options: ValidationOptions) {
     try {
       // Validate body if schema provided
       if (options.body) {
-        const parsedBody = options.body.parse(req.body)
-        req.body = parsedBody
+        const bodySchema: ZodSchema =
+          (options.body as any).schema || (options.body as ZodSchema)
+        const parsedBody = bodySchema.parse(req.body)
+        ;(req as any).body = parsedBody as any
       }
 
-      // Validate params if schema provided  
+      // Validate params if schema provided
       if (options.params) {
-        const parsedParams = options.params.parse(req.params)
-        req.params = parsedParams
+        const paramsSchema: ZodSchema =
+          (options.params as any).schema || (options.params as ZodSchema)
+        const parsedParams = paramsSchema.parse(req.params)
+        ;(req as any).params = parsedParams as any
       }
 
       // Validate query if schema provided
       if (options.query) {
-        const parsedQuery = options.query.parse(req.query)
-        req.query = parsedQuery
+        const querySchema: ZodSchema =
+          (options.query as any).schema || (options.query as ZodSchema)
+        const parsedQuery = querySchema.parse(req.query)
+        ;(req as any).query = parsedQuery as any
       }
 
       next()
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Format validation errors for response
-        const errors = error.issues.map(issue => ({
+        const errors = error.issues.map((issue) => ({
           field: issue.path.join('.'),
           message: issue.message,
-          value: issue.input
+          value: issue.input,
         }))
 
         return res.status(400).json({
           error: 'Validation error',
-          details: errors
+          details: errors,
         })
       }
-      
+
       // Handle other errors
-      return res.status(500).json({ 
-        error: 'Internal server error during validation' 
+      return res.status(500).json({
+        error: 'Internal server error during validation',
       })
     }
   }
@@ -70,11 +76,18 @@ export function validateData<T>(data: unknown, schema: ZodSchema<T>): T {
 /**
  * Safe validation function that returns result or error
  */
-export function safeValidateData<T>(data: unknown, schema: ZodSchema<T>): { 
-  success: true; data: T 
-} | { 
-  success: false; error: z.ZodError 
-} {
+export function safeValidateData<T>(
+  data: unknown,
+  schema: ZodSchema<T>
+):
+  | {
+      success: true
+      data: T
+    }
+  | {
+      success: false
+      error: z.ZodError
+    } {
   try {
     const parsedData = schema.parse(data)
     return { success: true, data: parsedData }

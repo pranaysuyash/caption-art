@@ -35,6 +35,61 @@ export class ImageRenderer {
     'instagram-story': { width: 1080, height: 1920 },
   }
 
+  // Optimized canvas reuse pool to improve performance
+  private static canvasPool = new Map<string, { canvas: any; context: any; inUse: boolean }>()
+  private static readonly POOL_SIZE_LIMIT = 10 // Maximum canvases to keep in pool
+
+  /**
+   * Get or create canvas from pool for better performance
+   */
+  private static getCanvas(width: number, height: number) {
+    const key = `${width}x${height}`
+    let canvasEntry = this.canvasPool.get(key)
+
+    if (!canvasEntry) {
+      // If we're at pool limit, remove least recently used canvas
+      if (this.canvasPool.size >= this.POOL_SIZE_LIMIT) {
+        const firstKey = this.canvasPool.keys().next().value
+        if (firstKey) {
+          this.canvasPool.delete(firstKey)
+        }
+      }
+
+      const canvas = createCanvas(width, height)
+      const context = canvas.getContext('2d')
+
+      canvasEntry = { canvas, context, inUse: true }
+      this.canvasPool.set(key, canvasEntry)
+    } else {
+      canvasEntry.inUse = true
+    }
+
+    return { canvas: canvasEntry.canvas, context: canvasEntry.context }
+  }
+
+  /**
+   * Release canvas back to pool
+   */
+  private static releaseCanvas(width: number, height: number) {
+    const key = `${width}x${height}`
+    const canvasEntry = this.canvasPool.get(key)
+    if (canvasEntry) {
+      canvasEntry.inUse = false
+    }
+  }
+
+  /**
+   * Clear unused canvases from pool
+   */
+  static clearUnusedCanvases() {
+    // Remove canvases that are not in use
+    for (const [key, canvasEntry] of this.canvasPool.entries()) {
+      if (!canvasEntry.inUse) {
+        this.canvasPool.delete(key)
+      }
+    }
+  }
+
   static async initialize(): Promise<void> {
     // Ensure output directory exists
     if (!fs.existsSync(this.OUTPUT_DIR)) {
@@ -200,9 +255,8 @@ export class ImageRenderer {
     const dimensions = this.DIMENSIONS[format]
     const colors = this.generateColorPalette(brandKit)
 
-    // Create canvas
-    const canvas = createCanvas(dimensions.width, dimensions.height)
-    const ctx = canvas.getContext('2d')
+    // Get canvas from pool for better performance
+    const { canvas, context: ctx } = this.getCanvas(dimensions.width, dimensions.height)
 
     // Fill background
     ctx.fillStyle = colors.background
@@ -340,9 +394,16 @@ export class ImageRenderer {
       // Cache the result for faster retrieval next time
       await cacheService.set(cacheKey, result, 24 * 60 * 60 * 1000) // Cache for 24 hours
 
+      // Release canvas back to pool for reuse
+      this.releaseCanvas(dimensions.width, dimensions.height)
+
       return result
     } catch (error) {
       log.error({ err: error }, 'Image rendering failed')
+
+      // Release canvas back to pool in case of error
+      this.releaseCanvas(dimensions.width, dimensions.height)
+
       throw new Error(
         `Failed to render image: ${error instanceof Error ? error.message : 'Unknown error'}`
       )

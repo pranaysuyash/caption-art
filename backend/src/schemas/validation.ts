@@ -63,6 +63,8 @@ export const COST_BASED_RATE_LIMITS = {
   veryHigh: { points: 10, description: 'Multiple AI services' }
 }
 
+export const Tones = z.enum(['default', 'witty', 'inspirational', 'formal']);
+
 /**
  * Schema for caption generation requests
  */
@@ -86,6 +88,7 @@ export const CaptionRequestSchema: SchemaWithMetadata<z.ZodObject<any>> = {
         return true
       }, 'Invalid data URI format. Must be base64-encoded image'),
     keywords: z.array(z.string()).optional().default([]),
+    tone: Tones.optional().default('default'),
   }),
   rateLimit: {
     ...RATE_LIMIT_TIERS.standard,

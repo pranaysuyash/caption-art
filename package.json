@@ -2,5 +2,8 @@
   "dependencies": {
     "@types/archiver": "^7.0.0",
     "archiver": "^7.0.1"
+  },
+  "devDependencies": {
+    "madge": "^8.0.0"
   }
 }

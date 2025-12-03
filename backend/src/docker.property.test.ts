@@ -122,7 +122,7 @@ describe('Property 19: Container environment variables', () => {
           // Set all environment variables as they would be in a container
           Object.entries(envVars).forEach(([key, value]) => {
             if (value !== undefined) {
-              process.env[key] = value
+              process.env[key] = String(value)
             } else {
               delete process.env[key]
             }
@@ -193,7 +193,7 @@ describe('Property 20: Environment equivalence', () => {
         async (envVars) => {
           // Simulate local environment
           Object.entries(envVars).forEach(([key, value]) => {
-            process.env[key] = value
+            process.env[key] = String(value)
           })
 
           const { config: localConfig } = await import('./config')
@@ -212,7 +212,7 @@ describe('Property 20: Environment equivalence', () => {
 
           // Simulate container environment (same env vars)
           Object.entries(envVars).forEach(([key, value]) => {
-            process.env[key] = value
+            process.env[key] = String(value)
           })
 
           const { config: containerConfig } = await import('./config')
@@ -249,11 +249,14 @@ describe('Property 20: Environment equivalence', () => {
         async (envVars) => {
           // Set environment variables
           Object.entries(envVars).forEach(([key, value]) => {
-            process.env[key] = value
+            process.env[key] = String(value)
           })
 
           // Import server module
-          const { createServer } = await import('./server.ts')
+          const serverModule = await import('./server.ts')
+          const createServer =
+            (serverModule as any).createServer ||
+            (serverModule as any).default?.createServer
 
           // Create server (simulates both local and container)
           const app = createServer()
@@ -284,7 +287,10 @@ describe('Property 20: Environment equivalence', () => {
     process.env.PORT = '3001'
 
     // Import server
-    const { createServer } = await import('./server.ts')
+    const serverModule = await import('./server.ts')
+    const createServer =
+      (serverModule as any).createServer ||
+      (serverModule as any).default?.createServer
 
     // Create server instance (represents both local and container)
     const app = createServer()

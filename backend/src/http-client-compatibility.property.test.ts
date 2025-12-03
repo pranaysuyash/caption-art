@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import * as fc from 'fast-check'
-import { createServer } from './server'
 import { Express } from 'express'
 import * as replicateService from './services/replicate'
 import * as openaiService from './services/openai'
@@ -15,11 +14,16 @@ import { Server } from 'http'
  */
 
 describe('Property 21: HTTP client compatibility', () => {
-  let app: Express
+  let app: any
   let server: Server
   let port: number
 
   beforeEach(async () => {
+    // Dynamic import to avoid circular dependency
+    const serverModule = await import('./server.ts')
+    const createServer =
+      (serverModule as any).createServer ||
+      (serverModule as any).default?.createServer
     // Create app without rate limiter for testing
     app = createServer({ enableRateLimiter: false })
 

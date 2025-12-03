@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { generateBaseCaption } from '../services/replicate'
 import { rewriteCaption } from '../services/openai'
+import { z } from 'zod'
 import {
   CaptionGenerator,
   CAPTION_TEMPLATES,
@@ -32,11 +33,11 @@ const requireAuth = createAuthMiddleware() as any
 router.post(
   '/',
   validateRequest({ body: CaptionRequestSchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: any, next: NextFunction) => {
     try {
       // Validate request body with Zod schema
       const validatedData = req.body
-      const { imageUrl, keywords } = validatedData
+      const { imageUrl, keywords, tone } = validatedData
 
       // Sanitize keywords to avoid prompt injection and limit size
       const safeKeywords = sanitizeKeywords(keywords)
@@ -55,7 +56,7 @@ router.post(
       // Generate creative variants with OpenAI
       let variants: string[]
       try {
-        variants = await rewriteCaption(baseCaption, safeKeywords)
+        variants = await rewriteCaption(baseCaption, safeKeywords, tone)
       } catch (error) {
         throw new ExternalAPIError(
           error instanceof Error ? error.message : 'Caption rewriting failed',
@@ -81,7 +82,7 @@ router.post(
   '/batch',
   requireAuth,
   validateRequest({ body: BatchCaptionSchema }),
-  async (req: Request, res: Response) => {
+  async (req: Request, res: any) => {
     try {
       const authenticatedReq = req as unknown as any
       const { workspaceId, assetIds, template } = req.body
@@ -103,11 +104,9 @@ router.post(
           return res.status(404).json({ error: `Asset ${assetId} not found` })
         }
         if (asset.workspaceId !== workspaceId) {
-          return res
-            .status(403)
-            .json({
-              error: `Asset ${assetId} does not belong to this workspace`,
-            })
+          return res.status(403).json({
+            error: `Asset ${assetId} does not belong to this workspace`,
+          })
         }
       }
 
@@ -148,35 +147,31 @@ router.post(
 )
 
 // GET /api/caption/batch/:jobId - Get batch job status
-router.get(
-  '/batch/:jobId',
-  requireAuth,
-  async (req: Request, res: Response) => {
-    try {
-      const authenticatedReq = req as unknown as any
-      const { jobId } = req.params
+router.get('/batch/:jobId', requireAuth, async (req: Request, res: any) => {
+  try {
+    const authenticatedReq = req as unknown as any
+    const { jobId } = req.params
 
-      const job = AuthModel.getBatchJobById(jobId)
-      if (!job) {
-        return res.status(404).json({ error: 'Batch job not found' })
-      }
-
-      // Verify job belongs to agency via workspace
-      const workspace = AuthModel.getWorkspaceById(job.workspaceId)
-      if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-        return res.status(403).json({ error: 'Access denied' })
-      }
-
-      res.json({ job })
-    } catch (error) {
-      log.error({ err: error }, 'Get batch job error')
-      res.status(500).json({ error: 'Internal server error' })
+    const job = AuthModel.getBatchJobById(jobId)
+    if (!job) {
+      return res.status(404).json({ error: 'Batch job not found' })
     }
+
+    // Verify job belongs to agency via workspace
+    const workspace = AuthModel.getWorkspaceById(job.workspaceId)
+    if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    res.json({ job })
+  } catch (error) {
+    log.error({ err: error }, 'Get batch job error')
+    res.status(500).json({ error: 'Internal server error' })
   }
-)
+})
 
 // GET /api/caption/templates - Get available caption templates
-router.get('/templates', (req: Request, res: Response) => {
+router.get('/templates', (req: Request, res: any) => {
   res.json({
     templates: CAPTION_TEMPLATES,
     defaultTemplate: 'descriptive',

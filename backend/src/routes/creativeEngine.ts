@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { createAuthMiddleware } from '../routes/auth'
-import validateRequest from '../middleware/validateRequest'
+import { validateRequest } from '../middleware/validation'
 import { AuthenticatedRequest } from '../types/auth'
 import { AuthModel } from '../models/auth'
 import CreativeEngine from '../services/creativeEngine'
@@ -57,7 +57,7 @@ router.use((req, res, next) => {
 router.post(
   '/generate',
   requireAuth,
-  validateRequest(generateCreativesSchema) as any,
+  validateRequest({ body: generateCreativesSchema }),
   async (req, res) => {
     log.info(
       { requestId: (req as any).requestId },
@@ -67,7 +67,7 @@ router.post(
 
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
-      let validatedData = (req as any).validatedData
+      let validatedData = req.body
       // Sanitize textual inputs to prevent injection and excessive length
       const { sanitizeKeywords, sanitizeText, sanitizePhrases } =
         await import('../utils/sanitizers')

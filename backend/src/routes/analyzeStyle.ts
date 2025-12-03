@@ -52,7 +52,11 @@ router.post(
       })
     } catch (error) {
       log.error(
-        { err: error, imageUrl, requestId: (req as any).requestId },
+        {
+          err: error,
+          imageUrl: req.body.imageUrl,
+          requestId: (req as any).requestId,
+        },
         'Visual style analysis error'
       )
 

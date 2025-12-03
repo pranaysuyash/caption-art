@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import pino from 'pino'
+import { MetricsService } from '../services/MetricsService'
 
 // Import pino with better configuration
 let pinoLogger: any
@@ -55,6 +56,8 @@ export function requestLogger(
       if (!res.locals) (res as any).locals = {}
       if (!res.locals.responseLogged) {
         const duration = Date.now() - startTime
+        const durationSec = duration / 1000
+
         try {
           log.info(
             {
@@ -71,6 +74,9 @@ export function requestLogger(
             },
             'request finished'
           )
+
+          // Track API request metrics
+          MetricsService.trackApiRequest(req.method, req.path, res.statusCode, durationSec)
         } catch (e) {
           // Best-effort: if logging fails in stubbed environments, swallow to avoid crashing tests
         }
@@ -86,6 +92,8 @@ export function requestLogger(
       if (!res.locals) (res as any).locals = {}
       if (!res.locals.responseLogged) {
         const duration = Date.now() - startTime
+        const durationSec = duration / 1000
+
         try {
           log.info(
             {
@@ -102,6 +110,9 @@ export function requestLogger(
             },
             'request finished'
           )
+
+          // Track API request metrics using the metrics service
+          MetricsService.trackApiRequest(req.method, req.path, res.statusCode, durationSec)
         } catch (e) {
           // swallow errors to remain compatible with test stubs
         }

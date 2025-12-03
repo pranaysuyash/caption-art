@@ -177,7 +177,7 @@ describe('Error Handler Middleware', () => {
     errorHandler(error, req, res, next)
 
     expect(consoleSpy).toHaveBeenCalled()
-    const logCall = consoleSpy.mock.calls[0]
+    const logCall = consoleSpy.mock.calls[0] as any
     expect(logCall[0]).toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
 
     consoleSpy.mockRestore()

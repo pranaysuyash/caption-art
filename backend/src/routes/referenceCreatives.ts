@@ -30,10 +30,6 @@ router.use((req, res, next) => {
 
 // POST /api/reference-creatives/upload - Upload reference creative
 router.post('/upload', requireAuth, async (req, res) => {
-  log.info(
-    { requestId: (req as any).requestId, name: rawName, workspaceId },
-    'Uploading reference creative'
-  )
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
 
@@ -49,6 +45,11 @@ router.post('/upload', requireAuth, async (req, res) => {
     const { sanitizeText } = await import('../utils/sanitizers')
     const name = sanitizeText(rawName, 200) || rawName
     const notes = sanitizeText(rawNotes, 1000) || rawNotes
+
+    log.info(
+      { requestId: (req as any).requestId, name, workspaceId },
+      'Uploading reference creative'
+    )
 
     // Validate required fields
     if (!name || !workspaceId || !imageUrl) {

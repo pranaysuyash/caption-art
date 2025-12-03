@@ -1,107 +1,29 @@
-/**
- * Theme System Styles
- * 
- * Global styles for theme transitions and base theme setup.
- */
+/* frontend/src/styles/themes.css */
 
-/* Theme transition styles */
-:root.theme-transitioning {
-  transition: 
-    background-color var(--theme-transition-duration, 300ms) cubic-bezier(0.4, 0, 0.2, 1),
-    color var(--theme-transition-duration, 300ms) cubic-bezier(0.4, 0, 0.2, 1);
+.theme-light {
+  --color-background: var(--color-background-light);
+  --color-primary: var(--color-primary-light);
+  --color-secondary: var(--color-secondary-light);
+  --color-accent: var(--color-accent-light);
+  --color-text: var(--color-text-light);
+  --color-surface: var(--color-surface-light);
+  --color-border: var(--color-border-light);
+
+  background-color: var(--color-background);
+  color: var(--color-text);
+  transition: background-color var(--transition-timing-base) var(--transition-ease-smooth), color var(--transition-timing-base) var(--transition-ease-smooth);
 }
 
-:root.theme-transitioning * {
-  transition: 
-    background-color var(--theme-transition-duration, 300ms) cubic-bezier(0.4, 0, 0.2, 1),
-    color var(--theme-transition-duration, 300ms) cubic-bezier(0.4, 0, 0.2, 1),
-    border-color var(--theme-transition-duration, 300ms) cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow var(--theme-transition-duration, 300ms) cubic-bezier(0.4, 0, 0.2, 1);
-}
+.theme-dark {
+  --color-background: var(--color-background-dark);
+  --color-primary: var(--color-primary-dark);
+  --color-secondary: var(--color-secondary-dark);
+  --color-accent: var(--color-accent-dark);
+  --color-text: var(--color-text-dark);
+  --color-surface: var(--color-surface-dark);
+  --color-border: var(--color-border-dark);
 
-/* Prevent transitions on page load */
-:root.no-transition,
-:root.no-transition * {
-  transition: none !important;
+  background-color: var(--color-background);
+  color: var(--color-text);
+  transition: background-color var(--transition-timing-base) var(--transition-ease-smooth), color var(--transition-timing-base) var(--transition-ease-smooth);
 }
-
-/* Respect reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  :root.theme-transitioning,
-  :root.theme-transitioning * {
-    transition: none !important;
-  }
-}
-
-/* Default theme variable fallbacks */
-:root {
-  /* Colors */
-  --color-bg: #FAFAFA;
-  --color-bg-secondary: #FFFFFF;
-  --color-bg-tertiary: #F5F5F5;
-  --color-text: #111111;
-  --color-text-secondary: #666666;
-  --color-text-tertiary: #999999;
-  --color-primary: #FF6B6B;
-  --color-secondary: #4ECDC4;
-  --color-accent: #FFE66D;
-  --color-success: #51CF66;
-  --color-warning: #FFA94D;
-  --color-error: #FF6B6B;
-  --color-info: #4ECDC4;
-  --color-border: #111111;
-  --color-border-light: #CCCCCC;
-  --color-border-heavy: #000000;
-  
-  /* Typography */
-  --font-family-heading: "Space Grotesk", sans-serif;
-  --font-family-body: "Inter", sans-serif;
-  --font-family-mono: "JetBrains Mono", monospace;
-  --font-size-base: 16px;
-  --font-weight-normal: 400;
-  --font-weight-medium: 600;
-  --font-weight-bold: 700;
-  --line-height-base: 1.5;
-  --letter-spacing: 0;
-  
-  /* Spacing */
-  --spacing-unit: 8px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
-  --spacing-2xl: 32px;
-  --spacing-3xl: 48px;
-  --spacing-4xl: 64px;
-  --spacing-5xl: 96px;
-  
-  /* Shadows */
-  --shadow-sm: 4px 4px 0 var(--color-border);
-  --shadow-md: 8px 8px 0 var(--color-border);
-  --shadow-lg: 12px 12px 0 var(--color-border);
-  --shadow-xl: 16px 16px 0 var(--color-border);
-  --shadow-inner: inset 2px 2px 4px rgba(0, 0, 0, 0.1);
-  
-  /* Borders */
-  --border-width-thin: 2px;
-  --border-width-medium: 3px;
-  --border-width-thick: 5px;
-  --border-radius-sm: 4px;
-  --border-radius-md: 8px;
-  --border-radius-lg: 12px;
-  --border-radius-full: 9999px;
-  --border-style: solid;
-  
-  /* Animations */
-  --animation-duration-fast: 150ms;
-  --animation-duration-base: 300ms;
-  --animation-duration-slow: 500ms;
-  --animation-easing-smooth: cubic-bezier(0.4, 0, 0.2, 1);
-  --animation-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  --animation-easing-sharp: cubic-bezier(0.4, 0, 0.6, 1);
-  
-  /* Theme transition duration */
-  --theme-transition-duration: 300ms;
-}
-

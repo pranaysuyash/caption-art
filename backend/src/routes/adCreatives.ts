@@ -5,7 +5,10 @@ import { createAuthMiddleware } from '../routes/auth'
 import validateRequest from '../middleware/validateRequest'
 import { AdCreativeGenerator } from '../services/adCreativeGenerator'
 import { AdCreative, AdCreativeGenerationRequest } from '../types/adCreative'
-import { AdCopyService, AdCopyGenerationRequest } from '../services/adCopyService'
+import {
+  AdCopyService,
+  AdCopyGenerationRequest,
+} from '../services/adCopyService'
 import { CampaignAwareService } from '../services/campaignAwareService'
 import { log } from '../middleware/logger'
 import { AuthenticatedRequest } from '../types/auth'
@@ -56,8 +59,8 @@ const updateAdCreativeSchema = z.object({
         content: z.string(),
         variations: z.array(z.string()).optional(),
         maxLength: z.number().optional(),
-        platformSpecific: z.record(z.string()).optional(),
-        metadata: z.record(z.any()).optional(),
+        platformSpecific: z.record(z.string(), z.string()).optional(),
+        metadata: z.record(z.string(), z.any()).optional(),
       })
     )
     .optional(),
@@ -92,7 +95,15 @@ const generateAdCopySchema = z.object({
       painPoints: z.array(z.string()).optional(),
     })
     .optional(),
-  variationType: z.enum(['main', 'alt1', 'alt2', 'alt3', 'punchy', 'short', 'story']),
+  variationType: z.enum([
+    'main',
+    'alt1',
+    'alt2',
+    'alt3',
+    'punchy',
+    'short',
+    'story',
+  ]),
 })
 
 const generateMultipleAdCopySchema = z.object({
@@ -135,7 +146,7 @@ router.post(
   '/generate',
   requireAuth,
   validateRequest(generateAdCreativeSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const requestData = (req as any)
         .validatedData as AdCreativeGenerationRequest
@@ -218,74 +229,70 @@ router.post(
  * GET /api/ad-creatives
  * List all ad creatives for the agency
  */
-router.get(
-  '/',
-  requireAuth,
-  async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { campaignId, status, platform, page = 1, limit = 20 } = req.query
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res: any) => {
+  try {
+    const { campaignId, status, platform, page = 1, limit = 20 } = req.query
 
-      // Get all campaigns for this agency
-      const agencyCampaigns = AuthModel.getAllCampaigns().filter((campaign) => {
-        const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
-        return workspace?.agencyId === req.agency.id
-      })
+    // Get all campaigns for this agency
+    const agencyCampaigns = AuthModel.getAllCampaigns().filter((campaign) => {
+      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      return workspace?.agencyId === req.agency.id
+    })
 
-      const campaignIds = agencyCampaigns.map((c) => c.id)
+    const campaignIds = agencyCampaigns.map((c) => c.id)
 
-      // Filter ad creatives
-      let filteredCreatives = Array.from(adCreatives.values()).filter(
-        (creative) => {
-          let matches = true
+    // Filter ad creatives
+    let filteredCreatives = Array.from(adCreatives.values()).filter(
+      (creative) => {
+        let matches = true
 
-          if (campaignId) {
-            matches = matches && creative.campaignId === campaignId
-          }
-
-          if (status) {
-            matches = matches && creative.status === status
-          }
-
-          if (platform) {
-            matches = matches && creative.primaryPlatform === platform
-          }
-
-          matches = matches && campaignIds.includes(creative.campaignId)
-
-          return matches
+        if (campaignId) {
+          matches = matches && creative.campaignId === campaignId
         }
-      )
 
-      // Sort by creation date (newest first)
-      filteredCreatives.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
+        if (status) {
+          matches = matches && creative.status === status
+        }
 
-      // Pagination
-      const startIndex = (Number(page) - 1) * Number(limit)
-      const endIndex = startIndex + Number(limit)
-      const paginatedCreatives = filteredCreatives.slice(startIndex, endIndex)
+        if (platform) {
+          matches = matches && creative.primaryPlatform === platform
+        }
 
-      res.json({
-        success: true,
-        adCreatives: paginatedCreatives,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: filteredCreatives.length,
-          totalPages: Math.ceil(filteredCreatives.length / Number(limit)),
-        },
-      })
-    } catch (error) {
-      log.error(
-        { err: error, requestId: (req as any).requestId },
-        'List ad creatives error'
-      )
-      res.status(500).json({ error: 'Failed to list ad creatives' })
-    }
+        matches = matches && campaignIds.includes(creative.campaignId)
+
+        return matches
+      }
+    )
+
+    // Sort by creation date (newest first)
+    filteredCreatives.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+
+    // Pagination
+    const startIndex = (Number(page) - 1) * Number(limit)
+    const endIndex = startIndex + Number(limit)
+    const paginatedCreatives = filteredCreatives.slice(startIndex, endIndex)
+
+    res.json({
+      success: true,
+      adCreatives: paginatedCreatives,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: filteredCreatives.length,
+        totalPages: Math.ceil(filteredCreatives.length / Number(limit)),
+      },
+    })
+  } catch (error) {
+    log.error(
+      { err: error, requestId: (req as any).requestId },
+      'List ad creatives error'
+    )
+    res.status(500).json({ error: 'Failed to list ad creatives' })
   }
-)
+})
 
 /**
  * GET /api/ad-creatives/:adCreativeId
@@ -295,7 +302,7 @@ router.get(
   '/:adCreativeId',
   requireAuth,
   validateRequest(adCreativeIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { adCreativeId } = (req as any).validatedData
 
@@ -337,7 +344,7 @@ router.put(
   '/:adCreativeId',
   requireAuth,
   validateRequest(updateAdCreativeSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { adCreativeId } = req.params
       const updateData = (req as any).validatedData
@@ -421,7 +428,7 @@ router.delete(
   '/:adCreativeId',
   requireAuth,
   validateRequest(adCreativeIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { adCreativeId } = (req as any).validatedData
 
@@ -470,7 +477,7 @@ router.post(
   '/:adCreativeId/duplicate',
   requireAuth,
   validateRequest(adCreativeIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { adCreativeId } = (req as any).validatedData
 
@@ -535,7 +542,7 @@ router.post(
   '/:adCreativeId/analyze',
   requireAuth,
   validateRequest(adCreativeIdSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { adCreativeId } = (req as any).validatedData
 
@@ -564,7 +571,10 @@ router.post(
         brandKitId: adCreative.brandKitId,
         objective: adCreative.objective,
         funnelStage: adCreative.funnelStage,
-        platforms: [adCreative.primaryPlatform],
+        platforms:
+          adCreative.primaryPlatform === 'multi'
+            ? ['instagram', 'facebook', 'linkedin']
+            : [adCreative.primaryPlatform],
         targetAudience: {
           demographics: campaign.brief?.primaryAudience?.demographics || '',
           psychographics: campaign.brief?.primaryAudience?.psychographics || '',
@@ -631,7 +641,7 @@ router.post(
   '/adcopy/generate',
   requireAuth,
   validateRequest(generateAdCopySchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const requestData = (req as any).validatedData as AdCopyGenerationRequest
 
@@ -720,7 +730,7 @@ router.post(
   '/adcopy/generate-multiple',
   requireAuth,
   validateRequest(generateMultipleAdCopySchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const requestData = (req as any).validatedData
 
@@ -779,8 +789,9 @@ router.post(
       }
 
       // Calculate overall statistics
-      const averageQualityScore = results.reduce((sum, r) => sum + r.qualityScore, 0) / results.length
-      const allRecommendations = results.flatMap(r => r.recommendations)
+      const averageQualityScore =
+        results.reduce((sum, r) => sum + r.qualityScore, 0) / results.length
+      const allRecommendations = results.flatMap((r) => r.recommendations)
 
       log.info(
         {
@@ -794,7 +805,7 @@ router.post(
       res.json({
         success: true,
         results: {
-          variations: results.map(r => ({
+          variations: results.map((r) => ({
             variation: r.variation,
             adCopy: r.adCopy,
             qualityScore: r.qualityScore,
@@ -817,7 +828,9 @@ router.post(
         return res.status(400).json({ error: error.message })
       }
 
-      res.status(500).json({ error: 'Failed to generate multiple ad copy variations' })
+      res
+        .status(500)
+        .json({ error: 'Failed to generate multiple ad copy variations' })
     }
   }
 )
@@ -826,7 +839,7 @@ router.post(
  * GET /api/ad-creatives/adcopy/health
  * Health check endpoint for ad copy service
  */
-router.get('/adcopy/health', (req: Request, res: Response) => {
+router.get('/adcopy/health', (req: Request, res: any) => {
   res.json({
     status: 'ok',
     service: 'ad-copy-service',
@@ -851,7 +864,7 @@ router.post(
   '/campaign-context/analyze',
   requireAuth,
   validateRequest(analyzeCampaignContextSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId, brandKitId } = (req as any).validatedData
 
@@ -887,10 +900,14 @@ router.post(
       )
 
       // Build campaign context
-      const campaignContext = campaignAwareService.buildCampaignContext(campaign, brandKit)
+      const campaignContext = campaignAwareService.buildCampaignContext(
+        campaign,
+        brandKit
+      )
 
       // Analyze context quality
-      const analysis = campaignAwareService.analyzeCampaignContext(campaignContext)
+      const analysis =
+        campaignAwareService.analyzeCampaignContext(campaignContext)
 
       log.info(
         {
@@ -908,8 +925,12 @@ router.post(
           campaignContext,
           analysis,
           recommendations: {
-            immediate: analysis.recommendations.filter(r => r.includes('Missing')),
-            strategic: analysis.recommendations.filter(r => !r.includes('Missing')),
+            immediate: analysis.recommendations.filter((r) =>
+              r.includes('Missing')
+            ),
+            strategic: analysis.recommendations.filter(
+              (r) => !r.includes('Missing')
+            ),
           },
         },
       })
@@ -936,10 +957,11 @@ router.post(
   '/campaign-context/generate-prompt',
   requireAuth,
   validateRequest(analyzeCampaignContextSchema) as any,
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId, brandKitId } = (req as any).validatedData
-      const { assetDescription, variationType, platforms, contentType } = req.body
+      const { assetDescription, variationType, platforms, contentType } =
+        req.body
 
       // Validate campaign exists and user has access
       const campaign = AuthModel.getCampaignById(campaignId)
@@ -974,14 +996,22 @@ router.post(
       )
 
       // Build campaign context
-      const campaignContext = campaignAwareService.buildCampaignContext(campaign, brandKit)
+      const campaignContext = campaignAwareService.buildCampaignContext(
+        campaign,
+        brandKit
+      )
 
       // Generate sample prompt
       const assetContext = {
-        description: assetDescription || 'Sample product or service description',
+        description:
+          assetDescription || 'Sample product or service description',
         category: contentType || 'ad-copy',
         features: [],
-        benefits: [campaign.brief?.keyMessage || brandKit.valueProposition || 'High quality products'],
+        benefits: [
+          campaign.brief?.keyMessage ||
+            brandKit.valueProposition ||
+            'High quality products',
+        ],
         useCases: [`Drive ${campaign.objective} through compelling content`],
       }
 
@@ -1026,7 +1056,9 @@ router.post(
         return res.status(400).json({ error: error.message })
       }
 
-      res.status(500).json({ error: 'Failed to generate campaign-aware prompt' })
+      res
+        .status(500)
+        .json({ error: 'Failed to generate campaign-aware prompt' })
     }
   }
 )
@@ -1035,7 +1067,7 @@ router.post(
  * GET /api/ad-creatives/campaign-context/health
  * Health check endpoint for campaign-aware service
  */
-router.get('/campaign-context/health', (req: Request, res: Response) => {
+router.get('/campaign-context/health', (req: Request, res: any) => {
   res.json({
     status: 'ok',
     service: 'campaign-aware-service',
@@ -1055,7 +1087,7 @@ router.get('/campaign-context/health', (req: Request, res: Response) => {
  * GET /api/ad-creatives/health
  * Health check endpoint
  */
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', (req: Request, res: any) => {
   res.json({
     status: 'ok',
     service: 'ad-creative-service',

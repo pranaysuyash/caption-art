@@ -1,33 +1,53 @@
-import OpenAI from 'openai'
-import { config } from '../config'
-import { withRetry } from './replicate'
+import OpenAI from 'openai';
+import { config } from '../config';
+import { withRetry } from './replicate';
+
+export const TONE_PROMPTS = {
+  default:
+    'You are a creative copywriter for image captions. Given a base caption, produce 5 concise, catchy variants for social posts. Keep 4-10 words each. Avoid hashtags, avoid quotes.',
+  witty:
+    'You are a witty and sarcastic copywriter. Given a base caption, produce 5 short, punchy, and funny variants for social posts. Use irony and humor. Keep it under 10 words. No hashtags.',
+  inspirational:
+    'You are an inspirational and uplifting copywriter. Given a base caption, produce 5 moving and motivational variants. Use powerful words. Keep it concise. No hashtags.',
+  formal:
+    'You are a professional and formal copywriter for a business or news outlet. Given a base caption, produce 5 clear, objective, and descriptive variants. Avoid slang and exclamation points.',
+};
+
+export type Tone = keyof typeof TONE_PROMPTS;
 
 /**
  * Rewrites a base caption into multiple creative variants using OpenAI
  * @param baseCaption - The base caption to rewrite
  * @param keywords - Optional keywords to incorporate into variants
+ * @param tone - The desired tone of voice for the captions
  * @returns Array of caption variants
  */
 export async function rewriteCaption(
   baseCaption: string,
-  keywords: string[] = []
+  keywords: string[] = [],
+  tone: Tone = 'default'
 ): Promise<string[]> {
   return withRetry(
     async () => {
-      const openai = new OpenAI({ apiKey: config.openai.apiKey })
+      const openai = new OpenAI({ apiKey: config.openai.apiKey });
 
       const keywordText =
-        keywords.length > 0 ? `Keywords: ${keywords.join(', ')}` : ''
+        keywords.length > 0 ? `Keywords: ${keywords.join(', ')}` : '';
 
-      const prompt = `You are a creative copywriter for image captions. Given a base caption, produce 5 concise, catchy variants for social posts. Keep 4-10 words each. Avoid hashtags, avoid quotes. ${keywordText ? 'If keywords are provided, weave 1-2 in naturally.' : ''} Base: "${baseCaption}". ${keywordText}`
+      const basePrompt =
+        TONE_PROMPTS[tone] || TONE_PROMPTS.default;
+
+      const prompt = `${basePrompt} ${
+        keywordText ? 'If keywords are provided, weave 1-2 in naturally.' : ''
+      } Base: "${baseCaption}". ${keywordText}`;
 
       const response = await openai.chat.completions.create({
         model: config.openai.model,
         messages: [{ role: 'user', content: prompt }],
         temperature: config.openai.temperature,
-      })
+      });
 
-      const text = response.choices[0]?.message?.content || ''
+      const text = response.choices[0]?.message?.content || '';
 
       // Parse the response into individual variants
       // Split by newlines and clean up formatting
@@ -35,16 +55,16 @@ export async function rewriteCaption(
         .split(/\n|\r/)
         .map((s) => s.replace(/^[-*\d.\s]+/, '').trim())
         .filter(Boolean)
-        .slice(0, 5)
+        .slice(0, 5);
 
-      return variants
+      return variants;
     },
     {
       maxRetries: 2, // Retry twice for OpenAI
       initialDelay: 1000,
       timeout: 30000,
     }
-  )
+  );
 }
 
 /**

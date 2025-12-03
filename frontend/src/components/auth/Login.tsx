@@ -10,6 +10,17 @@ export function Login({ onLogin }: LoginProps) {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [isSignup, setIsSignup] = useState(false)
+  const [agencyName, setAgencyName] = useState('')
+
+  const handleSignup = async () => {
+    setIsSignup(true)
+  }
+
+  const handleBackToLogin = () => {
+    setIsSignup(false)
+    setAgencyName('')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -17,17 +28,22 @@ export function Login({ onLogin }: LoginProps) {
     setError('')
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}/api/auth/login`, {
+      const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login'
+      const body = isSignup
+        ? { email, password, agencyName: agencyName || 'Default Agency' }
+        : { email, password }
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
-        throw new Error(data.error || 'Login failed')
+        throw new Error(data.error || `${isSignup ? 'Signup' : 'Login'} failed`)
       }
 
       const data = await response.json()
@@ -71,11 +87,39 @@ export function Login({ onLogin }: LoginProps) {
             marginTop: '0.5rem',
             marginBottom: 0
           }}>
-            Agency Creative Engine
+            {isSignup ? 'Create your agency account' : 'Agency Creative Engine'}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {isSignup && (
+            <div>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.5rem',
+                fontWeight: '500',
+                color: 'var(--color-text, #1f2937)'
+              }}>
+                Agency Name
+              </label>
+              <input
+                type="text"
+                value={agencyName}
+                onChange={(e) => setAgencyName(e.target.value)}
+                placeholder="My Creative Agency"
+                className="input"
+                required={isSignup}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid var(--color-border, #d1d5db)',
+                  borderRadius: '6px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+          )}
+
           <div>
             <label style={{
               display: 'block',
@@ -143,7 +187,7 @@ export function Login({ onLogin }: LoginProps) {
 
           <button
             type="submit"
-            disabled={loading || !email || !password}
+            disabled={loading || !email || !password || (isSignup && !agencyName)}
             className="button button-primary"
             style={{
               padding: '0.75rem',
@@ -152,12 +196,12 @@ export function Login({ onLogin }: LoginProps) {
               fontSize: '1rem',
               fontWeight: '500',
               cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: (loading || !email || !password) ? 0.5 : 1,
+              opacity: (loading || !email || !password || (isSignup && !agencyName)) ? 0.5 : 1,
               backgroundColor: 'var(--color-primary, #2563eb)',
               color: 'white'
             }}
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? (isSignup ? 'Creating account...' : 'Signing in...') : (isSignup ? 'Sign Up' : 'Sign In')}
           </button>
         </form>
 
@@ -167,7 +211,31 @@ export function Login({ onLogin }: LoginProps) {
           fontSize: '0.875rem',
           color: 'var(--color-text-secondary, #6b7280)'
         }}>
-          Demo: Use any email/password to continue
+          {isSignup ? 'Already have an account?' : "Don't have an account?"}
+          <button
+            type="button"
+            onClick={isSignup ? handleBackToLogin : handleSignup}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-primary, #2563eb)',
+              textDecoration: 'underline',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              marginLeft: '0.25rem'
+            }}
+          >
+            {isSignup ? 'Sign in' : 'Sign up'}
+          </button>
+        </div>
+
+        <div style={{
+          marginTop: '0.5rem',
+          textAlign: 'center',
+          fontSize: '0.75rem',
+          color: 'var(--color-text-secondary, #6b7280)'
+        }}>
+          Demo: Use test@example.com / testpassword123
         </div>
       </div>
     </div>

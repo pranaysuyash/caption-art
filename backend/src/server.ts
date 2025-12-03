@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 // Load environment variables before anything else
 dotenv.config()
 
-import express, { Express } from 'express'
+import express from 'express'
 import cookieParser from 'cookie-parser'
 import path from 'path'
 import { config } from './config'
@@ -11,32 +11,67 @@ import { requestIdMiddleware } from './middleware/requestId'
 import { wafMiddleware } from './middleware/waf'
 import { errorHandler } from './middleware/errorHandler'
 import { requestLogger, log } from './middleware/logger'
-import { rateLimiter } from './middleware/rateLimiter'
-import { createCostWeightedRateLimiter } from './middleware/costWeightedRateLimiter'
-import authRouter from './routes/auth'
-import workspacesRouter from './routes/workspaces'
-import brandKitsRouter from './routes/brandKits'
-import assetsRouter from './routes/assets'
-import batchRouter from './routes/batch'
-import approvalRouter from './routes/approval'
-import exportRouter from './routes/export'
-import { createAuthMiddleware } from './routes/auth'
-import { ExportService } from './services/exportService'
-import { AuthModel } from './models/auth'
-import generatedAssetsRouter from './routes/generatedAssets'
-import captionRouter from './routes/caption'
-import maskRouter from './routes/mask'
-import verifyRouter from './routes/verify'
-import healthRouter from './routes/health'
-import storyRouter from './routes/story'
-import campaignsRouter from './routes/campaigns'
-import referenceCreativesRouter from './routes/referenceCreatives'
-import creativeEngineRouter from './routes/creativeEngine'
-import analyzeStyleRouter from './routes/analyzeStyle'
-import campaignBriefsRouter from './routes/campaignBriefs'
-import adCreativesRouter from './routes/adCreatives'
-import styleMemoryRouter from './routes/styleMemory'
-import videoScriptsRouter from './routes/videoScripts'
+// import { rateLimiter } from './middleware/rateLimiter'
+
+// Pre-declare exports as function stubs to avoid circular dependency issues
+// These will be reassigned below after actual function definitions
+// Export mutable bindings so tests that import createServer can get the
+// up-to-date implementation even when circular dependencies exist.
+// Export named functions directly so the function bindings are defined
+// immediately at module evaluation time. This avoids intermittent
+// "createServer is not a function" errors when other modules import the
+// server during a circular dependency.
+export function createServer(
+  options: { enableRateLimiter?: boolean; loadRoutes?: boolean } = {}
+) {
+  return createServerImpl(options)
+}
+
+export function startServer(): void {
+  return startServerImpl()
+}
+
+if (process.env.NODE_ENV === 'test') {
+  // eslint-disable-next-line no-console
+  console.log(
+    '[server.ts] module evaluated (test) createServer type:',
+    typeof createServer
+  )
+}
+
+// Attach to CommonJS exports directly to ensure the bindings exist for
+// consumers that access module.exports (and for circular import cases).
+// This is safe because we export the named functions above and only need to
+// ensure the properties are present immediately on module.exports.
+;(module as any).exports.createServer = createServer
+;(module as any).exports.startServer = startServer
+
+// Ensure module.exports contains named and default exports for all module
+// loaders (CommonJS and ESM interop). This helps in test environments that
+// import CommonJS modules using ESM syntax and expect named exports.
+Object.assign((module as any).exports, {
+  createServer,
+  startServer,
+})
+// Avoid explicitly touching module.exports.__esModule - it may be read-only
+// in some loaders (e.g., ts-node), and adding it can cause TypeError.
+
+// Minimal debug outputs to verify module.exports shape in the test environment.
+// Kept minimal to reduce noisy warnings; this is only used to validate the
+// shape of exports during a test run.
+if (process.env.NODE_ENV === 'test') {
+  // eslint-disable-next-line no-console
+  console.log(
+    '[server.ts] module.exports keys after assignment:',
+    Object.keys(module.exports || {})
+  )
+}
+
+// Also provide a default export that exposes the current bindings. This keeps
+// backwards compatibility with code that imports the default and expects an
+// object with createServer/startServer getters.
+// No default export - keep only named exports. This avoids ESM/CJS interop
+// issues where dynamic import only exposes `default` and not named exports.
 
 // Global route registry to make route information accessible across functions
 let globalMountedRoutes: Array<{
@@ -44,10 +79,10 @@ let globalMountedRoutes: Array<{
   innerRoutes?: Array<{ method: string; path: string }>
 }> = []
 
-export function createServer(
-  options: { enableRateLimiter?: boolean } = {}
-): Express {
-  const { enableRateLimiter = true } = options
+function createServerImpl(
+  options: { enableRateLimiter?: boolean; loadRoutes?: boolean } = {}
+) {
+  const { enableRateLimiter = true, loadRoutes = true } = options
   const app = express()
 
   // Reset the global mounted routes for each server instance
@@ -147,75 +182,161 @@ export function createServer(
 
   // 6. Cost-weighted rate limiter for API routes (can be disabled for testing)
   if (enableRateLimiter) {
+    // Lazy-load to avoid circular dependency through AuthModel
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const {
+      createCostWeightedRateLimiter,
+    } = require('./middleware/costWeightedRateLimiter')
     const costWeightedRateLimiter = createCostWeightedRateLimiter({
       windowMs: 15 * 60 * 1000, // 15 minutes
       maxPoints: 500, // Default max points, will be adjusted based on user tier
-    });
-    app.use('/api/', costWeightedRateLimiter);
+    })
+    app.use('/api/', costWeightedRateLimiter)
   }
 
-  // Routes (auth first, then workspaces, brand kits, assets, batch, approval, export, generated assets, then existing routes)
-  app.use('/api/auth', authRouter)
-  app.use('/api/workspaces', workspacesRouter)
-  app.use('/api/brand-kits', brandKitsRouter)
-  app.use('/api/assets', assetsRouter)
-  app.use('/api/batch', batchRouter)
-  app.use('/api/approval', approvalRouter)
+  // Lazy-load route modules to break circular dependencies (optional in tests)
+  // When loadRoutes is false, we avoid requiring route modules to make the
+  // server constructable in unit tests that don't need full routing setup.
+  let authRouter, workspacesRouter, brandKitsRouter
+  let assetsRouter, batchRouter, approvalRouter, exportRouter
+  let generatedAssetsRouter, captionRouter, maskRouter, verifyRouter
+  let healthRouter, storyRouter, campaignsRouter, referenceCreativesRouter
+  let creativeEngineRouter, analyzeStyleRouter, campaignBriefsRouter
+  let adCreativesRouter, styleMemoryRouter, videoScriptsRouter
+  let multiFormatRouter, styleSynthesisRouter, videoRendererRouter
+  let publishingRouter, dashboardRouter
+  if (loadRoutes) {
+    // Lazy-load route modules only when requested
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const authRouter = require('./routes/auth').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const workspacesRouter = require('./routes/workspaces').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const brandKitsRouter = require('./routes/brandKits').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const assetsRouter = require('./routes/assets').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const batchRouter = require('./routes/batch').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const approvalRouter = require('./routes/approval').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const exportRouter = require('./routes/export').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const generatedAssetsRouter = require('./routes/generatedAssets').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const captionRouter = require('./routes/caption').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const maskRouter = require('./routes/mask').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const verifyRouter = require('./routes/verify').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const healthRouter = require('./routes/health').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const storyRouter = require('./routes/story').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const campaignsRouter = require('./routes/campaigns').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const referenceCreativesRouter =
+      require('./routes/referenceCreatives').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const creativeEngineRouter = require('./routes/creativeEngine').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const analyzeStyleRouter = require('./routes/analyzeStyle').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const campaignBriefsRouter = require('./routes/campaignBriefs').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const adCreativesRouter = require('./routes/adCreatives').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const styleMemoryRouter = require('./routes/styleMemory').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const videoScriptsRouter = require('./routes/videoScripts').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const multiFormatRouter = require('./routes/multiFormat').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const styleSynthesisRouter = require('./routes/styleSynthesis').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const videoRendererRouter = require('./routes/videoRenderer').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const publishingRouter = require('./routes/publishing').default
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const dashboardRouter = require('./routes/dashboard').default
 
-  // Fallback server-level POST route for starting export, to prevent 404 when router route matching fails for POST. This duplicates exportRouter POST handler for now.
-  const requireAuthInline = createAuthMiddleware() as any
-  app.post(
-    '/api/export/workspace/:workspaceId/start',
-    requireAuthInline,
-    async (req, res) => {
-      try {
-        const authenticatedReq: any = req
-        const { workspaceId } = req.params
+    // Routes (auth first, then workspaces, brand kits, assets, batch, approval, export, generated assets, then existing routes)
+    app.use('/api/auth', authRouter)
+    app.use('/api/workspaces', workspacesRouter)
+    app.use('/api/brand-kits', brandKitsRouter)
+    app.use('/api/assets', assetsRouter)
+    app.use('/api/batch', batchRouter)
+    app.use('/api/approval', approvalRouter)
 
-        const workspace = AuthModel.getWorkspaceById(workspaceId)
-        if (!workspace) {
-          return res.status(404).json({ error: 'Workspace not found' })
+    // Lazy-load createAuthMiddleware, AuthModel, and ExportService to avoid circular dependency
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { createAuthMiddleware } = require('./routes/auth')
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { AuthModel } = require('./models/auth')
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { ExportService } = require('./services/exportService')
+
+    // Fallback server-level POST route for starting export, to prevent 404 when router route matching fails for POST. This duplicates exportRouter POST handler for now.
+    const requireAuthInline = createAuthMiddleware() as any
+    app.post(
+      '/api/export/workspace/:workspaceId/start',
+      requireAuthInline,
+      async (req, res) => {
+        try {
+          const authenticatedReq: any = req
+          const { workspaceId } = req.params
+
+          const workspace = AuthModel.getWorkspaceById(workspaceId)
+          if (!workspace) {
+            return res.status(404).json({ error: 'Workspace not found' })
+          }
+
+          if (workspace.agencyId !== authenticatedReq.agency.id) {
+            return res.status(403).json({ error: 'Access denied' })
+          }
+
+          const approvedCaptions =
+            AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
+          if (approvedCaptions.length === 0) {
+            return res
+              .status(400)
+              .json({ error: 'No approved captions found for export' })
+          }
+
+          const result = await ExportService.startExport(workspaceId)
+          res.status(201).json(result)
+        } catch (error) {
+          if (error instanceof Error) {
+            return res.status(400).json({ error: error.message })
+          }
+          log.error({ err: error }, 'Start export error (fallback route)')
+          res.status(500).json({ error: 'Internal server error' })
         }
-
-        if (workspace.agencyId !== authenticatedReq.agency.id) {
-          return res.status(403).json({ error: 'Access denied' })
-        }
-
-        const approvedCaptions =
-          AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-        if (approvedCaptions.length === 0) {
-          return res
-            .status(400)
-            .json({ error: 'No approved captions found for export' })
-        }
-
-        const result = await ExportService.startExport(workspaceId)
-        res.status(201).json(result)
-      } catch (error) {
-        if (error instanceof Error) {
-          return res.status(400).json({ error: error.message })
-        }
-        log.error({ err: error }, 'Start export error (fallback route)')
-        res.status(500).json({ error: 'Internal server error' })
       }
-    }
-  )
-  // Mount export router at /api/export
-  app.use('/api/export', exportRouter)
-  app.use('/api/generated-assets', generatedAssetsRouter)
-  app.use('/api/caption', captionRouter)
-  app.use('/api/mask', maskRouter)
-  app.use('/api/verify', verifyRouter)
-  app.use('/api/health', healthRouter)
-  app.use('/api/story', storyRouter)
-  app.use('/api/campaigns', campaignsRouter)
-  app.use('/api/reference-creatives', referenceCreativesRouter)
-  app.use('/api/creative-engine', creativeEngineRouter)
-  app.use('/api/analyze-style', analyzeStyleRouter)
-  app.use('/api/campaign-briefs', campaignBriefsRouter)
-  app.use('/api/ad-creatives', adCreativesRouter)
-  app.use('/api/style-memory', styleMemoryRouter)
-  app.use('/api/video-scripts', videoScriptsRouter)
+    )
+    // Mount export router at /api/export
+    app.use('/api/export', exportRouter)
+    app.use('/api/generated-assets', generatedAssetsRouter)
+    app.use('/api/caption', captionRouter)
+    app.use('/api/mask', maskRouter)
+    app.use('/api/verify', verifyRouter)
+    app.use('/api/health', healthRouter)
+    app.use('/api/story', storyRouter)
+    app.use('/api/campaigns', campaignsRouter)
+    app.use('/api/reference-creatives', referenceCreativesRouter)
+    app.use('/api/creative-engine', creativeEngineRouter)
+    app.use('/api/analyze-style', analyzeStyleRouter)
+    app.use('/api/campaign-briefs', campaignBriefsRouter)
+    app.use('/api/ad-creatives', adCreativesRouter)
+    app.use('/api/style-memory', styleMemoryRouter)
+    app.use('/api/video-scripts', videoScriptsRouter)
+    app.use('/api/multi-format', multiFormatRouter)
+    app.use('/api/style-synthesis', styleSynthesisRouter)
+    app.use('/api/video-renderer', videoRendererRouter)
+    app.use('/api/publishing', publishingRouter)
+    app.use('/api/dashboard', dashboardRouter)
+  }
 
   // Simple test route to debug route registration
   log.info({ env: process.env.NODE_ENV }, 'NODE_ENV value on startup')
@@ -432,7 +553,7 @@ export function createServer(
   return app
 }
 
-export function startServer(): void {
+function startServerImpl(): void {
   const app = createServer()
   const port = config.port
 
@@ -528,6 +649,19 @@ export function startServer(): void {
     }
   })
 }
+
+// Note: export functions createServer/startServer are thin wrappers that
+// delegate to the actual implementations createServerImpl/startServerImpl.
+// This keeps the export bindings stable while allowing us to keep the
+// implementation functions private.
+
+// Debug: Log when module is fully evaluated
+// Debug: print exports and module.exports details to help diagnose circular
+// import timing issues where consumers may see undefined bindings.
+// Module-level debug logging disabled to avoid triggering module export
+// access timing warnings; this would read module.exports while the module is
+// still being evaluated and may result in misleading circular dependency
+// warnings.
 
 // Start server if this file is run directly
 if (require.main === module) {

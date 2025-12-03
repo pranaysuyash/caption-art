@@ -1,6 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { verifyLicense } from '../services/gumroad'
 import { VerifyRequest, VerifyResponse } from '../types/api'
+import { ExternalAPIError } from '../errors/AppError'
 
 const router = Router()
 
@@ -35,7 +36,15 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Verify license with Gumroad
-    const result = await verifyLicense(licenseKey)
+    let result
+    try {
+      result = await verifyLicense(licenseKey)
+    } catch (error) {
+      throw new ExternalAPIError(
+        error instanceof Error ? error.message : 'License verification failed',
+        'Gumroad'
+      )
+    }
 
     const response: VerifyResponse = {
       valid: result.valid,

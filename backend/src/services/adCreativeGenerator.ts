@@ -155,7 +155,7 @@ export class AdCreativeGenerator {
     const brief = campaign.brief
     const brandPersonality =
       brandKit.brandPersonality || 'Professional and trustworthy'
-    const colors = brandKit.colors || {}
+    const colors = brandKit.colors || { primary: 'Not specified', secondary: 'Not specified' }
 
     return `
 Generate ${request.variations} variations of ad creative content for the following campaign:

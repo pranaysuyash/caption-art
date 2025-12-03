@@ -6,7 +6,10 @@ describe('Export integration', () => {
   let app: any
   beforeEach(async () => {
     vi.resetModules()
-    const { createServer } = await import('../../src/server')
+    const serverModule = await import('../../src/server')
+    const createServer =
+      (serverModule as any).createServer ||
+      (serverModule as any).default?.createServer
     app = createServer({ enableRateLimiter: false })
   })
 

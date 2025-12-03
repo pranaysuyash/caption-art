@@ -2,7 +2,6 @@ import { describe, it, expect, beforeAll, vi } from 'vitest'
 import * as fc from 'fast-check'
 import request from 'supertest'
 import { Express } from 'express'
-import { createServer } from '../server'
 import * as replicateService from '../services/replicate'
 import * as openaiService from '../services/openai'
 import * as gumroadService from '../services/gumroad'
@@ -19,7 +18,13 @@ import * as gumroadService from '../services/gumroad'
 describe('Property 3: API key security', () => {
   let app: Express
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    // Dynamic import from index to break circular dependency
+    const serverModule = await import('../index')
+    const createServer =
+      (serverModule as any).createServer ||
+      (serverModule as any).default?.createServer
+
     // Mock external services to prevent real API calls during property tests
     vi.spyOn(replicateService, 'generateBaseCaption').mockResolvedValue(
       'A test caption'

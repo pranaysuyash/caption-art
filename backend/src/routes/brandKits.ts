@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { AuthModel } from '../models/auth'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
-import validateRequest from '../middleware/validateRequest'
+import { validateRequest } from '../middleware/validation'
 import { AuthenticatedRequest } from '../types/auth'
 import { MaskingService } from '../services/maskingService'
 
@@ -78,11 +78,11 @@ const updateBrandKitSchema = z.object({
 router.post(
   '/',
   requireAuth,
-  validateRequest(createBrandKitSchema) as any,
+  validateRequest({ body: createBrandKitSchema }),
   async (req, res) => {
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
-      let brandKitData = (req as any).validatedData
+      let brandKitData = req.body
       // sanitize voice prompt to avoid injection patterns
       if (brandKitData.voicePrompt) {
         const { sanitizeText } = await import('../utils/sanitizers')
@@ -154,12 +154,12 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.put(
   '/:id',
   requireAuth,
-  validateRequest(updateBrandKitSchema) as any,
+  validateRequest({ body: updateBrandKitSchema }),
   async (req, res) => {
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { id } = req.params
-      let updates = (req as any).validatedData
+      let updates = req.body
       if (updates.voicePrompt) {
         const { sanitizeText } = await import('../utils/sanitizers')
         updates = {

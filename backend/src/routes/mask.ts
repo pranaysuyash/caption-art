@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express'
 import { generateMask } from '../services/replicate'
 import { MaskResponse } from '../types/api'
 import { MaskRequestSchema } from '../schemas/validation'
-import validateRequest from '../middleware/validateRequest'
+import { validateRequest } from '../middleware/validation'
 import { ValidationError, ExternalAPIError } from '../errors/AppError'
 
 const router = Router()
@@ -19,12 +19,11 @@ const router = Router()
  */
 router.post(
   '/',
-  validateRequest(MaskRequestSchema) as any,
+  validateRequest({ body: MaskRequestSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Validate request body with Zod schema
-      const validatedData = (req as any).validatedData
-      const { imageUrl } = validatedData
+      // Data is already validated and available in req.body
+      const { imageUrl } = req.body
 
       // Generate mask using Replicate's rembg model
       let maskUrl: string

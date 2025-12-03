@@ -31,6 +31,7 @@ export function WorkspaceList() {
   const loadWorkspaces = async () => {
     try {
       setLoading(true)
+      
       const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}/api/workspaces`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
@@ -45,8 +46,8 @@ export function WorkspaceList() {
       setWorkspaces(data.workspaces || [])
     } catch (error) {
       console.error('Error loading workspaces:', error)
-      // For now, show mock data if API fails
-      setWorkspaces([
+      // For now, show mock data if API fails and no local data
+      const mockWorkspaces = [
         {
           id: 'workspace-1',
           clientName: 'Fashion Brand A',
@@ -61,7 +62,10 @@ export function WorkspaceList() {
           createdAt: new Date().toISOString(),
           campaignCount: 1
         }
-      ])
+      ]
+      setWorkspaces(mockWorkspaces)
+      // Save mock data to storage so we have a starting point
+      localStorage.setItem('workspaces', JSON.stringify(mockWorkspaces))
     } finally {
       setLoading(false)
     }

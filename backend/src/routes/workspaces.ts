@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { AuthModel } from '../models/auth'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
-import validateRequest from '../middleware/validateRequest'
+import { validateRequest } from '../middleware/validation'
 import { AuthenticatedRequest } from '../types/auth'
 
 const router = Router()
@@ -30,11 +30,11 @@ router.get('/', requireAuth as any, (req, res) => {
 router.post(
   '/',
   requireAuth as any,
-  validateRequest(createWorkspaceSchema) as any,
+  validateRequest({ body: createWorkspaceSchema }),
   async (req, res) => {
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
-      const { clientName } = (req as any).validatedData
+      const { clientName } = req.body
 
       const workspace = await AuthModel.createWorkspace(
         authenticatedReq.agency.id,
@@ -78,12 +78,15 @@ router.get('/:id', requireAuth as any, (req, res) => {
 router.put(
   '/:id',
   requireAuth as any,
-  validateRequest(updateWorkspaceSchema) as any,
+  validateRequest({
+    params: z.object({ id: z.string().min(1) }),
+    body: updateWorkspaceSchema
+  }),
   (req, res) => {
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { id } = req.params
-      const updates = (req as any).validatedData
+      const updates = req.body
 
       const workspace = AuthModel.getWorkspaceById(id)
       if (!workspace) {
