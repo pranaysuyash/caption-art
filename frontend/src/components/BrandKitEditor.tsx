@@ -26,6 +26,23 @@ const FONT_OPTIONS = [
   'Inter',
 ];
 
+const TONE_STYLE_OPTIONS = [
+  { value: 'professional', label: 'Professional', description: 'Authoritative, knowledgeable, formal' },
+  { value: 'playful', label: 'Playful', description: 'Fun, lighthearted, whimsical' },
+  { value: 'bold', label: 'Bold', description: 'Confident, daring, attention-grabbing' },
+  { value: 'minimal', label: 'Minimal', description: 'Clean, simple, understated' },
+  { value: 'luxury', label: 'Luxury', description: 'Premium, elegant, sophisticated' },
+  { value: 'edgy', label: 'Edgy', description: 'Trendy, provocative, cutting-edge' },
+];
+
+const MASKING_MODEL_OPTIONS = [
+  { value: 'rembg-replicate', label: 'Rembg (Replicate)', description: 'General purpose background removal' },
+  { value: 'sam3', label: 'SAM 3', description: 'Segment Anything Model v3' },
+  { value: 'rf-detr', label: 'Roboflow DETR', description: 'Object detection and segmentation' },
+  { value: 'roboflow', label: 'Roboflow Custom', description: 'Custom trained models' },
+  { value: 'hf-model-id', label: 'Hugging Face Model', description: 'HF Hub custom models' },
+];
+
 export function BrandKitEditor() {
   const { activeWorkspace } = useWorkspace();
   const [brandKit, setBrandKit] = useState<BrandKit | null>(null);
@@ -43,6 +60,14 @@ export function BrandKitEditor() {
       body: 'Arial',
     },
     voicePrompt: '',
+    // V2 Campaign Brain fields
+    brandPersonality: '',
+    targetAudience: '',
+    valueProposition: '',
+    preferredPhrases: [],
+    forbiddenPhrases: [],
+    toneStyle: 'professional',
+    maskingModel: 'rembg-replicate',
   });
 
   useEffect(() => {
@@ -63,6 +88,14 @@ export function BrandKitEditor() {
         colors: kit.colors,
         fonts: kit.fonts,
         voicePrompt: kit.voicePrompt,
+        // V2 Campaign Brain fields
+        brandPersonality: kit.brandPersonality || '',
+        targetAudience: kit.targetAudience || '',
+        valueProposition: kit.valueProposition || '',
+        preferredPhrases: kit.preferredPhrases || [],
+        forbiddenPhrases: kit.forbiddenPhrases || [],
+        toneStyle: kit.toneStyle || 'professional',
+        maskingModel: kit.maskingModel || 'rembg-replicate',
       });
     } catch (err) {
       console.error('Failed to load brand kit:', err);
@@ -87,6 +120,39 @@ export function BrandKitEditor() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Helper functions for phrase arrays
+  const addPreferredPhrase = (phrase: string) => {
+    if (phrase.trim() && !formData.preferredPhrases?.includes(phrase.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        preferredPhrases: [...(prev.preferredPhrases || []), phrase.trim()]
+      }));
+    }
+  };
+
+  const removePreferredPhrase = (phrase: string) => {
+    setFormData(prev => ({
+      ...prev,
+      preferredPhrases: (prev.preferredPhrases || []).filter(p => p !== phrase)
+    }));
+  };
+
+  const addForbiddenPhrase = (phrase: string) => {
+    if (phrase.trim() && !formData.forbiddenPhrases?.includes(phrase.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        forbiddenPhrases: [...(prev.forbiddenPhrases || []), phrase.trim()]
+      }));
+    }
+  };
+
+  const removeForbiddenPhrase = (phrase: string) => {
+    setFormData(prev => ({
+      ...prev,
+      forbiddenPhrases: (prev.forbiddenPhrases || []).filter(p => p !== phrase)
+    }));
   };
 
   if (!activeWorkspace) {
@@ -269,6 +335,178 @@ export function BrandKitEditor() {
             <div className='char-count'>
               {formData.voicePrompt?.length || 0} / 500
             </div>
+          </div>
+
+          <div className='form-group'>
+            <label>Tone Style</label>
+            <select
+              value={formData.toneStyle || 'professional'}
+              onChange={(e) =>
+                setFormData({ ...formData, toneStyle: e.target.value as any })
+              }
+            >
+              {TONE_STYLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} - {option.description}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* V2 Campaign Brain Section */}
+        <div className='form-section'>
+          <h3>🧠 Campaign Brain</h3>
+          <p className='section-description'>
+            Advanced brand intelligence for AI-powered creative generation
+          </p>
+
+          <div className='form-group'>
+            <label>Brand Personality</label>
+            <input
+              type='text'
+              value={formData.brandPersonality || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, brandPersonality: e.target.value })
+              }
+              placeholder='e.g., Bold, witty, slightly irreverent'
+              maxLength={100}
+            />
+            <small>Describe your brand personality in a few words</small>
+          </div>
+
+          <div className='form-group'>
+            <label>Target Audience</label>
+            <textarea
+              value={formData.targetAudience || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, targetAudience: e.target.value })
+              }
+              placeholder='e.g., Working moms 28-40 in Tier 1 cities, Tech-savvy millennials 25-35, B2B decision makers in finance'
+              rows={3}
+              maxLength={200}
+            />
+            <small>Describe your ideal customer demographic and psychographic</small>
+          </div>
+
+          <div className='form-group'>
+            <label>Value Proposition</label>
+            <input
+              type='text'
+              value={formData.valueProposition || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, valueProposition: e.target.value })
+              }
+              placeholder='e.g., Saves 2 hours a day on social media management'
+              maxLength={150}
+            />
+            <small>What unique value do you provide to customers?</small>
+          </div>
+
+          {/* Preferred Phrases */}
+          <div className='form-group'>
+            <label>Preferred Phrases</label>
+            <div className='phrase-input-group'>
+              <input
+                type='text'
+                placeholder='Add preferred phrase'
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addPreferredPhrase(e.currentTarget.value);
+                    e.currentTarget.value = '';
+                  }
+                }}
+              />
+              <button
+                type='button'
+                onClick={(e) => {
+                  const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                  addPreferredPhrase(input.value);
+                  input.value = '';
+                }}
+                className='btn-add'
+              >
+                Add
+              </button>
+            </div>
+            <div className='phrase-list'>
+              {formData.preferredPhrases?.map((phrase, index) => (
+                <span key={index} className='phrase-tag preferred'>
+                  {phrase}
+                  <button
+                    type='button'
+                    onClick={() => removePreferredPhrase(phrase)}
+                    className='btn-remove'
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <small>Phrases that should appear in your creative content</small>
+          </div>
+
+          {/* Forbidden Phrases */}
+          <div className='form-group'>
+            <label>Forbidden Phrases</label>
+            <div className='phrase-input-group'>
+              <input
+                type='text'
+                placeholder='Add forbidden phrase'
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addForbiddenPhrase(e.currentTarget.value);
+                    e.currentTarget.value = '';
+                  }
+                }}
+              />
+              <button
+                type='button'
+                onClick={(e) => {
+                  const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                  addForbiddenPhrase(input.value);
+                  input.value = '';
+                }}
+                className='btn-add'
+              >
+                Add
+              </button>
+            </div>
+            <div className='phrase-list'>
+              {formData.forbiddenPhrases?.map((phrase, index) => (
+                <span key={index} className='phrase-tag forbidden'>
+                  {phrase}
+                  <button
+                    type='button'
+                    onClick={() => removeForbiddenPhrase(phrase)}
+                    className='btn-remove'
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+            </div>
+            <small>Phrases that should NEVER appear in your creative content</small>
+          </div>
+
+          {/* Masking Model */}
+          <div className='form-group'>
+            <label>AI Masking Model</label>
+            <select
+              value={formData.maskingModel || 'rembg-replicate'}
+              onChange={(e) =>
+                setFormData({ ...formData, maskingModel: e.target.value as any })
+              }
+            >
+              {MASKING_MODEL_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} - {option.description}
+                </option>
+              ))}
+            </select>
+            <small>Choose the AI model for background removal and masking</small>
           </div>
         </div>
 

@@ -1,7 +1,9 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { AuthModel } from '../models/auth'
+import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
+import validateRequest from '../middleware/validateRequest'
 import { AuthenticatedRequest } from '../types/auth'
 
 const router = Router()
@@ -25,30 +27,35 @@ router.get('/', requireAuth as any, (req, res) => {
 })
 
 // POST /api/workspaces - Create new workspace
-router.post('/', requireAuth as any, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { clientName } = createWorkspaceSchema.parse(req.body)
+router.post(
+  '/',
+  requireAuth as any,
+  validateRequest(createWorkspaceSchema) as any,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { clientName } = (req as any).validatedData
 
-    const workspace = await AuthModel.createWorkspace(
-      authenticatedReq.agency.id,
-      clientName
-    )
-    // DEV DEBUG: log the created workspace object to check serialization issues
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Created workspace (debug):', workspace)
+      const workspace = await AuthModel.createWorkspace(
+        authenticatedReq.agency.id,
+        clientName
+      )
+      // DEV DEBUG: log the created workspace object to check serialization issues
+      if (process.env.NODE_ENV !== 'production') {
+        log.info({ workspace }, 'Created workspace (debug)')
+      }
+      res.status(201).json({ workspace })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
+      }
+      log.error({ err: error }, 'Create workspace error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-    res.status(201).json({ workspace })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', details: error.issues })
-    }
-    console.error('Create workspace error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // GET /api/workspaces/:id - Get specific workspace
 router.get('/:id', requireAuth as any, (req, res) => {
@@ -68,35 +75,40 @@ router.get('/:id', requireAuth as any, (req, res) => {
 })
 
 // PUT /api/workspaces/:id - Update workspace
-router.put('/:id', requireAuth as any, (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { id } = req.params
-    const updates = updateWorkspaceSchema.parse(req.body)
+router.put(
+  '/:id',
+  requireAuth as any,
+  validateRequest(updateWorkspaceSchema) as any,
+  (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { id } = req.params
+      const updates = (req as any).validatedData
 
-    const workspace = AuthModel.getWorkspaceById(id)
-    if (!workspace) {
-      return res.status(404).json({ error: 'Workspace not found' })
+      const workspace = AuthModel.getWorkspaceById(id)
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' })
+      }
+
+      if (workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+
+      AuthModel.updateWorkspace(id, updates)
+      const updatedWorkspace = AuthModel.getWorkspaceById(id)
+
+      res.json({ workspace: updatedWorkspace })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
+      }
+      log.error({ err: error }, 'Update workspace error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-
-    if (workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
-
-    AuthModel.updateWorkspace(id, updates)
-    const updatedWorkspace = AuthModel.getWorkspaceById(id)
-
-    res.json({ workspace: updatedWorkspace })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', details: error.issues })
-    }
-    console.error('Update workspace error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // DELETE /api/workspaces/:id - Archive workspace (soft delete)
 router.delete('/:id', requireAuth as any, (req, res) => {

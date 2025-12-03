@@ -1,7 +1,8 @@
 import exportRouter from '../src/routes/export'
+import { log } from '../src/middleware/logger'
 
 const stack = (exportRouter as any).stack
-console.log('exportRouter.stack length:', stack ? stack.length : 0)
+log.info({ length: stack ? stack.length : 0 }, 'exportRouter.stack length')
 
 function formatLayer(layer: any): any {
   if (layer.route) {
@@ -26,4 +27,4 @@ for (const layer of stack) {
   }
 }
 
-console.log(JSON.stringify(routes, null, 2))
+log.info({ routes }, 'exportRouter routes')

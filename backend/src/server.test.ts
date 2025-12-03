@@ -37,7 +37,7 @@ describe('Server', () => {
 
   describe('createServer', () => {
     it('should create an Express application', async () => {
-      const { createServer } = await import('./server')
+      const { createServer } = await import('./server.ts')
       const app = createServer()
       expect(app).toBeDefined()
       expect(typeof app.listen).toBe('function')
@@ -61,7 +61,7 @@ describe('Server', () => {
             return new Promise<void>(async (resolve, reject) => {
               try {
                 // Import server module dynamically
-                const { createServer } = await import('./server')
+                const { createServer } = await import('./server.ts')
                 const app = createServer()
 
                 const server = app.listen(port, () => {

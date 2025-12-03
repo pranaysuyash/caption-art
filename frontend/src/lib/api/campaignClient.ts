@@ -38,6 +38,8 @@ export interface Campaign {
   secondaryCTA?: string;
   targetAudience?: string;
   placements: Placement[];
+  referenceCaptions?: string[];
+  learnedStyleProfile?: string;
   status: 'draft' | 'active' | 'paused' | 'completed';
   createdAt: string;
   updatedAt: string;
@@ -55,6 +57,7 @@ export interface CreateCampaignData {
   secondaryCTA?: string;
   targetAudience?: string;
   placements: Placement[];
+  referenceCaptions?: string[];
 }
 
 function getHeaders(): HeadersInit {
@@ -83,6 +86,20 @@ export async function getCampaigns(workspaceId?: string): Promise<Campaign[]> {
   return data.campaigns || [];
 }
 
+export async function getCampaign(campaignId: string): Promise<Campaign> {
+  const response = await fetch(`${API_URL}/campaigns/${campaignId}`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch campaign');
+  }
+
+  const data = await response.json();
+  return data.campaign;
+}
+
 export async function createCampaign(
   campaignData: CreateCampaignData
 ): Promise<Campaign> {
@@ -105,5 +122,6 @@ export async function createCampaign(
 
 export const campaignClient = {
   getCampaigns,
+  getCampaign,
   createCampaign,
 };

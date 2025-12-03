@@ -1,4 +1,5 @@
 import { createServer } from './src/server'
+import { log } from './src/middleware/logger'
 
 const app = createServer({ enableRateLimiter: false })
 
@@ -25,4 +26,4 @@ if ((app as any)._router && (app as any)._router.stack) {
   }
 }
 
-console.log(routes)
+log.info({ routes }, 'Available routes')

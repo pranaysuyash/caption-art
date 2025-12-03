@@ -1,4 +1,5 @@
 import { createServer } from '../src/server'
+import { log } from '../src/middleware/logger'
 
 const app = createServer()
 const stack = (app as any)._router ? (app as any)._router.stack : []
@@ -40,4 +41,4 @@ for (const layer of stack) {
   }
 }
 
-console.log(JSON.stringify(routes, null, 2))
+log.info({ routes }, 'Discovered routes')

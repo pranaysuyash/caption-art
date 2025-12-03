@@ -1,55 +1,56 @@
 import { Router } from 'express'
-import { z } from 'zod'
 import { AuthModel } from '../models/auth'
+import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
+import { validateRequest } from '../middleware/validation'
 import { AuthenticatedRequest } from '../types/auth'
 import { CaptionGenerator } from '../services/captionGenerator'
+import { StartBatchSchema } from '../schemas/validation'
 
 const router = Router()
 const requireAuth = createAuthMiddleware() as any
 
-// Validation schemas
-const startBatchSchema = z.object({
-  workspaceId: z.string().min(1),
-  assetIds: z.array(z.string().min(1)).min(1).max(10),
-})
-
 // POST /api/batch/generate - Start batch caption generation
-router.post('/generate', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { workspaceId, assetIds } = startBatchSchema.parse(req.body)
+router.post(
+  '/generate',
+  requireAuth,
+  validateRequest({ body: StartBatchSchema }),
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { workspaceId, assetIds } = req.body
 
-    // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
-    if (!workspace) {
-      return res.status(404).json({ error: 'Workspace not found' })
-    }
+      // Verify workspace belongs to current agency
+      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' })
+      }
 
-    if (workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
+      if (workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
 
-    // Start batch generation
-    const result = await CaptionGenerator.startBatchGeneration(
-      workspaceId,
-      assetIds
-    )
+      // Start batch generation
+      const result = await CaptionGenerator.startBatchGeneration(
+        workspaceId,
+        assetIds
+      )
 
-    res.status(201).json(result)
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', details: error.issues })
+      res.status(201).json(result)
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
+      }
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message })
+      }
+      log.error({ err: error }, 'Start batch generation error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-    if (error instanceof Error) {
-      return res.status(400).json({ error: error.message })
-    }
-    console.error('Start batch generation error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // GET /api/batch/jobs/:jobId - Get specific batch job status
 router.get('/jobs/:jobId', requireAuth, async (req, res) => {
@@ -90,7 +91,7 @@ router.get('/jobs/:jobId', requireAuth, async (req, res) => {
       captions: jobCaptions,
     })
   } catch (error) {
-    console.error('Get batch job error:', error)
+    log.error({ err: error }, 'Get batch job error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -114,7 +115,7 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
     const jobs = AuthModel.getBatchJobsByWorkspace(workspaceId)
     res.json({ jobs })
   } catch (error) {
-    console.error('Get batch jobs error:', error)
+    log.error({ err: error }, 'Get batch jobs error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -145,7 +146,20 @@ router.get(
         const asset = AuthModel.getAssetById(caption.assetId)
         return {
           ...caption,
+          text:
+            caption.variations.length > 0
+              ? caption.variations[0]?.text || ''
+              : '', // For backward compatibility
           approved: caption.approvalStatus === 'approved',
+          variations: caption.variations.map((v) => ({
+            ...v,
+            approved: v.approvalStatus === 'approved',
+          })),
+          primaryVariation: caption.primaryVariationId
+            ? caption.variations.find(
+                (v) => v.id === caption.primaryVariationId
+              )
+            : caption.variations[0] || null,
           asset: asset
             ? {
                 id: asset.id,
@@ -159,7 +173,7 @@ router.get(
 
       res.json({ captions: enrichedCaptions })
     } catch (error) {
-      console.error('Get captions error:', error)
+      log.error({ err: error }, 'Get captions error')
       res.status(500).json({ error: 'Internal server error' })
     }
   }
@@ -170,7 +184,9 @@ router.put('/captions/:captionId', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { captionId } = req.params
+    const { sanitizeText } = await import('../utils/sanitizers')
     const { text } = req.body
+    const safeText = sanitizeText(text, 2200)
 
     if (typeof text !== 'string') {
       return res.status(400).json({ error: 'Caption text is required' })
@@ -187,23 +203,48 @@ router.put('/captions/:captionId', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const updatedCaption = AuthModel.updateCaption(captionId, {
-      text: text.trim(),
+    // For backward compatibility and manual editing, add a new variation with the edited text
+    const updatedCaption = AuthModel.addCaptionVariation(captionId, {
+      text: (safeText || text || '').trim(),
       status: 'completed',
+      approvalStatus: 'pending',
+      createdAt: new Date(),
     })
 
     if (!updatedCaption) {
       return res.status(404).json({ error: 'Caption not found' })
     }
 
+    // Set this new variation as the primary one
+    const latestVariation =
+      updatedCaption.variations[updatedCaption.variations.length - 1]
+    if (latestVariation) {
+      AuthModel.setPrimaryCaptionVariation(captionId, latestVariation.id)
+      // Refresh the caption to get the updated primary variation
+      const refreshedCaption = AuthModel.getCaptionById(captionId)
+      if (refreshedCaption) {
+        updatedCaption.primaryVariationId = refreshedCaption.primaryVariationId
+      }
+    }
+
     res.json({
       caption: {
         ...updatedCaption,
+        text: latestVariation?.text || '',
         approved: updatedCaption.approvalStatus === 'approved',
+        variations: updatedCaption.variations.map((v) => ({
+          ...v,
+          approved: v.approvalStatus === 'approved',
+        })),
+        primaryVariation: updatedCaption.primaryVariationId
+          ? updatedCaption.variations.find(
+              (v) => v.id === updatedCaption.primaryVariationId
+            )
+          : updatedCaption.variations[0] || null,
       },
     })
   } catch (error) {
-    console.error('Update caption error:', error)
+    log.error({ err: error }, 'Update caption error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -232,7 +273,7 @@ router.delete('/captions/:captionId', requireAuth, async (req, res) => {
 
     res.json({ message: 'Caption deleted successfully' })
   } catch (error) {
-    console.error('Delete caption error:', error)
+    log.error({ err: error }, 'Delete caption error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })

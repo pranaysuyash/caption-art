@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { creativeEngineClient } from '../lib/api/creativeEngineClient';
+import { campaignClient } from '../lib/api/campaignClient';
 import './AssetManager.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
@@ -25,11 +26,19 @@ interface Asset {
 export function AssetManager() {
   const { activeWorkspace } = useWorkspace();
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [generationMode, setGenerationMode] = useState<'caption' | 'ad-copy'>('caption');
-  const [selectedPlatform, setSelectedPlatform] = useState<'ig-feed' | 'fb-feed' | 'li-feed'>('ig-feed');
+  const [generationMode, setGenerationMode] = useState<'caption' | 'ad-copy'>(
+    'caption'
+  );
+  const [selectedPlatform, setSelectedPlatform] = useState<
+    'ig-feed' | 'fb-feed' | 'li-feed'
+  >('ig-feed');
   const [variationCount, setVariationCount] = useState(3);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +47,7 @@ export function AssetManager() {
   useEffect(() => {
     if (activeWorkspace) {
       loadAssets();
+      loadCampaigns();
     }
   }, [activeWorkspace]);
 
@@ -62,6 +72,17 @@ export function AssetManager() {
       console.error('Failed to load assets:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCampaigns = async () => {
+    if (!activeWorkspace) return;
+
+    try {
+      const data = await campaignClient.getCampaigns(activeWorkspace.id);
+      setCampaigns(data || []);
+    } catch (err) {
+      console.error('Failed to load campaigns:', err);
     }
   };
 
@@ -154,6 +175,19 @@ export function AssetManager() {
         throw new Error('No brand kit found. Please create a brand kit first.');
       }
 
+      // Get reference captions from selected campaign
+      let referenceCaptions: string[] | undefined;
+      let learnedStyleProfile: string | undefined;
+      if (selectedCampaignId) {
+        try {
+          const campaign = await campaignClient.getCampaign(selectedCampaignId);
+          referenceCaptions = campaign.referenceCaptions;
+          learnedStyleProfile = campaign.learnedStyleProfile;
+        } catch (err) {
+          console.warn('Failed to load campaign reference captions:', err);
+        }
+      }
+
       const result = await creativeEngineClient.startGeneration({
         workspaceId: activeWorkspace.id,
         brandKitId,
@@ -161,11 +195,13 @@ export function AssetManager() {
         outputCount: variationCount, // N variations per asset
         mode: generationMode, // caption or ad-copy
         platforms: [selectedPlatform], // platform-specific optimization
+        referenceCaptions,
+        learnedStyleProfile,
       });
 
       if (result.success) {
-        const totalVariations = result.result.summary.totalGenerated
-        const perAsset = Math.floor(totalVariations / assets.length)
+        const totalVariations = result.result.summary.totalGenerated;
+        const perAsset = Math.floor(totalVariations / assets.length);
         setSuccessMessage(
           `Generated ${totalVariations} captions (${perAsset} per asset) in ${result.result.summary.processingTime}ms. Check the Approval tab!`
         );
@@ -196,6 +232,36 @@ export function AssetManager() {
         <div className='header-actions'>
           {assets.length > 0 && (
             <>
+              <div
+                className='campaign-selector'
+                style={{ marginRight: '12px' }}
+              >
+                <label
+                  htmlFor='campaign-select'
+                  style={{ fontSize: '13px', marginRight: '6px' }}
+                >
+                  Campaign:
+                </label>
+                <select
+                  id='campaign-select'
+                  value={selectedCampaignId || ''}
+                  onChange={(e) =>
+                    setSelectedCampaignId(e.target.value || null)
+                  }
+                  disabled={generating}
+                  style={{ minWidth: '150px' }}
+                >
+                  <option value=''>None (no style learning)</option>
+                  {campaigns.map((campaign) => (
+                    <option key={campaign.id} value={campaign.id}>
+                      {campaign.name}
+                      {campaign.referenceCaptions &&
+                        campaign.referenceCaptions.length > 0 &&
+                        ' ✓'}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className='mode-toggle'>
                 <button
                   className={generationMode === 'caption' ? 'active' : ''}
@@ -213,33 +279,33 @@ export function AssetManager() {
                 </button>
               </div>
               <div className='variation-selector'>
-              <label htmlFor='variation-count'>Variations:</label>
-              <select
-                id='variation-count'
-                value={variationCount}
-                onChange={(e) => setVariationCount(Number(e.target.value))}
-                disabled={generating}
-              >
-                <option value={1}>1 option</option>
-                <option value={2}>2 options</option>
-                <option value={3}>3 options</option>
-                <option value={5}>5 options</option>
-                <option value={10}>10 options</option>
-              </select>
-            </div>
-            <div className='platform-selector'>
-              <label htmlFor='platform-select'>Platform:</label>
-              <select
-                id='platform-select'
-                value={selectedPlatform}
-                onChange={(e) => setSelectedPlatform(e.target.value as any)}
-                disabled={generating}
-              >
-                <option value='ig-feed'>Instagram</option>
-                <option value='fb-feed'>Facebook</option>
-                <option value='li-feed'>LinkedIn</option>
-              </select>
-            </div>
+                <label htmlFor='variation-count'>Variations:</label>
+                <select
+                  id='variation-count'
+                  value={variationCount}
+                  onChange={(e) => setVariationCount(Number(e.target.value))}
+                  disabled={generating}
+                >
+                  <option value={1}>1 option</option>
+                  <option value={2}>2 options</option>
+                  <option value={3}>3 options</option>
+                  <option value={5}>5 options</option>
+                  <option value={10}>10 options</option>
+                </select>
+              </div>
+              <div className='platform-selector'>
+                <label htmlFor='platform-select'>Platform:</label>
+                <select
+                  id='platform-select'
+                  value={selectedPlatform}
+                  onChange={(e) => setSelectedPlatform(e.target.value as any)}
+                  disabled={generating}
+                >
+                  <option value='ig-feed'>Instagram</option>
+                  <option value='fb-feed'>Facebook</option>
+                  <option value='li-feed'>LinkedIn</option>
+                </select>
+              </div>
             </>
           )}
           <label htmlFor='file-input' className='btn-upload'>

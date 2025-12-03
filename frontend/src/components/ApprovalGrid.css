@@ -162,6 +162,22 @@
   background: #2563eb;
 }
 
+.btn-auto-approve {
+  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.btn-auto-approve:hover {
+  background: linear-gradient(135deg, #059669 0%, #2563eb 100%);
+  box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
 .btn-small {
   padding: 4px 8px;
   font-size: 12px;
@@ -246,6 +262,46 @@
   color: white;
   font-weight: bold;
   font-size: 14px;
+}
+
+.quality-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1;
+  border: 2px solid white;
+}
+
+.quality-badge.score-10,
+.quality-badge.score-9 {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.quality-badge.score-8,
+.quality-badge.score-7 {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.quality-badge.score-6,
+.quality-badge.score-5 {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.quality-badge.score-4,
+.quality-badge.score-3,
+.quality-badge.score-2,
+.quality-badge.score-1 {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
 }
 
 /* Preview section */

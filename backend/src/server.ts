@@ -7,9 +7,12 @@ import cookieParser from 'cookie-parser'
 import path from 'path'
 import { config } from './config'
 import { corsMiddleware } from './middleware/cors'
+import { requestIdMiddleware } from './middleware/requestId'
+import { wafMiddleware } from './middleware/waf'
 import { errorHandler } from './middleware/errorHandler'
-import { logger } from './middleware/logger'
+import { requestLogger, log } from './middleware/logger'
 import { rateLimiter } from './middleware/rateLimiter'
+import { createCostWeightedRateLimiter } from './middleware/costWeightedRateLimiter'
 import authRouter from './routes/auth'
 import workspacesRouter from './routes/workspaces'
 import brandKitsRouter from './routes/brandKits'
@@ -29,6 +32,11 @@ import storyRouter from './routes/story'
 import campaignsRouter from './routes/campaigns'
 import referenceCreativesRouter from './routes/referenceCreatives'
 import creativeEngineRouter from './routes/creativeEngine'
+import analyzeStyleRouter from './routes/analyzeStyle'
+import campaignBriefsRouter from './routes/campaignBriefs'
+import adCreativesRouter from './routes/adCreatives'
+import styleMemoryRouter from './routes/styleMemory'
+import videoScriptsRouter from './routes/videoScripts'
 
 // Global route registry to make route information accessible across functions
 let globalMountedRoutes: Array<{
@@ -93,7 +101,7 @@ export function createServer(
         })
       }
     } catch (err) {
-      console.error('Failed to extract inner routes from handler', err)
+      log.error({ err }, 'Failed to extract inner routes from handler')
     }
     return originalUse(...args)
   }
@@ -120,9 +128,12 @@ export function createServer(
   // Middleware - order matters!
   // 1. CORS must be first to handle preflight requests
   app.use(corsMiddleware)
+  // 1b. WAF middleware to block known suspicious payloads when enabled
+  app.use(wafMiddleware)
 
-  // 2. Logger to track all requests
-  app.use(logger)
+  // 2. Request id assignment and Logger to track all requests
+  app.use(requestIdMiddleware)
+  app.use(requestLogger)
 
   // 3. Cookie parser for session management
   app.use(cookieParser())
@@ -134,9 +145,13 @@ export function createServer(
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
   app.use('/generated', express.static(path.join(process.cwd(), 'generated')))
 
-  // 6. Rate limiter for API routes (can be disabled for testing)
+  // 6. Cost-weighted rate limiter for API routes (can be disabled for testing)
   if (enableRateLimiter) {
-    app.use('/api/', rateLimiter)
+    const costWeightedRateLimiter = createCostWeightedRateLimiter({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      maxPoints: 500, // Default max points, will be adjusted based on user tier
+    });
+    app.use('/api/', costWeightedRateLimiter);
   }
 
   // Routes (auth first, then workspaces, brand kits, assets, batch, approval, export, generated assets, then existing routes)
@@ -180,7 +195,7 @@ export function createServer(
         if (error instanceof Error) {
           return res.status(400).json({ error: error.message })
         }
-        console.error('Start export error (fallback route):', error)
+        log.error({ err: error }, 'Start export error (fallback route)')
         res.status(500).json({ error: 'Internal server error' })
       }
     }
@@ -196,10 +211,15 @@ export function createServer(
   app.use('/api/campaigns', campaignsRouter)
   app.use('/api/reference-creatives', referenceCreativesRouter)
   app.use('/api/creative-engine', creativeEngineRouter)
+  app.use('/api/analyze-style', analyzeStyleRouter)
+  app.use('/api/campaign-briefs', campaignBriefsRouter)
+  app.use('/api/ad-creatives', adCreativesRouter)
+  app.use('/api/style-memory', styleMemoryRouter)
+  app.use('/api/video-scripts', videoScriptsRouter)
 
   // Simple test route to debug route registration
-  console.log('NODE_ENV value on startup:', process.env.NODE_ENV)
-  console.log('Setting up dev-only debug routes')
+  log.info({ env: process.env.NODE_ENV }, 'NODE_ENV value on startup')
+  log.info('Setting up dev-only debug routes')
   if (process.env.NODE_ENV !== 'production') {
     app.get('/api/_test', (_, res) => {
       res.json({
@@ -239,7 +259,7 @@ export function createServer(
         })
         res.json({ layers, mountedRoutes: fallbackMountedRoutes })
       } catch (err) {
-        console.error('Error listing full routes', err)
+        log.error({ err }, 'Error listing full routes')
         res.status(500).json({ error: 'Failed to list routes' })
       }
     })
@@ -303,13 +323,13 @@ export function createServer(
         }
         res.json({ routes })
       } catch (err) {
-        console.error('Error listing routes', err)
+        log.error({ err }, 'Error listing routes')
         res.status(500).json({ error: 'Failed to list routes' })
       }
     })
 
     // Debug route to inspect internal router object keys and stack length
-    console.log('Registering debug route /api/_debug_router')
+    log.info('Registering debug route /api/_debug_router')
     app.get('/api/_debug_router', (_, res) => {
       try {
         const results: any = {}
@@ -376,7 +396,7 @@ export function createServer(
 
         res.json({ results, stackProps, routerDetails, handleDetails })
       } catch (err) {
-        console.error('Error inspecting router', err)
+        log.error({ err }, 'Error inspecting router')
         res.status(500).json({ error: 'Failed to inspect router' })
       }
     })
@@ -392,23 +412,21 @@ export function createServer(
       (app as any)._router && (app as any)._router.stack
         ? (app as any)._router.stack.length
         : 0
-    console.log(
-      'createServer - app._router present?',
-      hasRouter,
-      'stack length:',
-      stackLen
+    log.info(
+      { hasRouter, stackLen },
+      'createServer - app._router present? stack length'
     )
     const appKeys = Object.getOwnPropertyNames(app).slice(0, 50)
-    console.log('createServer - app keys:', appKeys)
+    log.info({ appKeys }, 'createServer - app keys')
     if (hasRouter) {
       const routerKeys = Object.getOwnPropertyNames((app as any)._router).slice(
         0,
         50
       )
-      console.log('createServer - router keys:', routerKeys)
+      log.info({ routerKeys }, 'createServer - router keys')
     }
   } catch (err) {
-    console.error('createServer router debug error:', err)
+    log.error({ err }, 'createServer router debug error')
   }
 
   return app
@@ -419,8 +437,8 @@ export function startServer(): void {
   const port = config.port
 
   app.listen(port, () => {
-    console.log(`Server running on port ${port}`)
-    console.log(`Environment: ${config.env}`)
+    log.info({ port }, `Server running on port ${port}`)
+    log.info({ env: config.env }, `Environment`)
 
     // Log all registered routes for easier debugging
     try {
@@ -444,7 +462,7 @@ export function startServer(): void {
       }
 
       const routerInfo = findRouterStack()
-      console.log('router prop used on startup:', routerInfo.prop)
+      log.info({ routerProp: routerInfo.prop }, 'router prop used on startup')
       const routes: Array<{ method: string; path: string }> = []
       const seen = new Set<string>()
       const walk = (stack: any[], prefix = '') => {
@@ -504,9 +522,9 @@ export function startServer(): void {
         }
       }
 
-      console.log('Registered routes:', routes)
+      log.info({ routes }, 'Registered routes')
     } catch (error) {
-      console.error('Failed to list routes on startup', error)
+      log.error({ error }, 'Failed to list routes on startup')
     }
   })
 }

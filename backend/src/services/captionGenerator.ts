@@ -1,14 +1,27 @@
 import OpenAI from 'openai'
 import { AuthModel } from '../models/auth'
+import { log } from '../middleware/logger'
 import { ImageRenderer } from './imageRenderer'
+import { StyleAnalyzer, StyleProfile } from './styleAnalyzer'
+import { CacheService } from './CacheService'
 import path from 'path'
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 })
 
-export type CaptionTemplate = 'punchy' | 'descriptive' | 'hashtag-heavy' | 'storytelling' | 'question'
-export type CaptionAngle = 'emotional' | 'data-driven' | 'question-based' | 'cta-focused' | 'educational'
+export type CaptionTemplate =
+  | 'punchy'
+  | 'descriptive'
+  | 'hashtag-heavy'
+  | 'storytelling'
+  | 'question'
+export type CaptionAngle =
+  | 'emotional'
+  | 'data-driven'
+  | 'question-based'
+  | 'cta-focused'
+  | 'educational'
 
 export interface GenerationRequest {
   assetId: string
@@ -27,67 +40,80 @@ export interface GenerationRequest {
   mustIncludePhrases?: string[]
   mustExcludePhrases?: string[]
   platform?: string
+  // Reference style injection
+  referenceCaptions?: string[]
+  learnedStyleProfile?: StyleProfile
 }
 
 export const CAPTION_TEMPLATES = {
   punchy: {
     name: 'Punchy & Bold',
-    prompt: 'Create short, punchy captions that grab attention immediately. Use strong action words, minimal text, and powerful statements. Perfect for bold brands.',
+    prompt:
+      'Create short, punchy captions that grab attention immediately. Use strong action words, minimal text, and powerful statements. Perfect for bold brands.',
     length: '1-2 sentences',
-    style: 'Bold, confident, attention-grabbing'
+    style: 'Bold, confident, attention-grabbing',
   },
   descriptive: {
     name: 'Descriptive & Detailed',
-    prompt: 'Create detailed, descriptive captions that tell the full story behind the image. Include context, details, and comprehensive information.',
+    prompt:
+      'Create detailed, descriptive captions that tell the full story behind the image. Include context, details, and comprehensive information.',
     length: '3-5 sentences',
-    style: 'Informative, thorough, educational'
+    style: 'Informative, thorough, educational',
   },
   'hashtag-heavy': {
     name: 'Hashtag-Heavy',
-    prompt: 'Create engaging captions with extensive hashtag strategy. Include 10-15 relevant hashtags, mix of broad and niche tags, and industry-specific keywords.',
+    prompt:
+      'Create engaging captions with extensive hashtag strategy. Include 10-15 relevant hashtags, mix of broad and niche tags, and industry-specific keywords.',
     length: '2-3 sentences + hashtags',
-    style: 'Discoverable, trending, community-focused'
+    style: 'Discoverable, trending, community-focused',
   },
   storytelling: {
     name: 'Storytelling',
-    prompt: 'Create narrative-driven captions that tell a compelling story. Use emotional language, personal anecdotes, and engaging storytelling techniques.',
+    prompt:
+      'Create narrative-driven captions that tell a compelling story. Use emotional language, personal anecdotes, and engaging storytelling techniques.',
     length: '3-4 sentences',
-    style: 'Personal, emotional, engaging'
+    style: 'Personal, emotional, engaging',
   },
   question: {
     name: 'Question-Based',
-    prompt: 'Create captions that ask engaging questions to drive comments and interaction. Use open-ended questions, polls, and conversation starters.',
+    prompt:
+      'Create captions that ask engaging questions to drive comments and interaction. Use open-ended questions, polls, and conversation starters.',
     length: '2-3 sentences',
-    style: 'Interactive, conversational, engaging'
-  }
+    style: 'Interactive, conversational, engaging',
+  },
 }
 
 export const CAPTION_ANGLES = {
   emotional: {
     name: 'Emotional',
-    prompt: 'Appeal to emotions, desires, and aspirations. Use evocative language, sensory words, and emotional triggers. Connect on a personal level.',
-    focus: 'Feelings, dreams, personal connection'
+    prompt:
+      'Appeal to emotions, desires, and aspirations. Use evocative language, sensory words, and emotional triggers. Connect on a personal level.',
+    focus: 'Feelings, dreams, personal connection',
   },
   'data-driven': {
     name: 'Data-Driven',
-    prompt: 'Lead with facts, statistics, or specific benefits. Use numbers, percentages, and concrete evidence. Build credibility through data.',
-    focus: 'Numbers, facts, measurable results'
+    prompt:
+      'Lead with facts, statistics, or specific benefits. Use numbers, percentages, and concrete evidence. Build credibility through data.',
+    focus: 'Numbers, facts, measurable results',
   },
   'question-based': {
     name: 'Question-Based',
-    prompt: 'Start with a compelling question that engages the audience. Create curiosity and encourage responses. Make it thought-provoking.',
-    focus: 'Curiosity, engagement, conversation'
+    prompt:
+      'Start with a compelling question that engages the audience. Create curiosity and encourage responses. Make it thought-provoking.',
+    focus: 'Curiosity, engagement, conversation',
   },
   'cta-focused': {
     name: 'CTA-Focused',
-    prompt: 'Drive immediate action with clear, urgent calls-to-action. Use imperative verbs and action-oriented language. Create urgency.',
-    focus: 'Action, urgency, conversion'
+    prompt:
+      'Drive immediate action with clear, urgent calls-to-action. Use imperative verbs and action-oriented language. Create urgency.',
+    focus: 'Action, urgency, conversion',
   },
   educational: {
     name: 'Educational',
-    prompt: 'Teach something valuable. Share tips, insights, or how-to information. Position as helpful expert. Provide actionable value.',
-    focus: 'Knowledge, tips, value delivery'
-  }
+    prompt:
+      'Teach something valuable. Share tips, insights, or how-to information. Position as helpful expert. Provide actionable value.',
+    focus: 'Knowledge, tips, value delivery',
+  },
 }
 
 export const PLATFORM_PRESETS = {
@@ -103,8 +129,8 @@ export const PLATFORM_PRESETS = {
       'First line is critical (shown in preview)',
       'Use line breaks for readability',
       'Include call-to-action or question',
-      'Hashtags at end or integrated naturally'
-    ]
+      'Hashtags at end or integrated naturally',
+    ],
   },
   'ig-story': {
     name: 'Instagram Story',
@@ -117,8 +143,8 @@ export const PLATFORM_PRESETS = {
     guidelines: [
       'Grab attention in 2-3 seconds',
       'Swipe-up or action-focused',
-      'Time-sensitive language'
-    ]
+      'Time-sensitive language',
+    ],
   },
   'fb-feed': {
     name: 'Facebook Feed',
@@ -132,8 +158,8 @@ export const PLATFORM_PRESETS = {
       'Tell a complete story',
       'Ask questions to drive comments',
       'Tag relevant people/pages',
-      'Use natural language'
-    ]
+      'Use natural language',
+    ],
   },
   'fb-story': {
     name: 'Facebook Story',
@@ -143,10 +169,7 @@ export const PLATFORM_PRESETS = {
     hashtagStrategy: 'No hashtags needed',
     emojiUsage: 'Minimal emojis',
     style: 'Very brief, action-oriented',
-    guidelines: [
-      'Quick consumption',
-      'Clear single message'
-    ]
+    guidelines: ['Quick consumption', 'Clear single message'],
   },
   'li-feed': {
     name: 'LinkedIn Feed',
@@ -161,9 +184,9 @@ export const PLATFORM_PRESETS = {
       'Industry insights or expertise',
       'Professional call-to-action',
       'Avoid overly casual language',
-      'Data and credibility matter'
-    ]
-  }
+      'Data and credibility matter',
+    ],
+  },
 }
 
 export class CaptionGenerator {
@@ -171,7 +194,13 @@ export class CaptionGenerator {
    * Generate a caption for a single asset using AI
    */
   static async generateCaption(request: GenerationRequest): Promise<string> {
-    const { assetId, workspaceId, brandVoicePrompt, assetDescription, template = 'descriptive' } = request
+    const {
+      assetId,
+      workspaceId,
+      brandVoicePrompt,
+      assetDescription,
+      template = 'descriptive',
+    } = request
 
     // Get asset information outside try block for error handling
     const asset = AuthModel.getAssetById(assetId)
@@ -179,7 +208,17 @@ export class CaptionGenerator {
       throw new Error(`Asset ${assetId} not found`)
     }
 
+    // Create cache key based on request parameters for deduplication
+    const cacheKey = `caption_${assetId}_${template}_${request.angle || 'none'}_${request.platform || 'none'}`
+    const cacheService = CacheService.getInstance()
+
     try {
+      // Try to get from cache first
+      const cachedCaption = await cacheService.get<string>(cacheKey)
+      if (cachedCaption) {
+        log.info({ assetId, cacheKey }, 'Caption served from cache')
+        return cachedCaption
+      }
 
       // Create a descriptive prompt based on asset type
       let assetTypeDescription = ''
@@ -193,7 +232,7 @@ export class CaptionGenerator {
 
       // Get template instructions
       const templateConfig = CAPTION_TEMPLATES[template]
-      
+
       // Get angle instructions if specified
       const angleConfig = request.angle ? CAPTION_ANGLES[request.angle] : null
       const angleContext = angleConfig
@@ -216,16 +255,19 @@ Campaign Context:
 - Value Proposition: ${request.valueProposition || 'quality and innovation'}`
         : ''
 
-      const constraintsContext = request.mustIncludePhrases || request.mustExcludePhrases
-        ? `
+      const constraintsContext =
+        request.mustIncludePhrases || request.mustExcludePhrases
+          ? `
 
 Required Constraints:
 ${request.mustIncludePhrases && request.mustIncludePhrases.length > 0 ? `- MUST include these phrases: ${request.mustIncludePhrases.join(', ')}` : ''}
 ${request.mustExcludePhrases && request.mustExcludePhrases.length > 0 ? `- MUST NOT include these phrases: ${request.mustExcludePhrases.join(', ')}` : ''}`
-        : ''
+          : ''
 
       // Get platform preset if specified
-      const platformPreset = request.platform ? PLATFORM_PRESETS[request.platform as keyof typeof PLATFORM_PRESETS] : null
+      const platformPreset = request.platform
+        ? PLATFORM_PRESETS[request.platform as keyof typeof PLATFORM_PRESETS]
+        : null
       const platformContext = platformPreset
         ? `
 
@@ -237,18 +279,38 @@ Platform: ${platformPreset.name}
 - Style: ${platformPreset.style}
 - Guidelines: ${platformPreset.guidelines.join('; ')}`
         : request.platform
-        ? `
+          ? `
 
 Platform: ${request.platform}
 ${request.platform === 'ig-feed' || request.platform === 'ig-story' ? '- Use casual, visual-first language with emojis' : ''}
 ${request.platform === 'fb-feed' || request.platform === 'fb-story' ? '- Use community-focused, conversational tone' : ''}
 ${request.platform === 'li-feed' ? '- Use professional, value-driven language, minimal emojis' : ''}`
+          : ''
+
+      // Add reference style context if available
+      const referenceStyleContext = request.learnedStyleProfile
+        ? `
+
+Reference Style (MATCH THIS CLOSELY):
+${StyleAnalyzer.styleProfileToPrompt(request.learnedStyleProfile)}
+
+Style Examples:
+${
+  request.referenceCaptions
+    ? request.referenceCaptions
+        .slice(0, 3)
+        .map((ref, idx) => `Example ${idx + 1}: "${ref}"`)
+        .join('\n')
+    : ''
+}
+
+Important: Maintain the same tone, vocabulary, structure, and style patterns as the examples above.`
         : ''
 
       const systemPrompt = `You are a professional social media caption writer. Your task is to create engaging, on-brand captions for visual content.
 
 Brand Voice Instructions:
-${brandVoicePrompt}${campaignContext}${constraintsContext}${platformContext}${angleContext}
+${brandVoicePrompt}${campaignContext}${constraintsContext}${platformContext}${referenceStyleContext}${angleContext}
 
 Template Style: ${templateConfig.name}
 ${templateConfig.prompt}
@@ -257,7 +319,7 @@ Style Guide: ${templateConfig.style}
 
 Guidelines:
 - Follow the template style exactly
-- Match the brand voice consistently
+- Match the brand voice consistently${referenceStyleContext ? '\n- CRITICAL: Match the reference style patterns closely' : ''}
 - Align with campaign objective and funnel stage${angleConfig ? `\n- Use the ${angleConfig.name} angle to differentiate this variation` : ''}
 - Focus on the visual content's story or message
 - Write compelling content that drives engagement
@@ -288,12 +350,17 @@ Create a caption that aligns with the brand voice and would work well for social
       const caption = completion.choices[0]?.message?.content?.trim()
 
       if (!caption) {
-        throw new Error('Failed to generate caption: No content returned from AI')
+        throw new Error(
+          'Failed to generate caption: No content returned from AI'
+        )
       }
+
+      // Cache the generated caption for future requests
+      await cacheService.set(cacheKey, caption, 24 * 60 * 60 * 1000) // Cache for 24 hours
 
       return caption
     } catch (error) {
-      console.error(`Error generating caption for asset ${assetId}:`, error)
+      log.error({ err: error, assetId }, `Error generating caption for asset`)
 
       if (error instanceof Error) {
         // Return a fallback caption if AI generation fails
@@ -318,7 +385,17 @@ Create a caption that aligns with the brand voice and would work well for social
       throw new Error(`Asset ${assetId} not found`)
     }
 
+    // Create cache key for ad copy generation
+    const cacheKey = `adcopy_${assetId}_${angle || 'none'}_${request.platform || 'none'}`
+    const cacheService = CacheService.getInstance()
+
     try {
+      // Try to get from cache first
+      const cachedAdCopy = await cacheService.get<{ headline: string; bodyText: string; ctaText: string }>(cacheKey)
+      if (cachedAdCopy) {
+        log.info({ assetId, cacheKey }, 'Ad copy served from cache')
+        return cachedAdCopy
+      }
       // Create asset type description
       let assetTypeDescription = ''
       if (asset.mimeType.startsWith('image/')) {
@@ -340,17 +417,20 @@ Create a caption that aligns with the brand voice and would work well for social
         ? `\n\nCampaign Context:\n- Primary Objective: ${request.campaignObjective}\n- Funnel Stage: ${request.funnelStage || 'awareness'}\n- Target Audience: ${request.targetAudience || 'general audience'}\n- Brand Personality: ${request.brandPersonality || 'professional'}\n- Value Proposition: ${request.valueProposition || 'quality and innovation'}`
         : ''
 
-      const constraintsContext = request.mustIncludePhrases || request.mustExcludePhrases
-        ? `\n\nRequired Constraints:\n${request.mustIncludePhrases && request.mustIncludePhrases.length > 0 ? `- MUST include: ${request.mustIncludePhrases.join(', ')}` : ''}\n${request.mustExcludePhrases && request.mustExcludePhrases.length > 0 ? `- MUST NOT include: ${request.mustExcludePhrases.join(', ')}` : ''}`
-        : ''
+      const constraintsContext =
+        request.mustIncludePhrases || request.mustExcludePhrases
+          ? `\n\nRequired Constraints:\n${request.mustIncludePhrases && request.mustIncludePhrases.length > 0 ? `- MUST include: ${request.mustIncludePhrases.join(', ')}` : ''}\n${request.mustExcludePhrases && request.mustExcludePhrases.length > 0 ? `- MUST NOT include: ${request.mustExcludePhrases.join(', ')}` : ''}`
+          : ''
 
       // Get platform preset
-      const platformPreset = request.platform ? PLATFORM_PRESETS[request.platform as keyof typeof PLATFORM_PRESETS] : null
+      const platformPreset = request.platform
+        ? PLATFORM_PRESETS[request.platform as keyof typeof PLATFORM_PRESETS]
+        : null
       const platformContext = platformPreset
         ? `\n\nPlatform: ${platformPreset.name}\n- Tone: ${platformPreset.tone}\n- Style: ${platformPreset.style}\n- Emoji Usage: ${platformPreset.emojiUsage}`
         : request.platform
-        ? `\n\nPlatform: ${request.platform}\n${request.platform === 'ig-feed' || request.platform === 'ig-story' ? '- Casual, visual-first with emojis' : ''}\n${request.platform === 'fb-feed' || request.platform === 'fb-story' ? '- Community-focused, conversational' : ''}\n${request.platform === 'li-feed' ? '- Professional, value-driven, minimal emojis' : ''}`
-        : ''
+          ? `\n\nPlatform: ${request.platform}\n${request.platform === 'ig-feed' || request.platform === 'ig-story' ? '- Casual, visual-first with emojis' : ''}\n${request.platform === 'fb-feed' || request.platform === 'fb-story' ? '- Community-focused, conversational' : ''}\n${request.platform === 'li-feed' ? '- Professional, value-driven, minimal emojis' : ''}`
+          : ''
 
       const systemPrompt = `You are a professional ad copywriter specializing in social media advertising.
 
@@ -415,23 +495,30 @@ CTA: [your call-to-action here]`
       const bodyMatch = content.match(/BODY:\s*(.+?)(?:\n|$)/i)
       const ctaMatch = content.match(/CTA:\s*(.+?)(?:\n|$)/i)
 
-      const headline = headlineMatch?.[1]?.trim() || 'Discover Something Amazing'
-      const bodyText = bodyMatch?.[1]?.trim() || 'Transform your experience with quality you can trust.'
+      const headline =
+        headlineMatch?.[1]?.trim() || 'Discover Something Amazing'
+      const bodyText =
+        bodyMatch?.[1]?.trim() ||
+        'Transform your experience with quality you can trust.'
       const ctaText = ctaMatch?.[1]?.trim() || 'Learn More'
 
-      return {
+      const result = {
         headline: headline.slice(0, 60),
         bodyText: bodyText.slice(0, 125),
-        ctaText: ctaText.slice(0, 20)
+        ctaText: ctaText.slice(0, 20),
       }
 
+      // Cache the generated ad copy for future requests
+      await cacheService.set(cacheKey, result, 24 * 60 * 60 * 1000) // Cache for 24 hours
+
+      return result
     } catch (error) {
-      console.error(`Error generating ad copy for asset ${assetId}:`, error)
+      log.error({ err: error, assetId }, `Error generating ad copy for asset`)
       // Return fallback ad copy
       return {
         headline: 'Discover Something Amazing',
         bodyText: 'Experience quality and innovation designed for you.',
-        ctaText: 'Learn More'
+        ctaText: 'Learn More',
       }
     }
   }
@@ -441,9 +528,16 @@ CTA: [your call-to-action here]`
    */
   static async generateVariations(
     request: GenerationRequest,
-    count: number
+    count: number,
+    captionId?: string
   ): Promise<string[]> {
-    const angles: CaptionAngle[] = ['emotional', 'data-driven', 'question-based', 'cta-focused', 'educational']
+    const angles: CaptionAngle[] = [
+      'emotional',
+      'data-driven',
+      'question-based',
+      'cta-focused',
+      'educational',
+    ]
     const variations: string[] = []
 
     // Generate variations using different angles
@@ -455,13 +549,82 @@ CTA: [your call-to-action here]`
           angle,
         })
         variations.push(caption)
-        
+
+        // If a captionId is provided, add this variation to the caption
+        if (captionId) {
+          // First, get the caption to access campaign context for scoring
+          const captionRecord = AuthModel.getCaptionById(captionId)
+          const assetId = captionRecord?.assetId
+
+          let scores:
+            | {
+                clarity: number
+                originality: number
+                brandConsistency: number
+                platformRelevance: number
+                totalScore: number
+              }
+            | undefined
+
+          if (assetId) {
+            const asset = AuthModel.getAssetById(assetId)
+            const brandKit = asset
+              ? AuthModel.getBrandKitByWorkspace(asset.workspaceId)
+              : null
+
+            if (brandKit) {
+              scores = CaptionScorer.scoreCaptionVariation(
+                caption,
+                brandKit.voicePrompt,
+                {
+                  objective: request.campaignObjective,
+                  targetAudience:
+                    request.targetAudience || brandKit.targetAudience,
+                  brandPersonality: brandKit.brandPersonality,
+                }
+              )
+            }
+          }
+
+          // Generate ad copy if requested (for ad copy mode)
+          let adCopy = undefined
+          const generateAdCopy = request.platform?.includes('ad') || false // Check if ad copy mode is requested
+
+          if (generateAdCopy) {
+            const adCopyResult = await this.generateAdCopy(
+              { ...request, assetId: captionRecord?.assetId || '' },
+              request.angle
+            )
+            adCopy = adCopyResult
+          }
+
+          await AuthModel.addCaptionVariation(captionId, {
+            text: caption,
+            status: 'completed',
+            approvalStatus: 'pending',
+            qualityScore: scores?.totalScore,
+            scoreBreakdown: scores
+              ? {
+                  clarity: scores.clarity,
+                  originality: scores.originality,
+                  brandConsistency: scores.brandConsistency,
+                  platformRelevance: scores.platformRelevance,
+                }
+              : undefined,
+            adCopy: adCopy,
+            generatedAt: new Date(),
+          })
+        }
+
         // Small delay between API calls to avoid rate limits
         if (i < count - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500))
+          await new Promise((resolve) => setTimeout(resolve, 500))
         }
       } catch (error) {
-        console.error(`Failed to generate variation ${i + 1}:`, error)
+        log.error(
+          { err: error, variationIndex: i + 1 },
+          `Failed to generate variation`
+        )
         // Continue with other variations even if one fails
       }
     }
@@ -498,7 +661,9 @@ CTA: [your call-to-action here]`
 
       // Get workspace agency for watermark logic
       const workspace = AuthModel.getWorkspaceById(job.workspaceId)
-      const agency = workspace ? AuthModel.getAgencyById(workspace.agencyId) : null
+      const agency = workspace
+        ? AuthModel.getAgencyById(workspace.agencyId)
+        : null
 
       let processedCount = 0
 
@@ -522,10 +687,12 @@ CTA: [your call-to-action here]`
           })
 
           // Get campaign context if available
-          const campaign = job.campaignId ? AuthModel.getCampaignById(job.campaignId) : null
+          const campaign = job.campaignId
+            ? AuthModel.getCampaignById(job.campaignId)
+            : null
 
-          // Generate caption using AI with full context
-          const captionText = await this.generateCaption({
+          // Generate caption variations using AI with full context
+          const generationRequest: GenerationRequest = {
             assetId,
             workspaceId: job.workspaceId,
             brandVoicePrompt: brandKit.voicePrompt,
@@ -538,15 +705,41 @@ CTA: [your call-to-action here]`
             valueProposition: brandKit.valueProposition,
             mustIncludePhrases: campaign?.mustIncludePhrases,
             mustExcludePhrases: campaign?.mustExcludePhrases,
-            platform: campaign?.placements?.[0]
-          })
+            platform: campaign?.placements?.[0],
+          }
 
-          // Update caption with generated text
-          AuthModel.updateCaption(caption.id, {
+          // Generate primary caption first
+          const captionText = await this.generateCaption(generationRequest)
+
+          // Add the primary generated caption as a variation
+          AuthModel.addCaptionVariation(caption.id, {
             text: captionText,
             status: 'completed',
+            approvalStatus: 'pending',
             generatedAt: new Date(),
           })
+
+          // Generate additional variations (3 total by default)
+          const variationsCount = 3 // Default to 3 variations including the primary
+
+          // Check if ad copy mode is enabled
+          const isAdCopyMode = (job as any).generateAdCopy === true
+
+          // Create a modified request for ad copy generation if needed
+          const adCopyGenerationRequest = isAdCopyMode
+            ? {
+                ...generationRequest,
+                platform: generationRequest.platform
+                  ? `${generationRequest.platform}_ad`
+                  : 'ig-feed_ad', // Mark as ad copy mode
+              }
+            : generationRequest
+
+          await this.generateVariations(
+            adCopyGenerationRequest,
+            variationsCount - 1,
+            caption.id
+          )
 
           // Generate rendered images if we have an agency for watermark logic
           if (agency) {
@@ -569,26 +762,32 @@ CTA: [your call-to-action here]`
                 workspaceId: job.workspaceId,
                 captionId: caption.id,
                 approvalStatus: 'pending',
-                format: rendered.format as 'instagram-square' | 'instagram-story',
-                layout: rendered.layout as 'center-focus' | 'bottom-text' | 'top-text',
+                format: rendered.format as
+                  | 'instagram-square'
+                  | 'instagram-story',
+                layout: rendered.layout as
+                  | 'center-focus'
+                  | 'bottom-text'
+                  | 'top-text',
                 caption: captionText,
                 imageUrl: rendered.imageUrl,
                 thumbnailUrl: rendered.thumbnailUrl,
-                watermark: agency.planType === 'free'
+                watermark: agency.planType === 'free',
               })
             }
           }
 
           processedCount++
         } catch (error) {
-          console.error(`Error processing asset ${assetId}:`, error)
+          log.error({ err: error, assetId }, `Error processing asset`)
 
           // Update caption status to failed
           const caption = AuthModel.getCaptionsByAsset(assetId)[0]
           if (caption) {
             AuthModel.updateCaption(caption.id, {
               status: 'failed',
-              errorMessage: error instanceof Error ? error.message : 'Unknown error',
+              errorMessage:
+                error instanceof Error ? error.message : 'Unknown error',
             })
           }
         }
@@ -599,7 +798,7 @@ CTA: [your call-to-action here]`
         })
 
         // Longer delay between requests when rendering images
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise((resolve) => setTimeout(resolve, 2000))
       }
 
       // Mark job as completed
@@ -607,9 +806,8 @@ CTA: [your call-to-action here]`
         status: 'completed',
         completedAt: new Date(),
       })
-
     } catch (error) {
-      console.error(`Error processing batch job ${jobId}:`, error)
+      log.error({ err: error, jobId }, `Error processing batch job`)
 
       // Mark job as failed
       AuthModel.updateBatchJob(jobId, {
@@ -636,7 +834,9 @@ CTA: [your call-to-action here]`
     // Validate brand kit exists
     const brandKit = AuthModel.getBrandKitByWorkspace(workspaceId)
     if (!brandKit) {
-      throw new Error('No brand kit found for this workspace. Please create a brand kit first.')
+      throw new Error(
+        'No brand kit found for this workspace. Please create a brand kit first.'
+      )
     }
 
     // Validate assets
@@ -663,8 +863,11 @@ CTA: [your call-to-action here]`
     const job = AuthModel.createBatchJob(workspaceId, assetIds)
 
     // Start processing in background
-    this.processBatchJob(job.id).catch(error => {
-      console.error(`Background processing failed for job ${job.id}:`, error)
+    this.processBatchJob(job.id).catch((error) => {
+      log.error(
+        { err: error, jobId: job.id },
+        `Background processing failed for job`
+      )
     })
 
     return {

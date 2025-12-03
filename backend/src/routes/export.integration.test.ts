@@ -1,5 +1,6 @@
 import request from 'supertest'
 import { describe, it, beforeEach, afterEach, expect, vi } from 'vitest'
+import { log } from '../../src/middleware/logger'
 
 describe('Export integration', () => {
   let app: any
@@ -31,23 +32,27 @@ describe('Export integration', () => {
       .post('/api/workspaces')
       .send({ clientName: 'Export Client' })
       .expect(201)
-    console.log('Export integration test workspace response:', wsResp.body)
+    log.debug(
+      { body: wsResp.body },
+      'Export integration test workspace response'
+    )
     const workspaceId = wsResp.body.workspace.id
 
     // Create minimal brand kit
-    const brandResp = await agent
-      .post('/api/brand-kits')
-      .send({
-        workspaceId,
-        colors: {
-          primary: '#000000',
-          secondary: '#111111',
-          tertiary: '#222222',
-        },
-        fonts: { heading: 'Inter', body: 'Roboto' },
-        voicePrompt: 'Friendly and concise',
-      })
-    console.log('Brand kit response:', brandResp.status, brandResp.body)
+    const brandResp = await agent.post('/api/brand-kits').send({
+      workspaceId,
+      colors: {
+        primary: '#000000',
+        secondary: '#111111',
+        tertiary: '#222222',
+      },
+      fonts: { heading: 'Inter', body: 'Roboto' },
+      voicePrompt: 'Friendly and concise',
+    })
+    log.debug(
+      { status: brandResp.status, body: brandResp.body },
+      'Brand kit response'
+    )
     expect(brandResp.status).toBe(201)
 
     // Upload an asset (use repo test-image.png)
@@ -72,10 +77,7 @@ describe('Export integration', () => {
 
     // Query runtime route listing (best-effort) - do not rely on it for logic
     const routesResp = await agent.get('/api/_routes').expect(200)
-    console.log(
-      'All routes in server:',
-      JSON.stringify(routesResp.body, null, 2)
-    )
+    log.debug({ routes: routesResp.body }, 'All routes in server')
 
     // Now start export
     const startResp = await agent

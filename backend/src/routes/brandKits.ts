@@ -1,7 +1,9 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { AuthModel } from '../models/auth'
+import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
+import validateRequest from '../middleware/validateRequest'
 import { AuthenticatedRequest } from '../types/auth'
 import { MaskingService } from '../services/maskingService'
 
@@ -73,43 +75,56 @@ const updateBrandKitSchema = z.object({
 })
 
 // POST /api/brand-kits - Create new brand kit
-router.post('/', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const brandKitData = createBrandKitSchema.parse(req.body)
+router.post(
+  '/',
+  requireAuth,
+  validateRequest(createBrandKitSchema) as any,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      let brandKitData = (req as any).validatedData
+      // sanitize voice prompt to avoid injection patterns
+      if (brandKitData.voicePrompt) {
+        const { sanitizeText } = await import('../utils/sanitizers')
+        brandKitData = {
+          ...brandKitData,
+          voicePrompt: sanitizeText(brandKitData.voicePrompt, 500),
+        }
+      }
 
-    // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(brandKitData.workspaceId)
-    if (!workspace) {
-      return res.status(404).json({ error: 'Workspace not found' })
-    }
+      // Verify workspace belongs to current agency
+      const workspace = AuthModel.getWorkspaceById(brandKitData.workspaceId)
+      if (!workspace) {
+        return res.status(404).json({ error: 'Workspace not found' })
+      }
 
-    if (workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
+      if (workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
 
-    const brandKit = await AuthModel.createBrandKit({
-      workspaceId: brandKitData.workspaceId,
-      colors: brandKitData.colors,
-      fonts: brandKitData.fonts,
-      logo: brandKitData.logo,
-      voicePrompt: brandKitData.voicePrompt,
-    })
+      const brandKit = await AuthModel.createBrandKit({
+        workspaceId: brandKitData.workspaceId,
+        colors: brandKitData.colors,
+        fonts: brandKitData.fonts,
+        logo: brandKitData.logo,
+        voicePrompt: brandKitData.voicePrompt,
+      })
 
-    res.status(201).json({ brandKit })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', details: error.issues })
+      res.status(201).json({ brandKit })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
+      }
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message })
+      }
+      log.error({ err: error }, 'Create brand kit error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-    if (error instanceof Error) {
-      return res.status(400).json({ error: error.message })
-    }
-    console.error('Create brand kit error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // GET /api/brand-kits/:id - Get specific brand kit
 router.get('/:id', requireAuth, async (req, res) => {
@@ -130,45 +145,57 @@ router.get('/:id', requireAuth, async (req, res) => {
 
     res.json({ brandKit })
   } catch (error) {
-    console.error('Get brand kit error:', error)
+    log.error({ err: error }, 'Get brand kit error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
 
 // PUT /api/brand-kits/:id - Update brand kit
-router.put('/:id', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { id } = req.params
-    const updates = updateBrandKitSchema.parse(req.body)
+router.put(
+  '/:id',
+  requireAuth,
+  validateRequest(updateBrandKitSchema) as any,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { id } = req.params
+      let updates = (req as any).validatedData
+      if (updates.voicePrompt) {
+        const { sanitizeText } = await import('../utils/sanitizers')
+        updates = {
+          ...updates,
+          voicePrompt: sanitizeText(updates.voicePrompt, 500),
+        }
+      }
 
-    const brandKit = AuthModel.getBrandKitById(id)
-    if (!brandKit) {
-      return res.status(404).json({ error: 'Brand kit not found' })
-    }
+      const brandKit = AuthModel.getBrandKitById(id)
+      if (!brandKit) {
+        return res.status(404).json({ error: 'Brand kit not found' })
+      }
 
-    // Verify brand kit belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
-    if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
+      // Verify brand kit belongs to agency via workspace
+      const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+      if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
 
-    const updatedBrandKit = AuthModel.updateBrandKit(id, updates)
-    if (!updatedBrandKit) {
-      return res.status(404).json({ error: 'Brand kit not found' })
-    }
+      const updatedBrandKit = AuthModel.updateBrandKit(id, updates)
+      if (!updatedBrandKit) {
+        return res.status(404).json({ error: 'Brand kit not found' })
+      }
 
-    res.json({ brandKit: updatedBrandKit })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', details: error.issues })
+      res.json({ brandKit: updatedBrandKit })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
+      }
+      log.error({ err: error }, 'Update brand kit error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-    console.error('Update brand kit error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // DELETE /api/brand-kits/:id - Delete brand kit
 router.delete('/:id', requireAuth, async (req, res) => {
@@ -194,7 +221,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
     res.json({ message: 'Brand kit deleted successfully' })
   } catch (error) {
-    console.error('Delete brand kit error:', error)
+    log.error({ err: error }, 'Delete brand kit error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -222,7 +249,7 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
 
     res.json({ brandKit })
   } catch (error) {
-    console.error('Get brand kit by workspace error:', error)
+    log.error({ err: error }, 'Get brand kit by workspace error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -236,10 +263,10 @@ router.get('/masking-models', (req, res) => {
     res.json({
       models,
       defaultModel,
-      count: Object.keys(models).length
+      count: Object.keys(models).length,
     })
   } catch (error) {
-    console.error('Get masking models error:', error)
+    log.error({ err: error }, 'Get masking models error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -251,10 +278,16 @@ router.put('/:id/masking-model', requireAuth, async (req, res) => {
     const { id } = req.params
 
     const updateSchema = z.object({
-      maskingModel: z.enum(['rembg-replicate', 'sam3', 'rf-detr', 'roboflow', 'hf-model-id'])
+      maskingModel: z.enum([
+        'rembg-replicate',
+        'sam3',
+        'rf-detr',
+        'roboflow',
+        'hf-model-id',
+      ]),
     })
 
-    const { maskingModel } = updateSchema.parse(req.body)
+    const { maskingModel } = (req as any).validatedData
 
     const brandKit = AuthModel.getBrandKitById(id)
     if (!brandKit) {
@@ -269,7 +302,7 @@ router.put('/:id/masking-model', requireAuth, async (req, res) => {
 
     // Update brand kit with masking model
     const updatedBrandKit = AuthModel.updateBrandKit(id, {
-      maskingModel
+      maskingModel,
     })
 
     if (!updatedBrandKit) {
@@ -278,13 +311,15 @@ router.put('/:id/masking-model', requireAuth, async (req, res) => {
 
     res.json({
       message: 'Masking model updated successfully',
-      brandKit: updatedBrandKit
+      brandKit: updatedBrandKit,
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: 'Invalid input', details: error.issues })
+      return res
+        .status(400)
+        .json({ error: 'Invalid input', details: error.issues })
     }
-    console.error('Update masking model error:', error)
+    log.error({ err: error }, 'Update masking model error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })

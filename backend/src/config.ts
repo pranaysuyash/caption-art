@@ -49,6 +49,9 @@ export const config: Config = {
     productPermalink: requireEnv('GUMROAD_PRODUCT_PERMALINK'),
     accessToken: process.env.GUMROAD_ACCESS_TOKEN,
   },
+  waf: {
+    enable: (process.env.ENABLE_WAF || 'false') === 'true',
+  },
   cors: {
     origin: process.env.CORS_ORIGIN || '*',
   },

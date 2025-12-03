@@ -10,10 +10,20 @@
  * Into finished, platform-specific creatives in minutes.
  */
 
-import { AuthModel, BrandKit, Campaign, ReferenceCreative, Asset, AdCreative } from '../models/auth'
+import {
+  AuthModel,
+  BrandKit,
+  Campaign,
+  ReferenceCreative,
+  Asset,
+  AdCreative,
+} from '../models/auth'
+import { log } from '../middleware/logger'
 import { ImageRenderer } from './imageRenderer'
 import { CaptionGenerator } from './captionGenerator'
 import { MaskingService } from './maskingService'
+import { CaptionScorer } from './CaptionScorer'
+import { sanitizePhrases } from '../utils/sanitizers'
 
 export interface CreativeEngineInput {
   // Core inputs
@@ -91,7 +101,9 @@ export class CreativeEngine {
   /**
    * Main engine method - transforms inputs into finished creatives
    */
-  async generateCreatives(input: CreativeEngineInput): Promise<CreativeEngineOutput> {
+  async generateCreatives(
+    input: CreativeEngineInput
+  ): Promise<CreativeEngineOutput> {
     const startTime = Date.now()
 
     try {
@@ -102,20 +114,30 @@ export class CreativeEngine {
       const styleProfile = await this.buildStyleProfile(context)
 
       // 3. Generate creative variations
-      const adCreatives = await this.produceCreatives(input, context, styleProfile)
+      const adCreatives = await this.produceCreatives(
+        input,
+        context,
+        styleProfile
+      )
 
       // 4. Analyze results and provide insights
-      const summary = this.generateSummary(adCreatives, input, Date.now() - startTime)
+      const summary = this.generateSummary(
+        adCreatives,
+        input,
+        Date.now() - startTime
+      )
       const insights = await this.generateInsights(adCreatives, styleProfile)
 
       return {
         adCreatives,
         summary,
-        insights
+        insights,
       }
     } catch (error) {
-      console.error('Creative Engine generation failed:', error)
-      throw new Error(`Creative generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      log.error({ err: error }, 'Creative Engine generation failed')
+      throw new Error(
+        `Creative generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -129,6 +151,16 @@ export class CreativeEngine {
     sourceAssets: Asset[]
     styleConstraints: any
   }> {
+    // Sanitize incoming input fields
+    const { sanitizeKeywords, sanitizeText } =
+      await import('../utils/sanitizers')
+    if (input.styleTags)
+      input.styleTags = sanitizeKeywords(input.styleTags) as any
+    if (input.referenceCreatives)
+      input.referenceCreatives = input.referenceCreatives.map(
+        (rc) => sanitizeText(rc, 500) || rc
+      )
+
     // Load brand kit
     const brandKit = AuthModel.getBrandKitById(input.brandKitId)
     if (!brandKit) {
@@ -149,10 +181,14 @@ export class CreativeEngine {
     if (input.referenceCreatives && input.referenceCreatives.length > 0) {
       // For now, we'll need to find reference creatives by URL
       // In a real implementation, you'd have a more efficient lookup
-      const allRefs = AuthModel.getReferenceCreativesByWorkspace(input.workspaceId)
-      referenceCreatives.push(...allRefs.filter(ref =>
-        input.referenceCreatives!.includes(ref.imageUrl)
-      ))
+      const allRefs = AuthModel.getReferenceCreativesByWorkspace(
+        input.workspaceId
+      )
+      referenceCreatives.push(
+        ...allRefs.filter((ref) =>
+          input.referenceCreatives!.includes(ref.imageUrl)
+        )
+      )
     }
 
     // Load source assets
@@ -161,7 +197,7 @@ export class CreativeEngine {
       // For now, assume assets are already uploaded and find by URL pattern
       // In production, you'd have proper asset management
       const allAssets = AuthModel.getAssetsByWorkspace(input.workspaceId)
-      const asset = allAssets.find(a => a.url === assetUrl)
+      const asset = allAssets.find((a) => a.url === assetUrl)
       if (asset) {
         sourceAssets.push(asset)
       }
@@ -175,12 +211,23 @@ export class CreativeEngine {
     const styleConstraints = {
       objectives: input.objectives || [campaign?.objective || 'awareness'],
       platforms: input.platforms || campaign?.placements || ['ig-feed'],
-      mustInclude: input.mustIncludePhrases || campaign?.mustIncludePhrases || [],
-      mustExclude: input.mustExcludePhrases || campaign?.mustExcludePhrases || [],
+      mustInclude:
+        sanitizePhrases(
+          input.mustIncludePhrases || campaign?.mustIncludePhrases
+        ) || [],
+      mustExclude:
+        sanitizePhrases(
+          input.mustExcludePhrases || campaign?.mustExcludePhrases
+        ) || [],
       brandPersonality: brandKit.brandPersonality,
       targetAudience: campaign?.targetAudience || brandKit.targetAudience,
       valueProposition: brandKit.valueProposition,
-      toneStyle: brandKit.toneStyle
+      toneStyle: brandKit.toneStyle,
+      // Reference caption style
+      referenceCaptions: campaign?.referenceCaptions,
+      learnedStyleProfile: campaign?.learnedStyleProfile
+        ? JSON.parse(campaign.learnedStyleProfile)
+        : undefined,
     }
 
     return {
@@ -188,7 +235,7 @@ export class CreativeEngine {
       campaign,
       referenceCreatives,
       sourceAssets,
-      styleConstraints
+      styleConstraints,
     }
   }
 
@@ -214,7 +261,7 @@ export class CreativeEngine {
       colors,
       typography,
       layout,
-      tone
+      tone,
     }
   }
 
@@ -240,7 +287,8 @@ export class CreativeEngine {
       const generationRequest = {
         assetId: sourceAsset.id,
         workspaceId: sourceAsset.workspaceId,
-        brandVoicePrompt: context.styleConstraints.toneStyle || 'Professional and engaging',
+        brandVoicePrompt:
+          context.styleConstraints.toneStyle || 'Professional and engaging',
         template: 'descriptive' as const,
         campaignObjective: context.styleConstraints.objectives?.[0],
         funnelStage: context.styleConstraints.funnelStage || 'awareness',
@@ -249,12 +297,25 @@ export class CreativeEngine {
         valueProposition: context.styleConstraints.valueProposition,
         mustIncludePhrases: context.styleConstraints.mustInclude,
         mustExcludePhrases: context.styleConstraints.mustExclude,
-        platform: platforms[0]
+        platform: platforms[0],
+        referenceCaptions: context.styleConstraints.referenceCaptions,
+        learnedStyleProfile: context.styleConstraints.learnedStyleProfile,
       }
 
       try {
-        const angles: Array<'emotional' | 'data-driven' | 'question-based' | 'cta-focused' | 'educational'> = 
-          ['emotional', 'data-driven', 'question-based', 'cta-focused', 'educational']
+        const angles: Array<
+          | 'emotional'
+          | 'data-driven'
+          | 'question-based'
+          | 'cta-focused'
+          | 'educational'
+        > = [
+          'emotional',
+          'data-driven',
+          'question-based',
+          'cta-focused',
+          'educational',
+        ]
 
         // Generate variations based on mode
         for (let i = 0; i < variationsPerAsset; i++) {
@@ -269,7 +330,10 @@ export class CreativeEngine {
 
           if (input.mode === 'ad-copy') {
             // Generate structured ad copy
-            const adCopy = await CaptionGenerator.generateAdCopy(generationRequest, angle)
+            const adCopy = await CaptionGenerator.generateAdCopy(
+              generationRequest,
+              angle
+            )
             headline = adCopy.headline
             bodyText = adCopy.bodyText
             ctaText = adCopy.ctaText
@@ -281,7 +345,10 @@ export class CreativeEngine {
               angle,
             })
             // Parse caption into components
-            const lines = fullCaption.split('.').map(l => l.trim()).filter(l => l.length > 0)
+            const lines = fullCaption
+              .split('.')
+              .map((l) => l.trim())
+              .filter((l) => l.length > 0)
             headline = lines[0] || 'Discover Something Amazing'
             bodyText = lines.slice(1).join('. ') || fullCaption
             ctaText = this.selectCTA(context.styleConstraints)
@@ -298,9 +365,17 @@ export class CreativeEngine {
                 caption: bodyText,
                 brandKit: context.brandKit,
                 watermark: false, // Agency plan
-                workspaceId: input.workspaceId
+                workspaceId: input.workspaceId,
               }
             )
+
+            // Score the caption quality
+            const captionScore = CaptionScorer.scoreCaption(caption, {
+              campaignObjective: context.styleConstraints.objectives?.[0],
+              platform,
+              mustIncludePhrases: context.styleConstraints.mustInclude,
+              mustExcludePhrases: context.styleConstraints.mustExclude,
+            })
 
             // Create AdCreative record
             const adCreative: AdCreative = {
@@ -328,7 +403,9 @@ export class CreativeEngine {
               imageUrl: renderResult.imageUrl,
               thumbnailUrl: renderResult.thumbnailUrl,
               watermark: false,
-              createdAt: new Date()
+              qualityScore: captionScore.totalScore,
+              scoreBreakdown: captionScore.breakdown,
+              createdAt: new Date(),
             }
 
             adCreatives.push(adCreative)
@@ -336,16 +413,21 @@ export class CreativeEngine {
 
             // Small delay between API calls
             if (i < variationsPerAsset - 1) {
-              await new Promise(resolve => setTimeout(resolve, 500))
+              await new Promise((resolve) => setTimeout(resolve, 500))
             }
-
           } catch (error) {
-            console.error('Failed to render creative:', error)
+            log.error(
+              { err: error, sourceAssetId: sourceAsset.id },
+              'Failed to render creative'
+            )
             // Continue with next variation
           }
         }
       } catch (error) {
-        console.error(`Failed to generate variations for asset ${sourceAsset.id}:`, error)
+        log.error(
+          { err: error, sourceAssetId: sourceAsset.id },
+          `Failed to generate variations for asset`
+        )
         // Continue with next asset
       }
     }
@@ -382,12 +464,18 @@ export class CreativeEngine {
         valueProposition: constraints.valueProposition,
         mustIncludePhrases: constraints.mustInclude,
         mustExcludePhrases: constraints.mustExclude,
-        platform: constraints.platforms?.[0]
+        platform: constraints.platforms?.[0],
+        // Reference style injection
+        referenceCaptions: constraints.referenceCaptions,
+        learnedStyleProfile: constraints.learnedStyleProfile,
       })
 
       // Parse AI-generated caption into structured ad copy
-      const lines = fullCaption.split('.').map(l => l.trim()).filter(l => l.length > 0)
-      
+      const lines = fullCaption
+        .split('.')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0)
+
       // First line as headline, rest as body, add CTA
       const headline = lines[0] || 'Discover Something Amazing'
       const bodyText = lines.slice(1).join('. ') || fullCaption
@@ -397,10 +485,10 @@ export class CreativeEngine {
         headline: headline.slice(0, 60), // Limit headline length
         subheadline: constraints.campaign?.primaryOffer,
         bodyText: bodyText.slice(0, 125), // Limit body length for ads
-        ctaText
+        ctaText,
       }
     } catch (error) {
-      console.error('AI caption generation failed, using fallback:', error)
+      log.error({ err: error }, 'AI caption generation failed, using fallback')
       // Fallback to template-based approach
       return this.generateFallbackCopy(constraints)
     }
@@ -411,18 +499,22 @@ export class CreativeEngine {
    */
   private selectCTA(constraints: any): string {
     const objective = constraints.objectives?.[0]
-    
-    if (constraints.mustExclude && constraints.mustExclude.some((p: string) => 
-      p.toLowerCase().includes('buy') || p.toLowerCase().includes('shop')
-    )) {
+
+    if (
+      constraints.mustExclude &&
+      constraints.mustExclude.some(
+        (p: string) =>
+          p.toLowerCase().includes('buy') || p.toLowerCase().includes('shop')
+      )
+    ) {
       return 'Learn More'
     }
 
     const ctaMap: Record<string, string[]> = {
-      'conversion': ['Shop Now', 'Buy Now', 'Get Started', 'Sign Up'],
-      'traffic': ['Learn More', 'Discover More', 'Explore Now', 'Read More'],
-      'engagement': ['Join Us', 'Get Involved', 'Share Your Story', 'Tell Us'],
-      'awareness': ['Discover', 'Explore', 'Learn More', 'Find Out']
+      conversion: ['Shop Now', 'Buy Now', 'Get Started', 'Sign Up'],
+      traffic: ['Learn More', 'Discover More', 'Explore Now', 'Read More'],
+      engagement: ['Join Us', 'Get Involved', 'Share Your Story', 'Tell Us'],
+      awareness: ['Discover', 'Explore', 'Learn More', 'Find Out'],
     }
 
     const options = ctaMap[objective] || ctaMap['awareness']
@@ -442,35 +534,38 @@ export class CreativeEngine {
       `${constraints.brandPersonality || 'Elevate'} Your Style`,
       `Discover ${constraints.valueProposition || 'Something Amazing'}`,
       `Transform Your ${constraints.targetAudience || 'Daily'} Routine`,
-      `Premium Quality, Unmatched Results`
+      `Premium Quality, Unmatched Results`,
     ]
 
     const bodyTexts = [
       `Experience the difference with our carefully crafted ${constraints.targetAudience || 'solutions'}.`,
       `Join thousands of satisfied customers who have transformed their lives.`,
-      `Designed for those who appreciate quality and attention to detail.`
+      `Designed for those who appreciate quality and attention to detail.`,
     ]
 
     return {
       headline: headlines[Math.floor(Math.random() * headlines.length)],
       subheadline: constraints.campaign?.primaryOffer || undefined,
       bodyText: bodyTexts[Math.floor(Math.random() * bodyTexts.length)],
-      ctaText: this.selectCTA(constraints)
+      ctaText: this.selectCTA(constraints),
     }
   }
 
   /**
    * Extract colors from brand kit and reference creatives
    */
-  private extractColors(brandKit: BrandKit, referenceCreatives: ReferenceCreative[]): StyleProfile['colors'] {
+  private extractColors(
+    brandKit: BrandKit,
+    referenceCreatives: ReferenceCreative[]
+  ): StyleProfile['colors'] {
     const colors = {
       primary: [brandKit.colors.primary],
       secondary: [brandKit.colors.secondary],
-      accent: [brandKit.colors.tertiary]
+      accent: [brandKit.colors.tertiary],
     }
 
     // Add colors from reference creatives
-    referenceCreatives.forEach(ref => {
+    referenceCreatives.forEach((ref) => {
       if (ref.extractedColors) {
         colors.secondary.push(...ref.extractedColors.slice(0, 3)) // Limit to prevent too many colors
       }
@@ -487,22 +582,27 @@ export class CreativeEngine {
   /**
    * Analyze typography preferences
    */
-  private analyzeTypography(brandKit: BrandKit, referenceCreatives: ReferenceCreative[]): StyleProfile['typography'] {
+  private analyzeTypography(
+    brandKit: BrandKit,
+    referenceCreatives: ReferenceCreative[]
+  ): StyleProfile['typography'] {
     return {
       headingFonts: [brandKit.fonts.heading],
-      bodyFonts: [brandKit.fonts.body]
+      bodyFonts: [brandKit.fonts.body],
     }
   }
 
   /**
    * Learn layout patterns from reference creatives
    */
-  private analyzeLayout(referenceCreatives: ReferenceCreative[]): StyleProfile['layout'] {
+  private analyzeLayout(
+    referenceCreatives: ReferenceCreative[]
+  ): StyleProfile['layout'] {
     if (referenceCreatives.length === 0) {
       return {
         commonPatterns: ['center-focus'],
         textDensity: 'moderate',
-        visualHierarchy: 'balanced'
+        visualHierarchy: 'balanced',
       }
     }
 
@@ -514,37 +614,56 @@ export class CreativeEngine {
     }
 
     let totalDensity = 0
-    referenceCreatives.forEach(ref => {
+    referenceCreatives.forEach((ref) => {
       if (ref.detectedLayout) {
         layoutCounts[ref.detectedLayout]++
       }
       if (ref.textDensity) {
-        totalDensity += ref.textDensity === 'minimal' ? 1 : ref.textDensity === 'moderate' ? 2 : 3
+        totalDensity +=
+          ref.textDensity === 'minimal'
+            ? 1
+            : ref.textDensity === 'moderate'
+              ? 2
+              : 3
       }
     })
 
     // Find most common layout
-    const mostCommonLayout = Object.entries(layoutCounts)
-      .sort(([,a], [,b]) => b - a)[0][0] as any
+    const mostCommonLayout = Object.entries(layoutCounts).sort(
+      ([, a], [, b]) => b - a
+    )[0][0] as any
 
     const avgDensity = totalDensity / referenceCreatives.length
-    const textDensity = avgDensity < 1.5 ? 'minimal' : avgDensity < 2.5 ? 'moderate' : 'heavy'
+    const textDensity =
+      avgDensity < 1.5 ? 'minimal' : avgDensity < 2.5 ? 'moderate' : 'heavy'
 
     return {
       commonPatterns: [mostCommonLayout],
       textDensity,
-      visualHierarchy: textDensity === 'heavy' ? 'bold' : textDensity === 'minimal' ? 'subtle' : 'balanced'
+      visualHierarchy:
+        textDensity === 'heavy'
+          ? 'bold'
+          : textDensity === 'minimal'
+            ? 'subtle'
+            : 'balanced',
     }
   }
 
   /**
    * Analyze tone and voice
    */
-  private analyzeTone(brandKit: BrandKit, constraints: any): StyleProfile['tone'] {
+  private analyzeTone(
+    brandKit: BrandKit,
+    constraints: any
+  ): StyleProfile['tone'] {
     return {
       voice: [brandKit.voicePrompt || 'Professional'],
-      messaging: constraints.objectives?.includes('conversion') ? 'direct' : 'inspirational',
-      ctaStyle: constraints.objectives?.includes('awareness') ? 'gentle' : 'urgent'
+      messaging: constraints.objectives?.includes('conversion')
+        ? 'direct'
+        : 'inspirational',
+      ctaStyle: constraints.objectives?.includes('awareness')
+        ? 'gentle'
+        : 'urgent',
     }
   }
 
@@ -569,14 +688,14 @@ export class CreativeEngine {
     input: CreativeEngineInput,
     processingTime: number
   ): CreativeEngineOutput['summary'] {
-    const platformsCovered = [...new Set(adCreatives.map(ac => ac.placement))]
+    const platformsCovered = [...new Set(adCreatives.map((ac) => ac.placement))]
 
     return {
       totalGenerated: adCreatives.length,
       platformsCovered,
       styleConsistency: 85, // Placeholder - would analyze consistency
       brandAlignment: 90, // Placeholder - would analyze brand alignment
-      processingTime
+      processingTime,
     }
   }
 
@@ -588,14 +707,16 @@ export class CreativeEngine {
     styleProfile: StyleProfile
   ): Promise<CreativeEngineOutput['insights']> {
     return {
-      dominantColors: styleProfile.colors.primary.concat(styleProfile.colors.secondary),
+      dominantColors: styleProfile.colors.primary.concat(
+        styleProfile.colors.secondary
+      ),
       textDensity: styleProfile.layout.textDensity,
       visualStyle: styleProfile.layout.commonPatterns,
       suggestedImprovements: [
         'Consider adding more visual variety in next batch',
         'Test different CTA language for improved conversion',
-        'Review copy length for mobile readability'
-      ]
+        'Review copy length for mobile readability',
+      ],
     }
   }
 }

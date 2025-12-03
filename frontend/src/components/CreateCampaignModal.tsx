@@ -33,9 +33,11 @@ export function CreateCampaignModal({
     funnelStage: 'cold',
     primaryCTA: '',
     placements: ['ig-feed'],
+    referenceCaptions: [],
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newReferenceCaption, setNewReferenceCaption] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +62,26 @@ export function CreateCampaignModal({
       placements: prev.placements.includes(placement)
         ? prev.placements.filter((p) => p !== placement)
         : [...prev.placements, placement],
+    }));
+  };
+
+  const addReferenceCaption = () => {
+    if (newReferenceCaption.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        referenceCaptions: [
+          ...(prev.referenceCaptions || []),
+          newReferenceCaption.trim(),
+        ],
+      }));
+      setNewReferenceCaption('');
+    }
+  };
+
+  const removeReferenceCaption = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      referenceCaptions: prev.referenceCaptions?.filter((_, i) => i !== index),
     }));
   };
 
@@ -194,6 +216,107 @@ export function CreateCampaignModal({
               }
               placeholder='Shop Now, Learn More, etc.'
             />
+          </div>
+
+          <div className='form-group'>
+            <label>
+              Reference Captions (Optional)
+              <small
+                style={{ display: 'block', marginTop: '4px', opacity: 0.7 }}
+              >
+                Add example captions to teach the AI your brand's writing style.
+                The AI will analyze tone, vocabulary, emoji usage, and hashtag
+                patterns.
+              </small>
+            </label>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input
+                type='text'
+                value={newReferenceCaption}
+                onChange={(e) => setNewReferenceCaption(e.target.value)}
+                onKeyPress={(e) =>
+                  e.key === 'Enter' &&
+                  (e.preventDefault(), addReferenceCaption())
+                }
+                placeholder='Paste a caption that matches your brand voice...'
+                style={{ flex: 1 }}
+              />
+              <button
+                type='button'
+                onClick={addReferenceCaption}
+                className='btn-secondary'
+                disabled={!newReferenceCaption.trim()}
+              >
+                Add
+              </button>
+            </div>
+            {formData.referenceCaptions &&
+              formData.referenceCaptions.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <div
+                    style={{
+                      fontSize: '12px',
+                      marginBottom: '8px',
+                      opacity: 0.7,
+                    }}
+                  >
+                    {formData.referenceCaptions.length} reference caption
+                    {formData.referenceCaptions.length !== 1 ? 's' : ''} added
+                    {formData.referenceCaptions.length >= 2 && ' ✓'}
+                    {formData.referenceCaptions.length === 1 &&
+                      ' (add at least 1 more for style analysis)'}
+                  </div>
+                  <div
+                    style={{
+                      maxHeight: '200px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    {formData.referenceCaptions.map((caption, index) => (
+                      <div
+                        key={index}
+                        style={{
+                          padding: '12px',
+                          background: '#f5f5f5',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: '12px',
+                        }}
+                      >
+                        <div
+                          style={{
+                            flex: 1,
+                            fontSize: '13px',
+                            lineHeight: '1.5',
+                          }}
+                        >
+                          {caption}
+                        </div>
+                        <button
+                          type='button'
+                          onClick={() => removeReferenceCaption(index)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '18px',
+                            opacity: 0.5,
+                            padding: '0 4px',
+                          }}
+                          title='Remove'
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
           </div>
 
           {error && <div className='error-message'>{error}</div>}

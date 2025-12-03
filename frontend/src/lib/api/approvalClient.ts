@@ -13,6 +13,13 @@ export interface CaptionItem {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   approvalStatus: 'pending' | 'approved' | 'rejected';
   approved: boolean; // Derived from backend: approvalStatus === 'approved'
+  qualityScore?: number; // 1-10 quality score
+  scoreBreakdown?: {
+    brandVoiceMatch: number;
+    objectiveAlignment: number;
+    lengthCompliance: number;
+    constraintCompliance: number;
+  };
   createdAt: string;
   updatedAt?: string;
   approvedAt?: string;

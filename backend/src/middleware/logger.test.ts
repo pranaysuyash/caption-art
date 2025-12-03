@@ -1,19 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { Request, Response, NextFunction } from 'express'
 import * as fc from 'fast-check'
-import { logger } from './logger'
+import { logger, log } from './logger'
 import { ValidationError, ExternalAPIError } from '../errors/AppError'
 import { errorHandler } from './errorHandler'
 
 describe('Logger Middleware', () => {
-  let consoleLogSpy: any
+  let logInfoSpy: any
 
   beforeEach(() => {
-    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    logInfoSpy = vi.spyOn(log, 'info').mockImplementation(() => {})
   })
 
   afterEach(() => {
-    consoleLogSpy.mockRestore()
+    logInfoSpy.mockRestore()
   })
 
   /**
@@ -24,9 +24,7 @@ describe('Logger Middleware', () => {
    */
   it('should log errors with timestamp and context when errors occur', () => {
     // Create a separate spy for console.error since errorHandler uses console.error
-    const consoleErrorSpy = vi
-      .spyOn(console, 'error')
-      .mockImplementation(() => {})
+    const consoleErrorSpy = vi.spyOn(log, 'error').mockImplementation(() => {})
 
     fc.assert(
       fc.property(
@@ -71,9 +69,12 @@ describe('Logger Middleware', () => {
           const logCalls = consoleErrorSpy.mock.calls
           expect(logCalls.length).toBeGreaterThan(0)
 
-          // Verify first argument contains timestamp (ISO format)
+          // Verify log contains context (object is the first argument)
           const firstCall = logCalls[0]
-          expect(firstCall[0]).toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+          expect(firstCall[0]).toBeDefined()
+          // Expect the logged object to contain path/method
+          expect(firstCall[0].path).toBe(requestData.path)
+          expect(firstCall[0].method).toBe(requestData.method)
 
           // Verify log contains context (error details)
           const loggedData = firstCall[1]
@@ -109,20 +110,17 @@ describe('Logger Middleware', () => {
 
           const next = vi.fn() as NextFunction
 
-          consoleLogSpy.mockClear()
+          logInfoSpy.mockClear()
 
           logger(req, res, next)
 
           // Verify request was logged
-          expect(consoleLogSpy).toHaveBeenCalled()
+          expect(logInfoSpy).toHaveBeenCalled()
 
-          // Verify log contains timestamp
-          const logCall = consoleLogSpy.mock.calls[0][0]
-          expect(logCall).toMatch(/\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
-
-          // Verify log contains method and path
-          expect(logCall).toContain(requestData.method)
-          expect(logCall).toContain(requestData.path)
+          // Verify log contains method and path in the first argument
+          const logCall = logInfoSpy.mock.calls[0][0]
+          expect(logCall.method).toBe(requestData.method)
+          expect(logCall.path).toBe(requestData.path)
         }
       ),
       { numRuns: 100 }
@@ -147,7 +145,7 @@ describe('Logger Middleware', () => {
 
     const next = vi.fn() as NextFunction
 
-    consoleLogSpy.mockClear()
+    logInfoSpy.mockClear()
 
     logger(req, res, next)
 
@@ -157,11 +155,11 @@ describe('Logger Middleware', () => {
     }
 
     // Should have two log calls: one for request, one for response
-    expect(consoleLogSpy).toHaveBeenCalledTimes(2)
+    expect(logInfoSpy).toHaveBeenCalledTimes(2)
 
-    // Second call should include response time
-    const responseLog = consoleLogSpy.mock.calls[1][0]
-    expect(responseLog).toMatch(/\d+ms/)
-    expect(responseLog).toContain('200')
+    // Second call should include response time and status
+    const responseLog = logInfoSpy.mock.calls[1][0]
+    expect(responseLog.duration).toBeDefined()
+    expect(responseLog.status).toBe(200)
   })
 })

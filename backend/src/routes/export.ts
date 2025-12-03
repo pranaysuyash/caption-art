@@ -1,30 +1,40 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { AuthModel } from '../models/auth'
+import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
 import { AuthenticatedRequest } from '../types/auth'
 import { ExportService } from '../services/exportService'
 import path from 'path'
 
 const router = Router()
-console.log('Initializing export router')
+log.info('Initializing export router')
 const requireAuth = createAuthMiddleware() as any
 
 // Debug: log every request into export router
 router.use((req, res, next) => {
-  console.log('EXPORT ROUTER REQ:', req.method, req.path)
+  log.info(
+    { requestId: (req as any).requestId, method: req.method, path: req.path },
+    'EXPORT ROUTER REQ'
+  )
   next()
 })
 
 // Debug: generic catch-all on export router
 router.use((req, res, next) => {
-  console.log('EXPORT ROUTER CATCHALL:', req.method, req.path)
+  log.info(
+    { requestId: (req as any).requestId, method: req.method, path: req.path },
+    'EXPORT ROUTER CATCHALL'
+  )
   next()
 })
 
 // POST /api/export/workspace/:workspaceId/start - Start export job
 router.post('/workspace/:workspaceId/start', requireAuth, async (req, res) => {
-  console.log('Incoming POST /workspace/:workspaceId/start')
+  log.info(
+    { requestId: (req as any).requestId, workspaceId: req.params.workspaceId },
+    'Incoming POST /workspace/:workspaceId/start'
+  )
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { workspaceId } = req.params
@@ -55,7 +65,10 @@ router.post('/workspace/:workspaceId/start', requireAuth, async (req, res) => {
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message })
     }
-    console.error('Start export error:', error)
+    log.error(
+      { requestId: (req as any).requestId, err: error },
+      'Start export error'
+    )
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -79,7 +92,10 @@ router.get('/jobs/:jobId', requireAuth, async (req, res) => {
 
     res.json({ job })
   } catch (error) {
-    console.error('Get export job error:', error)
+    log.error(
+      { requestId: (req as any).requestId, err: error },
+      'Get export job error'
+    )
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -103,7 +119,10 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
     const jobs = AuthModel.getExportJobsByWorkspace(workspaceId)
     res.json({ jobs })
   } catch (error) {
-    console.error('Get export jobs error:', error)
+    log.error(
+      { requestId: (req as any).requestId, err: error },
+      'Get export jobs error'
+    )
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -132,14 +151,14 @@ router.get('/jobs/:jobId/download', requireAuth, async (req, res) => {
     const fileName = path.basename(job.zipFilePath)
     res.download(job.zipFilePath, fileName, (err) => {
       if (err) {
-        console.error('Download error:', err)
+        log.error({ err }, 'Download error')
         if (!res.headersSent) {
           res.status(500).json({ error: 'Download failed' })
         }
       }
     })
   } catch (error) {
-    console.error('Download export error:', error)
+    log.error({ err: error }, 'Download export error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -200,7 +219,10 @@ router.get('/workspace/:workspaceId/summary', requireAuth, async (req, res) => {
         .slice(0, 5),
     })
   } catch (error) {
-    console.error('Get export summary error:', error)
+    log.error(
+      { requestId: (req as any).requestId, err: error },
+      'Get export summary error'
+    )
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -229,7 +251,10 @@ router.delete('/jobs/:jobId', requireAuth, async (req, res) => {
 
     res.json({ message: 'Export job deleted successfully' })
   } catch (error) {
-    console.error('Delete export job error:', error)
+    log.error(
+      { requestId: (req as any).requestId, err: error },
+      'Delete export job error'
+    )
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -247,7 +272,10 @@ router.post('/cleanup', requireAuth, async (req, res) => {
       olderThanHours,
     })
   } catch (error) {
-    console.error('Cleanup exports error:', error)
+    log.error(
+      { requestId: (req as any).requestId, err: error },
+      'Cleanup exports error'
+    )
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -276,7 +304,10 @@ router.get('/workspace/:workspaceId/history', requireAuth, async (req, res) => {
       ...history,
     })
   } catch (error) {
-    console.error('Get export history error:', error)
+    log.error(
+      { requestId: (req as any).requestId, err: error },
+      'Get export history error'
+    )
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -307,7 +338,10 @@ router.get(
         ...statistics,
       })
     } catch (error) {
-      console.error('Get export statistics error:', error)
+      log.error(
+        { requestId: (req as any).requestId, err: error },
+        'Get export statistics error'
+      )
       res.status(500).json({ error: 'Internal server error' })
     }
   }
@@ -357,7 +391,7 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
       },
     })
   } catch (error) {
-    console.error('Get export jobs error:', error)
+    log.error({ err: error }, 'Get export jobs error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })

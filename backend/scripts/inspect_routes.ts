@@ -1,17 +1,18 @@
 import { createServer } from '../src/server'
+import { log } from '../src/middleware/logger'
 
 async function inspect() {
   const app = createServer({ enableRateLimiter: false })
   const routerObj =
     (app as any)._router || (app as any).router || (app as any).app || undefined
-  console.log(
-    'Top-level keys on app:',
-    Object.getOwnPropertyNames(app).slice(0, 40)
+  log.debug(
+    { topLevelKeys: Object.getOwnPropertyNames(app).slice(0, 40) },
+    'Top-level keys on app'
   )
   if (routerObj)
-    console.log(
-      'Router object keys:',
-      Object.getOwnPropertyNames(routerObj).slice(0, 40)
+    log.debug(
+      { routerKeys: Object.getOwnPropertyNames(routerObj).slice(0, 40) },
+      'Router object keys'
     )
   const stack = routerObj && routerObj.stack ? routerObj.stack : []
   const routes: Array<{ method: string; path: string }> = []
@@ -43,8 +44,7 @@ async function inspect() {
   }
   walk(stack, '')
 
-  console.log('Discovered routes:')
-  routes.forEach((r) => console.log(`${r.method} ${r.path}`))
+  log.info({ routes }, 'Discovered routes')
 }
 
 inspect()

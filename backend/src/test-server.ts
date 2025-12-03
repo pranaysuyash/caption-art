@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import express from 'express'
+import { log } from './middleware/logger'
 
 const app = express()
 
@@ -24,5 +25,5 @@ app.get('/api/health', (req, res) => {
 const port = process.env.PORT || 3001
 
 app.listen(port, () => {
-  console.log(`Test server running on port ${port}`)
+  log.info({ port }, 'Test server running')
 })

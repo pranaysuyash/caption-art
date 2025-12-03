@@ -1,11 +1,13 @@
 # Caption Quality Improvements
 
 ## Overview
+
 Enhanced caption generation with rich campaign and brand context for higher quality, more relevant captions.
 
 ## What Changed (Task 2 Complete)
 
 ### Enhanced Prompt Context
+
 The LLM prompt now includes:
 
 1. **Campaign Objective** - Optimizes caption for awareness/traffic/conversion/engagement
@@ -20,6 +22,7 @@ The LLM prompt now includes:
 ### Before vs After
 
 **Before:**
+
 ```
 "You are a professional social media caption writer.
 Brand Voice: [generic voice prompt]
@@ -27,6 +30,7 @@ Create engaging captions."
 ```
 
 **After:**
+
 ```
 "You are a professional social media caption writer.
 
@@ -64,6 +68,7 @@ Guidelines:
 ### Files Modified
 
 1. **`backend/src/services/captionGenerator.ts`**
+
    - Extended `GenerationRequest` interface with campaign fields
    - Enhanced `generateCaption()` to build context-rich prompts
    - Updated `processBatchJob()` to pass campaign data
@@ -92,6 +97,7 @@ High-quality, context-aware caption
 ## Next Steps (Week 1-2)
 
 **Task 3: Variation Engine**
+
 - Generate N caption options per asset (1-10 configurable)
 - Each variant uses different angle: emotional, data-driven, question-based, CTA-focused
 - Frontend approval grid shows all variants side-by-side

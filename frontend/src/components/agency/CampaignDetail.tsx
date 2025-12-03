@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { CampaignBriefEditor } from '../CampaignBriefEditor'
+import '../CampaignBriefEditor.css'
 
 export function CampaignDetail() {
   const { workspaceId, campaignId } = useParams<{ workspaceId: string; campaignId: string }>()
@@ -7,7 +9,8 @@ export function CampaignDetail() {
   const [brandKit, setBrandKit] = useState<any>(null)
   const [assets, setAssets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'brand-kit' | 'assets'>('brand-kit')
+  const [activeTab, setActiveTab] = useState<'brand-kit' | 'assets' | 'campaign-brief'>('brand-kit')
+  const [showBriefEditor, setShowBriefEditor] = useState(false)
 
   useEffect(() => {
     loadCampaignData()
@@ -141,6 +144,21 @@ export function CampaignDetail() {
             }}
           >
             Assets ({assets.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('campaign-brief')}
+            style={{
+              padding: '1rem 0',
+              border: 'none',
+              borderBottom: activeTab === 'campaign-brief' ? '2px solid var(--color-primary, #2563eb)' : 'none',
+              backgroundColor: 'transparent',
+              fontFamily: 'var(--font-heading, sans-serif)',
+              fontWeight: '600',
+              color: activeTab === 'campaign-brief' ? 'var(--color-primary, #2563eb)' : 'var(--color-text-secondary, #6b7280)',
+              cursor: 'pointer'
+            }}
+          >
+            Campaign Brief
           </button>
         </div>
       </div>
@@ -421,6 +439,158 @@ export function CampaignDetail() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'campaign-brief' && (
+        <div style={{
+          backgroundColor: 'var(--color-surface, white)',
+          border: '1px solid var(--color-border, #e5e7eb)',
+          borderRadius: '12px',
+          padding: '1.5rem'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '1.5rem'
+          }}>
+            <div>
+              <h3 style={{
+                fontFamily: 'var(--font-heading, sans-serif)',
+                fontSize: '1.25rem',
+                fontWeight: '600',
+                color: 'var(--color-text, #1f2937)',
+                margin: '0 0 0.5rem 0'
+              }}>
+                Campaign Brief
+              </h3>
+              <p style={{
+                color: 'var(--color-text-secondary, #6b7280)',
+                margin: 0,
+                fontSize: '0.875rem'
+              }}>
+                Define strategic requirements to guide creative generation
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowBriefEditor(!showBriefEditor)}
+              className="button button-primary"
+              style={{
+                padding: '0.5rem 1rem',
+                backgroundColor: 'var(--color-primary, #2563eb)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '0.875rem',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              {showBriefEditor ? 'Cancel' : 'Edit Brief'}
+            </button>
+          </div>
+
+          {showBriefEditor ? (
+            <CampaignBriefEditor
+              initialData={campaign?.brief || {}}
+              onSave={async (briefData) => {
+                try {
+                  // Save brief data via API
+                  const response = await fetch(`/api/campaign-briefs/${campaignId}`, {
+                    method: 'PUT',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ brief: briefData })
+                  })
+
+                  if (response.ok) {
+                    const result = await response.json()
+                    setCampaign(result.campaign)
+                    setShowBriefEditor(false)
+                  } else {
+                    console.error('Failed to save campaign brief')
+                  }
+                } catch (error) {
+                  console.error('Error saving campaign brief:', error)
+                }
+              }}
+              onCancel={() => setShowBriefEditor(false)}
+            />
+          ) : (
+            <div style={{
+              minHeight: '200px',
+              padding: '2rem',
+              border: '2px dashed var(--color-border, #d1d5db)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--color-background, #f8fafc)',
+              textAlign: 'center'
+            }}>
+              {campaign?.brief ? (
+                <div>
+                  <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>📋</div>
+                  <h4 style={{
+                    fontFamily: 'var(--font-heading, sans-serif)',
+                    fontSize: '1rem',
+                    color: 'var(--color-text, #1f2937)',
+                    margin: '0 0 0.5rem 0'
+                  }}>
+                    Campaign Brief Complete
+                  </h4>
+                  <p style={{
+                    color: 'var(--color-text-secondary, #6b7280)',
+                    margin: 0,
+                    fontSize: '0.875rem'
+                  }}>
+                    Strategic brief has been defined and is ready for creative generation
+                  </p>
+                  <div style={{
+                    marginTop: '1rem',
+                    padding: '1rem',
+                    backgroundColor: 'var(--color-surface, white)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--color-border, #e5e7eb)',
+                    textAlign: 'left'
+                  }}>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary, #6b7280)' }}>
+                      <strong>Key Message:</strong> {campaign.brief.keyMessage || 'Not defined'}
+                    </div>
+                    {campaign.brief.primaryKPI && (
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary, #6b7280)', marginTop: '0.5rem' }}>
+                        <strong>Primary KPI:</strong> {campaign.brief.primaryKPI}
+                      </div>
+                    )}
+                    {campaign.brief.primaryAudience?.demographics && (
+                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary, #6b7280)', marginTop: '0.5rem' }}>
+                        <strong>Target Audience:</strong> {campaign.brief.primaryAudience.demographics}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📝</div>
+                  <h4 style={{
+                    fontFamily: 'var(--font-heading, sans-serif)',
+                    fontSize: '1rem',
+                    color: 'var(--color-text, #1f2937)',
+                    margin: '0 0 0.5rem 0'
+                  }}>
+                    No Campaign Brief Yet
+                  </h4>
+                  <p style={{
+                    color: 'var(--color-text-secondary, #6b7280)',
+                    margin: 0,
+                    fontSize: '0.875rem'
+                  }}>
+                    Create a comprehensive campaign brief to guide the AI creative generation process
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

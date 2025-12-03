@@ -1,7 +1,9 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { AuthModel } from '../models/auth'
+import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
+import validateRequest from '../middleware/validateRequest'
 import { AuthenticatedRequest } from '../types/auth'
 
 const router = Router()
@@ -63,7 +65,7 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
 
     res.json({ generatedAssets: enrichedAssets })
   } catch (error) {
-    console.error('Get generated assets error:', error)
+    log.error({ err: error }, 'Get generated assets error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -116,7 +118,7 @@ router.get('/job/:jobId', requireAuth, async (req, res) => {
 
     res.json({ generatedAssets: enrichedAssets })
   } catch (error) {
-    console.error('Get generated assets by job error:', error)
+    log.error({ err: error }, 'Get generated assets by job error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -161,7 +163,7 @@ router.get(
 
       res.json({ generatedAssets: enrichedAssets })
     } catch (error) {
-      console.error('Get approved generated assets error:', error)
+      log.error({ err: error }, 'Get approved generated assets error')
       res.status(500).json({ error: 'Internal server error' })
     }
   }
@@ -197,131 +199,146 @@ router.put('/:assetId/approve', requireAuth, async (req, res) => {
       },
     })
   } catch (error) {
-    console.error('Approve generated asset error:', error)
+    log.error({ err: error }, 'Approve generated asset error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
 
 // PUT /api/generated-assets/:assetId/reject - Reject a generated asset
-router.put('/:assetId/reject', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { assetId } = req.params
-    const { reason } = approveRejectSchema.parse(req.body)
+router.put(
+  '/:assetId/reject',
+  requireAuth,
+  validateRequest(approveRejectSchema) as any,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { assetId } = req.params
+      const { reason } = (req as any).validatedData
 
-    const generatedAsset = AuthModel.getGeneratedAssetById(assetId)
-    if (!generatedAsset) {
-      return res.status(404).json({ error: 'Generated asset not found' })
-    }
+      const generatedAsset = AuthModel.getGeneratedAssetById(assetId)
+      if (!generatedAsset) {
+        return res.status(404).json({ error: 'Generated asset not found' })
+      }
 
-    // Verify asset belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(generatedAsset.workspaceId)
-    if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
+      // Verify asset belongs to agency via workspace
+      const workspace = AuthModel.getWorkspaceById(generatedAsset.workspaceId)
+      if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
 
-    const rejectedAsset = AuthModel.rejectGeneratedAsset(assetId)
-    if (!rejectedAsset) {
-      return res.status(404).json({ error: 'Generated asset not found' })
-    }
+      const rejectedAsset = AuthModel.rejectGeneratedAsset(assetId)
+      if (!rejectedAsset) {
+        return res.status(404).json({ error: 'Generated asset not found' })
+      }
 
-    res.json({
-      message: 'Generated asset rejected successfully',
-      generatedAsset: {
-        ...rejectedAsset,
-        approved: rejectedAsset.approvalStatus === 'approved',
-      },
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', details: error.issues })
+      res.json({
+        message: 'Generated asset rejected successfully',
+        generatedAsset: {
+          ...rejectedAsset,
+          approved: rejectedAsset.approvalStatus === 'approved',
+        },
+      })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
+      }
+      log.error({ err: error }, 'Reject generated asset error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-    console.error('Reject generated asset error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // POST /api/generated-assets/batch-approve - Approve multiple generated assets
-router.post('/batch-approve', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { assetIds } = batchApproveRejectSchema.parse(req.body)
+router.post(
+  '/batch-approve',
+  requireAuth,
+  validateRequest(batchApproveRejectSchema) as any,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { assetIds } = (req as any).validatedData
 
-    // Verify all assets belong to current agency
-    for (const assetId of assetIds) {
-      const generatedAsset = AuthModel.getGeneratedAssetById(assetId)
-      if (!generatedAsset) {
-        return res
-          .status(404)
-          .json({ error: `Generated asset ${assetId} not found` })
+      // Verify all assets belong to current agency
+      for (const assetId of assetIds) {
+        const generatedAsset = AuthModel.getGeneratedAssetById(assetId)
+        if (!generatedAsset) {
+          return res
+            .status(404)
+            .json({ error: `Generated asset ${assetId} not found` })
+        }
+
+        const workspace = AuthModel.getWorkspaceById(generatedAsset.workspaceId)
+        if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+          return res
+            .status(403)
+            .json({ error: 'Access denied for generated asset ${assetId}' })
+        }
       }
 
-      const workspace = AuthModel.getWorkspaceById(generatedAsset.workspaceId)
-      if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+      const result = AuthModel.batchApproveGeneratedAssets(assetIds)
+
+      res.json({
+        message: `Successfully approved ${result.approved} generated assets`,
+        ...result,
+      })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
         return res
-          .status(403)
-          .json({ error: 'Access denied for generated asset ${assetId}' })
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
       }
+      log.error({ err: error }, 'Batch approve generated assets error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-
-    const result = AuthModel.batchApproveGeneratedAssets(assetIds)
-
-    res.json({
-      message: `Successfully approved ${result.approved} generated assets`,
-      ...result,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', details: error.issues })
-    }
-    console.error('Batch approve generated assets error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // POST /api/generated-assets/batch-reject - Reject multiple generated assets
-router.post('/batch-reject', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { assetIds, reason } = batchApproveRejectSchema.parse(req.body)
+router.post(
+  '/batch-reject',
+  requireAuth,
+  validateRequest(batchApproveRejectSchema) as any,
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { assetIds, reason } = (req as any).validatedData
 
-    // Verify all assets belong to current agency
-    for (const assetId of assetIds) {
-      const generatedAsset = AuthModel.getGeneratedAssetById(assetId)
-      if (!generatedAsset) {
-        return res
-          .status(404)
-          .json({ error: `Generated asset ${assetId} not found` })
+      // Verify all assets belong to current agency
+      for (const assetId of assetIds) {
+        const generatedAsset = AuthModel.getGeneratedAssetById(assetId)
+        if (!generatedAsset) {
+          return res
+            .status(404)
+            .json({ error: `Generated asset ${assetId} not found` })
+        }
+
+        const workspace = AuthModel.getWorkspaceById(generatedAsset.workspaceId)
+        if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+          return res
+            .status(403)
+            .json({ error: 'Access denied for generated asset ${assetId}' })
+        }
       }
 
-      const workspace = AuthModel.getWorkspaceById(generatedAsset.workspaceId)
-      if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+      const result = AuthModel.batchRejectGeneratedAssets(assetIds)
+
+      res.json({
+        message: `Successfully rejected ${result.rejected} generated assets`,
+        ...result,
+      })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
         return res
-          .status(403)
-          .json({ error: 'Access denied for generated asset ${assetId}' })
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
       }
+      log.error({ err: error }, 'Batch reject generated assets error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-
-    const result = AuthModel.batchRejectGeneratedAssets(assetIds)
-
-    res.json({
-      message: `Successfully rejected ${result.rejected} generated assets`,
-      ...result,
-    })
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res
-        .status(400)
-        .json({ error: 'Invalid input', details: error.issues })
-    }
-    console.error('Batch reject generated assets error:', error)
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // GET /api/generated-assets/workspace/:workspaceId/stats - Get approval statistics
 router.get('/workspace/:workspaceId/stats', requireAuth, async (req, res) => {
@@ -374,7 +391,7 @@ router.get('/workspace/:workspaceId/stats', requireAuth, async (req, res) => {
 
     res.json({ stats })
   } catch (error) {
-    console.error('Get generated assets stats error:', error)
+    log.error({ err: error }, 'Get generated assets stats error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -403,7 +420,7 @@ router.delete('/:assetId', requireAuth, async (req, res) => {
 
     res.json({ message: 'Generated asset deleted successfully' })
   } catch (error) {
-    console.error('Delete generated asset error:', error)
+    log.error({ err: error }, 'Delete generated asset error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })

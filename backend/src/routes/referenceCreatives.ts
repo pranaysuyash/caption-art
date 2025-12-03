@@ -5,9 +5,10 @@ import { createAuthMiddleware } from '../routes/auth'
 import { AuthenticatedRequest } from '../types/auth'
 import path from 'path'
 import fs from 'fs'
+import { log } from '../middleware/logger'
 
 const router = Router()
-console.log('Initializing reference creatives router')
+log.info('Initializing reference creatives router')
 const requireAuth = createAuthMiddleware() as any
 
 // Schema validation
@@ -20,23 +21,40 @@ const createReferenceCreativeSchema = z.object({
 
 // Debug middleware
 router.use((req, res, next) => {
-  console.log('REFERENCE CREATIVES ROUTER REQ:', req.method, req.path)
+  log.info(
+    { requestId: (req as any).requestId, method: req.method, path: req.path },
+    'REFERENCE CREATIVES ROUTER REQ'
+  )
   next()
 })
 
 // POST /api/reference-creatives/upload - Upload reference creative
 router.post('/upload', requireAuth, async (req, res) => {
-  console.log('Uploading reference creative')
+  log.info(
+    { requestId: (req as any).requestId, name: rawName, workspaceId },
+    'Uploading reference creative'
+  )
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
 
     // For now, handle file upload as base64 or URL
     // In a production system, you'd handle multipart/form-data
-    const { name, campaignId, notes, workspaceId, imageUrl } = req.body
+    const {
+      name: rawName,
+      campaignId,
+      notes: rawNotes,
+      workspaceId,
+      imageUrl,
+    } = req.body
+    const { sanitizeText } = await import('../utils/sanitizers')
+    const name = sanitizeText(rawName, 200) || rawName
+    const notes = sanitizeText(rawNotes, 1000) || rawNotes
 
     // Validate required fields
     if (!name || !workspaceId || !imageUrl) {
-      return res.status(400).json({ error: 'Name, workspaceId, and imageUrl are required' })
+      return res
+        .status(400)
+        .json({ error: 'Name, workspaceId, and imageUrl are required' })
     }
 
     // Verify workspace belongs to agency
@@ -74,7 +92,7 @@ router.post('/upload', requireAuth, async (req, res) => {
 
     res.status(201).json({ referenceCreative })
   } catch (error) {
-    console.error('Upload reference creative error:', error)
+    log.error({ err: error }, 'Upload reference creative error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -98,20 +116,25 @@ router.get('/', requireAuth, async (req, res) => {
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      referenceCreatives = AuthModel.getReferenceCreativesByWorkspace(workspaceId)
+      referenceCreatives =
+        AuthModel.getReferenceCreativesByWorkspace(workspaceId)
     } else {
       // Get all creatives for agency
-      const agencyWorkspaces = Array.from(AuthModel.getAllWorkspaces()).filter(w => w.agencyId === authenticatedReq.agency.id)
-      const workspaceIds = agencyWorkspaces.map(w => w.id)
+      const agencyWorkspaces = Array.from(AuthModel.getAllWorkspaces()).filter(
+        (w) => w.agencyId === authenticatedReq.agency.id
+      )
+      const workspaceIds = agencyWorkspaces.map((w) => w.id)
 
       for (const wsId of workspaceIds) {
-        referenceCreatives.push(...AuthModel.getReferenceCreativesByWorkspace(wsId))
+        referenceCreatives.push(
+          ...AuthModel.getReferenceCreativesByWorkspace(wsId)
+        )
       }
     }
 
     res.json({ referenceCreatives })
   } catch (error) {
-    console.error('List reference creatives error:', error)
+    log.error({ err: error }, 'List reference creatives error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -141,7 +164,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 
     res.json({ referenceCreative, campaign })
   } catch (error) {
-    console.error('Get reference creative error:', error)
+    log.error({ err: error }, 'Get reference creative error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -152,7 +175,10 @@ router.put('/:id', requireAuth, async (req, res) => {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
 
-    const { name, notes, campaignId } = req.body
+    const { name: rawName, notes: rawNotes, campaignId } = req.body
+    const { sanitizeText } = await import('../utils/sanitizers')
+    const name = sanitizeText(rawName, 200) || rawName
+    const notes = sanitizeText(rawNotes, 500) || rawNotes
 
     const referenceCreative = AuthModel.getReferenceCreativeById(id)
     if (!referenceCreative) {
@@ -173,15 +199,18 @@ router.put('/:id', requireAuth, async (req, res) => {
       }
     }
 
-    const updatedReferenceCreative = await AuthModel.updateReferenceCreative(id, {
-      name,
-      notes,
-      campaignId,
-    })
+    const updatedReferenceCreative = await AuthModel.updateReferenceCreative(
+      id,
+      {
+        name,
+        notes,
+        campaignId,
+      }
+    )
 
     res.json({ referenceCreative: updatedReferenceCreative })
   } catch (error) {
-    console.error('Update reference creative error:', error)
+    log.error({ err: error }, 'Update reference creative error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -210,7 +239,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
     res.json({ message: 'Reference creative deleted successfully' })
   } catch (error) {
-    console.error('Delete reference creative error:', error)
+    log.error({ err: error }, 'Delete reference creative error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -233,21 +262,26 @@ router.post('/:id/analyze', requireAuth, async (req, res) => {
     }
 
     // Re-extract style information
-    const styleAnalysis = await extractStyleFromImage(referenceCreative.imageUrl)
+    const styleAnalysis = await extractStyleFromImage(
+      referenceCreative.imageUrl
+    )
 
-    const updatedReferenceCreative = await AuthModel.updateReferenceCreative(id, {
-      extractedColors: styleAnalysis.colors,
-      detectedLayout: styleAnalysis.layout,
-      textDensity: styleAnalysis.textDensity,
-      styleTags: styleAnalysis.tags,
-    })
+    const updatedReferenceCreative = await AuthModel.updateReferenceCreative(
+      id,
+      {
+        extractedColors: styleAnalysis.colors,
+        detectedLayout: styleAnalysis.layout,
+        textDensity: styleAnalysis.textDensity,
+        styleTags: styleAnalysis.tags,
+      }
+    )
 
     res.json({
       referenceCreative: updatedReferenceCreative,
-      analysis: styleAnalysis
+      analysis: styleAnalysis,
     })
   } catch (error) {
-    console.error('Analyze reference creative error:', error)
+    log.error({ err: error }, 'Analyze reference creative error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -275,16 +309,21 @@ async function extractStyleFromImage(imageUrl: string): Promise<{
       colors: ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7'],
       layout: 'center-focus',
       textDensity: 'moderate',
-      tags: ['high-contrast', 'bold-typography', 'vibrant-colors', 'centered-layout']
+      tags: [
+        'high-contrast',
+        'bold-typography',
+        'vibrant-colors',
+        'centered-layout',
+      ],
     }
   } catch (error) {
-    console.error('Style extraction failed:', error)
+    log.error({ err: error }, 'Style extraction failed')
     // Return safe defaults
     return {
       colors: ['#000000', '#FFFFFF'],
       layout: 'center-focus',
       textDensity: 'minimal',
-      tags: ['unknown']
+      tags: ['unknown'],
     }
   }
 }

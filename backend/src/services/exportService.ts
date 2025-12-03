@@ -2,6 +2,7 @@ import archiver from 'archiver'
 import fs from 'fs'
 import path from 'path'
 import { AuthModel, Caption, Asset, GeneratedAsset } from '../models/auth'
+import { log } from '../middleware/logger'
 
 export interface ExportOptions {
   includeAssets: boolean
@@ -117,6 +118,60 @@ export class ExportService {
           archive.append(JSON.stringify(enrichedCaptions, null, 2), {
             name: 'captions.json',
           })
+
+          // Add ad copy if any captions have it
+          const captionsWithAdCopy = approvedCaptions.filter((caption) =>
+            caption.variations.some((v) => v.adCopy)
+          )
+
+          if (captionsWithAdCopy.length > 0) {
+            const adCopyData = captionsWithAdCopy.map((caption) => {
+              const asset = AuthModel.getAssetById(caption.assetId)
+              return {
+                assetId: caption.assetId,
+                assetName: asset?.originalName || 'Unknown',
+                variations: caption.variations
+                  .map((variation) => ({
+                    id: variation.id,
+                    text: variation.text,
+                    adCopy: variation.adCopy,
+                    qualityScore: variation.qualityScore,
+                    scoreBreakdown: variation.scoreBreakdown,
+                  }))
+                  .filter((variation) => variation.adCopy), // Only include variations that have ad copy
+              }
+            })
+
+            archive.append(JSON.stringify(adCopyData, null, 2), {
+              name: 'ad-copy.json',
+            })
+
+            // Also create individual ad copy files per asset
+            for (const caption of captionsWithAdCopy) {
+              const asset = AuthModel.getAssetById(caption.assetId)
+              const fileName =
+                asset?.originalName.replace(/\.[^/.]+$/, '') || caption.assetId
+
+              const assetAdCopy = caption.variations
+                .filter((v) => v.adCopy)
+                .map((v) => ({
+                  variationId: v.id,
+                  caption: v.text,
+                  headline: v.adCopy?.headline,
+                  subheadline: v.adCopy?.subheadline,
+                  bodyText: v.adCopy?.bodyText,
+                  ctaText: v.adCopy?.ctaText,
+                  qualityScore: v.qualityScore,
+                  scoreBreakdown: v.scoreBreakdown,
+                }))
+
+              if (assetAdCopy.length > 0) {
+                archive.append(JSON.stringify(assetAdCopy, null, 2), {
+                  name: `ad-copy/${fileName}.json`,
+                })
+              }
+            }
+          }
         }
 
         if (options.includeAssets) {
@@ -218,7 +273,7 @@ Thank you for using caption-art!
         completedAt: new Date(),
       })
     } catch (error) {
-      console.error(`Error processing export job ${jobId}:`, error)
+      log.error({ err: error, jobId }, `Error processing export job`)
 
       // Mark job as failed
       AuthModel.updateExportJob(jobId, {
@@ -254,9 +309,9 @@ Thank you for using caption-art!
 
     // Start processing in background
     this.processExportJob(job.id).catch((error) => {
-      console.error(
-        `Background export processing failed for job ${job.id}:`,
-        error
+      log.error(
+        { err: error, jobId: job.id },
+        `Background export processing failed for job`
       )
     })
 
@@ -290,7 +345,10 @@ Thank you for using caption-art!
           fs.unlinkSync(filePath)
           deletedCount++
         } catch (error) {
-          console.error(`Error deleting old export file ${file}:`, error)
+          log.error(
+            { err: error, file },
+            `Error deleting old export file ${file}`
+          )
         }
       }
     }

@@ -3,6 +3,7 @@ import { generateNextScenePrompt } from '../services/openai'
 import { generateImage } from '../services/replicate'
 import { ExternalAPIError } from '../errors/AppError'
 import { z } from 'zod'
+import validateRequest from '../middleware/validateRequest'
 
 const router = Router()
 
@@ -26,10 +27,11 @@ const NextFrameRequestSchema = z.object({
  */
 router.post(
   '/next-frame',
+  validateRequest(NextFrameRequestSchema) as any,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Validate request body
-      const validatedData = NextFrameRequestSchema.parse(req.body)
+      const validatedData = (req as any).validatedData
       const { currentCaption, styleContext } = validatedData
 
       // 1. Generate prompt for the next scene

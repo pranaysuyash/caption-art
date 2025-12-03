@@ -17,6 +17,8 @@ export interface GenerateCreativesRequest {
   mode?: 'caption' | 'ad-copy';
   mustIncludePhrases?: string[];
   mustExcludePhrases?: string[];
+  referenceCaptions?: string[];
+  learnedStyleProfile?: string;
 }
 
 export interface GenerationJob {

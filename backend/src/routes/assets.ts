@@ -2,10 +2,12 @@ import { Router } from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
-import { z } from 'zod'
 import { AuthModel } from '../models/auth'
+import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
 import { AuthenticatedRequest } from '../types/auth'
+import { UploadAssetsSchema } from '../schemas/validation'
+import { safeValidateData } from '../middleware/validation'
 
 const router = Router()
 const requireAuth = createAuthMiddleware() as any
@@ -55,11 +57,6 @@ const upload = multer({
   },
 })
 
-// Validation schemas
-const uploadAssetsSchema = z.object({
-  workspaceId: z.string().min(1),
-})
-
 // POST /api/assets/upload - Upload multiple assets
 router.post(
   '/upload',
@@ -68,11 +65,24 @@ router.post(
   async (req, res) => {
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
-      const { workspaceId } = req.body
 
-      if (!workspaceId) {
-        return res.status(400).json({ error: 'workspaceId is required' })
+      // Validate workspaceId parameter using safe validation
+      const validation = safeValidateData(
+        { workspaceId: req.body.workspaceId },
+        UploadAssetsSchema.pick({ workspaceId: true })
+      )
+
+      if (!validation.success) {
+        return res.status(400).json({
+          error: 'Validation error',
+          details: validation.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+          })),
+        })
       }
+
+      const { workspaceId } = validation.data
 
       // Verify workspace belongs to current agency
       const workspace = AuthModel.getWorkspaceById(workspaceId)
@@ -118,7 +128,7 @@ router.post(
       if (error instanceof Error) {
         return res.status(400).json({ error: error.message })
       }
-      console.error('Upload assets error:', error)
+      log.error({ err: error }, 'Upload assets error')
       res.status(500).json({ error: 'Internal server error' })
     }
   }
@@ -143,7 +153,7 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
     const assets = AuthModel.getAssetsByWorkspace(workspaceId)
     res.json({ assets })
   } catch (error) {
-    console.error('Get assets by workspace error:', error)
+    log.error({ err: error }, 'Get assets by workspace error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -167,7 +177,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 
     res.json({ asset })
   } catch (error) {
-    console.error('Get asset error:', error)
+    log.error({ err: error }, 'Get asset error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })
@@ -202,7 +212,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
     res.json({ message: 'Asset deleted successfully' })
   } catch (error) {
-    console.error('Delete asset error:', error)
+    log.error({ err: error }, 'Delete asset error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })

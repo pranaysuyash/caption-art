@@ -2,8 +2,11 @@ import { createCanvas, loadImage, registerFont } from 'canvas'
 import sharp from 'sharp'
 import fs from 'fs'
 import path from 'path'
+import { createHash } from 'crypto'
 import { AuthModel, BrandKit, Agency } from '../models/auth'
+import { log } from '../middleware/logger'
 import { MaskingService } from './maskingService'
+import { CacheService } from './CacheService'
 
 export interface RenderOptions {
   format: 'instagram-square' | 'instagram-story'
@@ -29,7 +32,7 @@ export class ImageRenderer {
   // Format dimensions
   private static DIMENSIONS = {
     'instagram-square': { width: 1080, height: 1080 },
-    'instagram-story': { width: 1080, height: 1920 }
+    'instagram-story': { width: 1080, height: 1920 },
   }
 
   static async initialize(): Promise<void> {
@@ -42,32 +45,40 @@ export class ImageRenderer {
     // For now, we'll use system fonts
     try {
       // Attempt to register common fonts
-      registerFont(path.join(process.cwd(), 'fonts', 'Inter-Bold.ttf'), { family: 'Inter Bold' })
-      registerFont(path.join(process.cwd(), 'fonts', 'Inter-Regular.ttf'), { family: 'Inter Regular' })
+      registerFont(path.join(process.cwd(), 'fonts', 'Inter-Bold.ttf'), {
+        family: 'Inter Bold',
+      })
+      registerFont(path.join(process.cwd(), 'fonts', 'Inter-Regular.ttf'), {
+        family: 'Inter Regular',
+      })
     } catch (error) {
-      console.log('Custom fonts not found, using system fonts')
+      log.warn('Custom fonts not found, using system fonts')
     }
   }
 
   /**
    * Remove background from image using configurable masking service
    */
-  private static async removeBackground(imagePath: string, workspaceId: string): Promise<Buffer> {
+  private static async removeBackground(
+    imagePath: string,
+    workspaceId: string
+  ): Promise<Buffer> {
     try {
       // Get masking model preference from workspace brand kit
       const brandKit = AuthModel.getBrandKitByWorkspace(workspaceId)
-      const maskingModel = brandKit?.maskingModel || MaskingService.getDefaultModel()
+      const maskingModel =
+        brandKit?.maskingModel || MaskingService.getDefaultModel()
 
       // Apply masking using the selected model
       const maskingResult = await MaskingService.applyMasking({
         imagePath,
-        model: maskingModel
+        model: maskingModel,
       })
 
       // Read the processed image
       return fs.readFileSync(maskingResult.maskPath)
     } catch (error) {
-      console.error('Background removal failed:', error)
+      log.error({ err: error }, 'Background removal failed')
       // Fallback: return original image
       return fs.readFileSync(imagePath)
     }
@@ -76,7 +87,10 @@ export class ImageRenderer {
   /**
    * Apply mask to isolate subject
    */
-  private static async applyMask(imagePath: string, workspaceId: string): Promise<Buffer> {
+  private static async applyMask(
+    imagePath: string,
+    workspaceId: string
+  ): Promise<Buffer> {
     return await this.removeBackground(imagePath, workspaceId)
   }
 
@@ -89,7 +103,7 @@ export class ImageRenderer {
       secondary: brandKit.colors.secondary,
       tertiary: brandKit.colors.tertiary,
       text: this.getContrastColor(brandKit.colors.primary),
-      background: this.lightenColor(brandKit.colors.primary, 95)
+      background: this.lightenColor(brandKit.colors.primary, 95),
     }
   }
 
@@ -111,12 +125,19 @@ export class ImageRenderer {
     const num = parseInt(hexColor.slice(1), 16)
     const amt = Math.round(2.55 * percent)
     const R = (num >> 16) + amt
-    const G = (num >> 8 & 0x00FF) + amt
-    const B = (num & 0x0000FF) + amt
-    return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
-      (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
-      (B < 255 ? B < 1 ? 0 : B : 255))
-      .toString(16).slice(1)
+    const G = ((num >> 8) & 0x00ff) + amt
+    const B = (num & 0x0000ff) + amt
+    return (
+      '#' +
+      (
+        0x1000000 +
+        (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
+        (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
+        (B < 255 ? (B < 1 ? 0 : B) : 255)
+      )
+        .toString(16)
+        .slice(1)
+    )
   }
 
   /**
@@ -156,7 +177,26 @@ export class ImageRenderer {
   ): Promise<RenderResult> {
     await this.initialize()
 
-    const { format, layout, caption, brandKit, watermark, quality = 90 } = options
+    // Create cache key based on image path and render options
+    const hashSource = `${sourceImagePath}_${options.format}_${options.layout}_${options.caption}_${options.watermark}_${JSON.stringify(options.brandKit)}`
+    const cacheKey = `render_${createHash('md5').update(hashSource).digest('hex')}`
+    const cacheService = CacheService.getInstance()
+
+    // Try to get from cache first
+    const cachedResult = await cacheService.get<RenderResult>(cacheKey)
+    if (cachedResult) {
+      log.info({ cacheKey }, 'Image rendered from cache')
+      return cachedResult
+    }
+
+    const {
+      format,
+      layout,
+      caption,
+      brandKit,
+      watermark,
+      quality = 90,
+    } = options
     const dimensions = this.DIMENSIONS[format]
     const colors = this.generateColorPalette(brandKit)
 
@@ -170,7 +210,10 @@ export class ImageRenderer {
 
     try {
       // Apply mask to source image
-      const maskedImageBuffer = await this.applyMask(sourceImagePath, options.workspaceId)
+      const maskedImageBuffer = await this.applyMask(
+        sourceImagePath,
+        options.workspaceId
+      )
       const maskedImage = await loadImage(maskedImageBuffer)
 
       // Calculate subject dimensions and position based on layout
@@ -206,7 +249,13 @@ export class ImageRenderer {
       }
 
       // Draw the masked subject
-      ctx.drawImage(maskedImage, subjectX, subjectY, subjectWidth, subjectHeight)
+      ctx.drawImage(
+        maskedImage,
+        subjectX,
+        subjectY,
+        subjectWidth,
+        subjectHeight
+      )
 
       // Add caption text
       if (caption) {
@@ -228,7 +277,7 @@ export class ImageRenderer {
             textY = dimensions.height * 0.85
             break
           case 'top-text':
-            textY = dimensions.height * 0.1 + (lines.length * fontSize * 1.2)
+            textY = dimensions.height * 0.1 + lines.length * fontSize * 1.2
             break
           case 'center-focus':
           default:
@@ -237,7 +286,7 @@ export class ImageRenderer {
         }
 
         lines.forEach((line, index) => {
-          const lineY = textY + (index * fontSize * 1.2)
+          const lineY = textY + index * fontSize * 1.2
           ctx.fillText(line, dimensions.width / 2, lineY)
         })
       }
@@ -249,7 +298,11 @@ export class ImageRenderer {
         ctx.textAlign = 'right'
         ctx.shadowColor = 'rgba(0, 0, 0, 0.8)'
         ctx.shadowBlur = 2
-        ctx.fillText('caption-art.app', dimensions.width - 10, dimensions.height - 10)
+        ctx.fillText(
+          'caption-art.app',
+          dimensions.width - 10,
+          dimensions.height - 10
+        )
       }
 
       // Add brand color accent
@@ -277,16 +330,22 @@ export class ImageRenderer {
         .jpeg({ quality: 80 })
         .toFile(thumbnailPath)
 
-      return {
+      const result = {
         imageUrl: `/generated/${mainFilename}`,
         thumbnailUrl: `/generated/${thumbnailFilename}`,
         width: dimensions.width,
-        height: dimensions.height
+        height: dimensions.height,
       }
 
+      // Cache the result for faster retrieval next time
+      await cacheService.set(cacheKey, result, 24 * 60 * 60 * 1000) // Cache for 24 hours
+
+      return result
     } catch (error) {
-      console.error('Image rendering failed:', error)
-      throw new Error(`Failed to render image: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      log.error({ err: error }, 'Image rendering failed')
+      throw new Error(
+        `Failed to render image: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -312,11 +371,11 @@ export class ImageRenderer {
           caption,
           brandKit,
           watermark,
-          workspaceId
+          workspaceId,
         })
         results.push({ format: 'instagram-square', layout, ...result })
       } catch (error) {
-        console.error(`Failed to render ${layout}:`, error)
+        log.error({ err: error, layout }, `Failed to render ${layout}`)
       }
     }
 
@@ -328,11 +387,15 @@ export class ImageRenderer {
         caption,
         brandKit,
         watermark,
-        workspaceId
+        workspaceId,
       })
-      results.push({ format: 'instagram-story', layout: 'center-focus', ...result })
+      results.push({
+        format: 'instagram-story',
+        layout: 'center-focus',
+        ...result,
+      })
     } catch (error) {
-      console.error('Failed to render story:', error)
+      log.error({ err: error }, 'Failed to render story')
     }
 
     return results
@@ -347,7 +410,7 @@ export class ImageRenderer {
     }
 
     const files = fs.readdirSync(this.OUTPUT_DIR)
-    const cutoffTime = Date.now() - (olderThanHours * 60 * 60 * 1000)
+    const cutoffTime = Date.now() - olderThanHours * 60 * 60 * 1000
     let deletedCount = 0
 
     for (const file of files) {
@@ -359,7 +422,10 @@ export class ImageRenderer {
           fs.unlinkSync(filePath)
           deletedCount++
         } catch (error) {
-          console.error(`Error deleting old generated file ${file}:`, error)
+          log.error(
+            { err: error, file },
+            `Error deleting old generated file ${file}`
+          )
         }
       }
     }

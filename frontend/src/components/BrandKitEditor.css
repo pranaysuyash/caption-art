@@ -65,6 +65,13 @@
     color: #1f2937;
 }
 
+.section-description {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    color: #6b7280;
+    font-style: italic;
+}
+
 .color-inputs {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -120,6 +127,7 @@
     color: #374151;
 }
 
+.form-group input,
 .form-group select,
 .form-group textarea {
     padding: 10px 12px;
@@ -130,6 +138,7 @@
     transition: border-color 0.2s ease;
 }
 
+.form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
@@ -147,6 +156,103 @@
     font-size: 12px;
     color: #9ca3af;
     margin-top: 4px;
+}
+
+.form-group small {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+/* Phrase Management Styles */
+.phrase-input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.phrase-input-group input {
+    flex: 1;
+}
+
+.btn-add {
+    padding: 10px 16px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.btn-add:hover {
+    background: #059669;
+}
+
+.phrase-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    min-height: 32px;
+}
+
+.phrase-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid;
+}
+
+.phrase-tag.preferred {
+    background: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+}
+
+.phrase-tag.forbidden {
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fca5a5;
+}
+
+.btn-remove {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s ease;
+}
+
+.phrase-tag.preferred .btn-remove {
+    color: #065f46;
+}
+
+.phrase-tag.preferred .btn-remove:hover {
+    background: #d1fae5;
+}
+
+.phrase-tag.forbidden .btn-remove {
+    color: #991b1b;
+}
+
+.phrase-tag.forbidden .btn-remove:hover {
+    background: #fee2e2;
 }
 
 .error-message {
@@ -227,10 +333,47 @@
     }
 
     .color-input-wrapper input[type="text"],
+    .form-group input,
     .form-group select,
     .form-group textarea {
         background: #374151;
         border-color: #4b5563;
         color: #f3f4f6;
+    }
+
+    .section-description {
+        color: #d1d5db;
+    }
+
+    .form-group small {
+        color: #d1d5db;
+    }
+
+    .phrase-tag.preferred {
+        background: #064e3b;
+        color: #a7f3d0;
+        border-color: #34d399;
+    }
+
+    .phrase-tag.forbidden {
+        background: #7f1d1d;
+        color: #fecaca;
+        border-color: #f87171;
+    }
+
+    .phrase-tag.preferred .btn-remove {
+        color: #a7f3d0;
+    }
+
+    .phrase-tag.preferred .btn-remove:hover {
+        background: #065f46;
+    }
+
+    .phrase-tag.forbidden .btn-remove {
+        color: #fecaca;
+    }
+
+    .phrase-tag.forbidden .btn-remove:hover {
+        background: #991b1b;
     }
 }

@@ -253,7 +253,7 @@ describe('Property 20: Environment equivalence', () => {
           })
 
           // Import server module
-          const { createServer } = await import('./server')
+          const { createServer } = await import('./server.ts')
 
           // Create server (simulates both local and container)
           const app = createServer()
@@ -284,7 +284,7 @@ describe('Property 20: Environment equivalence', () => {
     process.env.PORT = '3001'
 
     // Import server
-    const { createServer } = await import('./server')
+    const { createServer } = await import('./server.ts')
 
     // Create server instance (represents both local and container)
     const app = createServer()

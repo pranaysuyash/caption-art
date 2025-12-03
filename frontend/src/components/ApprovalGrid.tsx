@@ -132,6 +132,44 @@ export function ApprovalGrid({
     }
   }
 
+  const handleAutoApprove = async () => {
+    // Find all pending captions with quality score >= 8
+    const highScoringIds = items
+      .filter(
+        (item) =>
+          item.approvalStatus === 'pending' &&
+          item.qualityScore !== undefined &&
+          item.qualityScore >= 8
+      )
+      .map((item) => item.id)
+
+    if (highScoringIds.length === 0) {
+      alert('No pending captions with quality score >= 8 found')
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Auto-approve ${highScoringIds.length} high-scoring captions (score >= 8)?`
+    )
+
+    if (!confirmed) return
+
+    try {
+      const result = await approvalClient.bulkApprove(highScoringIds)
+      
+      // Reload items to get updated state
+      await loadItems()
+      
+      // Clear selection
+      setSelectedIds([])
+      
+      onApprove?.(result.approved)
+    } catch (err) {
+      console.error('Auto-approve error:', err)
+      setError(err instanceof Error ? err.message : 'Failed to auto-approve captions')
+    }
+  }
+
   // Inline editing for caption text
   const startEditing = (id: string, currentText: string) => {
     setEditingId(id)
@@ -210,6 +248,15 @@ export function ApprovalGrid({
         </div>
 
         <div className="header-controls">
+          {/* Auto-approve button */}
+          <button
+            onClick={handleAutoApprove}
+            className="btn btn-auto-approve"
+            title="Automatically approve captions with quality score >= 8"
+          >
+            ⚡ Auto-Approve Best
+          </button>
+
           {/* Filter dropdown */}
           <select
             value={filter}
@@ -286,6 +333,13 @@ export function ApprovalGrid({
             >
               {getStatusIcon(item.approvalStatus)}
             </div>
+
+            {/* Quality score badge */}
+            {item.qualityScore && (
+              <div className={`quality-badge score-${item.qualityScore}`} title={`Quality Score: ${item.qualityScore}/10`}>
+                {item.qualityScore}
+              </div>
+            )}
 
             {/* Asset preview */}
             <div className="item-preview">

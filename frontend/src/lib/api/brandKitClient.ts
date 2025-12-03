@@ -21,10 +21,19 @@ export interface BrandKit {
     url: string;
     position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   };
+
+  // Original fields
   voicePrompt: string;
-  targetAudience?: string[];
-  preferredPhrases?: string[];
-  forbiddenPhrases?: string[];
+  maskingModel?: 'rembg-replicate' | 'sam3' | 'rf-detr' | 'roboflow' | 'hf-model-id';
+
+  // BrandKit v2 - Campaign Brain fields
+  brandPersonality?: string; // "Bold, witty, slightly irreverent"
+  targetAudience?: string; // "Working moms 28-40 in Tier 1 cities"
+  valueProposition?: string; // "Saves 2 hours a day on X"
+  forbiddenPhrases?: string[]; // "Do not say 'cheap', 'discount'"
+  preferredPhrases?: string[]; // "Always call our users 'creators'"
+  toneStyle?: 'professional' | 'playful' | 'bold' | 'minimal' | 'luxury' | 'edgy';
+
   createdAt: string;
   updatedAt: string;
 }
@@ -45,6 +54,15 @@ export interface CreateBrandKitData {
     url: string;
     position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   };
+
+  // BrandKit v2 fields
+  brandPersonality?: string;
+  targetAudience?: string;
+  valueProposition?: string;
+  forbiddenPhrases?: string[];
+  preferredPhrases?: string[];
+  toneStyle?: 'professional' | 'playful' | 'bold' | 'minimal' | 'luxury' | 'edgy';
+  maskingModel?: 'rembg-replicate' | 'sam3' | 'rf-detr' | 'roboflow' | 'hf-model-id';
 }
 
 export interface UpdateBrandKitData {
@@ -62,6 +80,15 @@ export interface UpdateBrandKitData {
     url: string;
     position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   };
+
+  // BrandKit v2 fields
+  brandPersonality?: string;
+  targetAudience?: string;
+  valueProposition?: string;
+  forbiddenPhrases?: string[];
+  preferredPhrases?: string[];
+  toneStyle?: 'professional' | 'playful' | 'bold' | 'minimal' | 'luxury' | 'edgy';
+  maskingModel?: 'rembg-replicate' | 'sam3' | 'rf-detr' | 'roboflow' | 'hf-model-id';
 }
 
 function getHeaders(): HeadersInit {

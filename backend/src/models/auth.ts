@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt'
+import { log } from '../middleware/logger'
 
 export interface User {
   id: string
@@ -68,6 +69,57 @@ export interface BrandKit {
   updatedAt: Date
 }
 
+// Phase 1: Variation Engine + Ad Copy Types
+export interface AdCopyContent {
+  headline: string
+  subheadline?: string
+  primaryText: string
+  ctaText: string
+  platformSpecific?: {
+    instagram?: {
+      headline: string
+      primaryText: string
+      ctaText: string
+    }
+    facebook?: {
+      headline: string
+      primaryText: string
+      ctaText: string
+    }
+    linkedin?: {
+      headline: string
+      primaryText: string
+      ctaText: string
+    }
+  }
+}
+
+export interface VideoScript {
+  scenes: {
+    sceneNumber: number
+    type: 'hook' | 'problem' | 'benefit' | 'demo' | 'cta'
+    duration: number // in seconds
+    script: string
+    visualNotes?: string
+  }[]
+  totalDuration: number
+  cta: string
+  platform: string
+}
+
+export interface VideoStoryboard {
+  videoScriptId: string
+  scenes: {
+    sceneNumber: number
+    type: 'hook' | 'problem' | 'benefit' | 'demo' | 'cta'
+    duration: number
+    script: string
+    imageUrl: string // Generated frame image
+    thumbnailUrl?: string
+  }[]
+  totalDuration: number
+}
+
 export interface Asset {
   id: string
   workspaceId: string
@@ -79,11 +131,38 @@ export interface Asset {
   uploadedAt: Date
 }
 
+export interface CaptionVariation {
+  id: string
+  label: 'main' | 'alt1' | 'alt2' | 'alt3' | 'punchy' | 'short' | 'story'
+  text: string
+  status: 'pending' | 'generating' | 'completed' | 'failed'
+  approvalStatus: 'pending' | 'approved' | 'rejected'
+  approved: boolean // For backward compatibility
+  qualityScore?: number // 1-10 quality score
+  scoreBreakdown?: {
+    clarity: number
+    originality: number
+    brandConsistency: number
+    platformRelevance: number
+  }
+  metadata?: {
+    readingGrade?: number
+    toneClassification?: string[]
+    platform?: string[]
+  }
+  adCopy?: AdCopyContent
+  generatedAt?: Date
+  approvedAt?: Date
+  rejectedAt?: Date
+  createdAt: Date
+}
+
 export interface Caption {
   id: string
   assetId: string
   workspaceId: string
-  text: string
+  variations: CaptionVariation[] // Array of 7 variation types: main, alt1-alt3, punchy, short, story
+  primaryVariationId?: string // ID of the primary/selected variation
   status: 'pending' | 'generating' | 'completed' | 'failed'
   approvalStatus: 'pending' | 'approved' | 'rejected'
   errorMessage?: string
@@ -91,6 +170,9 @@ export interface Caption {
   approvedAt?: Date
   rejectedAt?: Date
   createdAt: Date
+  // Phase 1.1: Additional metadata for variation engine
+  generationMode?: 'caption' | 'adcopy' | 'video-script' | 'storyboard'
+  brandKitId?: string // Brand kit used for generation
 }
 
 export interface BatchJob {
@@ -100,12 +182,20 @@ export interface BatchJob {
   status: 'pending' | 'processing' | 'completed' | 'failed'
   processedCount: number
   totalCount: number
+  campaignId?: string // Optional campaign association
   template?:
     | 'punchy'
     | 'descriptive'
     | 'hashtag-heavy'
     | 'storytelling'
     | 'question'
+  // Phase 1.1: Variation Engine extensions
+  variations?: {
+    variationType: 'main' | 'alt1' | 'alt2' | 'alt3' | 'punchy' | 'short' | 'story'
+    count: number // Number of variations of this type to generate
+  }[]
+  generationMode?: 'caption' | 'adcopy' | 'video-script' | 'storyboard'
+  brandKitId?: string // Brand kit for campaign-aware prompting
   startedAt?: Date
   completedAt?: Date
   errorMessage?: string
@@ -125,6 +215,13 @@ export interface GeneratedAsset {
   imageUrl: string
   thumbnailUrl: string
   watermark: boolean
+  qualityScore?: number // 1-10 quality score
+  scoreBreakdown?: {
+    brandVoiceMatch: number
+    objectiveAlignment: number
+    lengthCompliance: number
+    constraintCompliance: number
+  }
   createdAt: Date
   generatedAt?: Date
   approvedAt?: Date
@@ -157,6 +254,58 @@ export interface Campaign {
   launchType: 'new-launch' | 'evergreen' | 'seasonal' | 'sale' | 'event'
   funnelStage: 'cold' | 'warm' | 'hot'
 
+  // Campaign Brief v2 - Strategic Brief Elements
+  brief?: {
+    // Client Context
+    clientOverview?: string // "E-commerce fashion brand targeting millennials"
+    campaignPurpose?: string // "Launch new summer collection and drive sales"
+
+    // Business Goals
+    primaryKPI?: string // "15% increase in online sales"
+    secondaryKPIs?: string[] // ["20% traffic increase", "10% conversion rate improvement"]
+    targetMetrics?: {
+      impressions?: number
+      reach?: number
+      engagement?: number
+      conversions?: number
+      roi?: number
+    }
+
+    // Competitive Analysis
+    competitorInsights?: string[] // ["Competitor A focuses on price points", "Competitor B emphasizes sustainability"]
+    differentiators?: string[] // ["Premium quality", "Ethical sourcing", "Unique designs"]
+
+    // Target Audience Deep Dive
+    primaryAudience?: {
+      demographics?: string // "Women 25-35, urban, HHI $60k+"
+      psychographics?: string // "Fashion-conscious, value sustainability, active on social media"
+      painPoints?: string[] // ["Finding affordable trendy clothes", "Sustainable fashion options"]
+      motivations?: string[] // ["Self-expression", "Environmental consciousness", "Social status"]
+    }
+
+    // Message Hierarchy
+    keyMessage?: string // "Premium sustainable fashion for conscious consumers"
+    supportingPoints?: string[] // ["Ethically sourced materials", "Timeless designs", "Fair trade pricing"]
+    emotionalAppeal?: string // "Empowerment through conscious fashion choices"
+
+    // Mandatories & Constraints
+    mandatoryInclusions?: string[] // ["Brand logo visible", "Price point mentioned", "Sustainability message"]
+    mandatoryExclusions?: string[] // ["No stock photos", "No competitor comparisons", "No price focus"]
+    legalRequirements?: string[] // ["Copyright notice", "Fair trade certification", "Model releases"]
+
+    // Media & Platform Strategy
+    platformSpecific?: {
+      instagram?: string // "Focus on lifestyle imagery, influencer partnerships"
+      facebook?: string // "Detailed product shots, customer testimonials"
+      linkedin?: string // "Brand story, company values, sustainability initiatives"
+    }
+
+    // Timeline & Seasonality
+    campaignDuration?: string // "8-week campaign with phased rollout"
+    seasonality?: string // "Summer launch, aligning with vacation season"
+    urgency?: string // "Limited edition collection, early bird pricing"
+  }
+
   // Offer and CTA
   primaryOffer?: string // "Flat 20% off", "New summer collection"
   primaryCTA?: string // "Shop now", "Sign up", "Learn more"
@@ -171,6 +320,10 @@ export interface Campaign {
   bodyMaxLength?: number
   mustIncludePhrases?: string[]
   mustExcludePhrases?: string[]
+
+  // Reference style for caption generation
+  referenceCaptions?: string[] // Example captions to learn style from
+  learnedStyleProfile?: string // JSON string of StyleProfile from styleAnalyzer
 
   status: 'draft' | 'active' | 'paused' | 'completed'
   createdAt: Date
@@ -576,7 +729,7 @@ export class AuthModel {
       id: captionId,
       assetId,
       workspaceId,
-      text: '',
+      variations: [],
       status: 'pending',
       approvalStatus: 'pending',
       createdAt: new Date(),
@@ -615,6 +768,109 @@ export class AuthModel {
     return updatedCaption
   }
 
+  static addCaptionVariation(
+    captionId: string,
+    variation: Omit<CaptionVariation, 'id' | 'createdAt'>
+  ): Caption | null {
+    const caption = captions.get(captionId)
+    if (!caption) {
+      return null
+    }
+
+    const variationId = `var_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    const newVariation: CaptionVariation = {
+      ...variation,
+      id: variationId,
+      createdAt: new Date(),
+      status: variation.status || 'completed',
+      approvalStatus: variation.approvalStatus || 'pending',
+    }
+
+    const updatedCaption = {
+      ...caption,
+      variations: [...caption.variations, newVariation],
+    }
+
+    // If this is the first variation, set it as primary
+    if (caption.variations.length === 0) {
+      updatedCaption.primaryVariationId = variationId
+    }
+
+    captions.set(captionId, updatedCaption)
+    return updatedCaption
+  }
+
+  static updateCaptionVariation(
+    captionId: string,
+    variationId: string,
+    updates: Partial<CaptionVariation>
+  ): Caption | null {
+    const caption = captions.get(captionId)
+    if (!caption) {
+      return null
+    }
+
+    const variationIndex = caption.variations.findIndex(
+      (v) => v.id === variationId
+    )
+    if (variationIndex === -1) {
+      return null
+    }
+
+    const updatedVariations = [...caption.variations]
+    updatedVariations[variationIndex] = {
+      ...updatedVariations[variationIndex],
+      ...updates,
+    }
+
+    const updatedCaption = {
+      ...caption,
+      variations: updatedVariations,
+    }
+
+    captions.set(captionId, updatedCaption)
+    return updatedCaption
+  }
+
+  static setPrimaryCaptionVariation(
+    captionId: string,
+    variationId: string
+  ): Caption | null {
+    const caption = captions.get(captionId)
+    if (!caption) {
+      return null
+    }
+
+    // Verify the variation exists
+    const variationExists = caption.variations.some((v) => v.id === variationId)
+    if (!variationExists) {
+      return null
+    }
+
+    const updatedCaption = {
+      ...caption,
+      primaryVariationId: variationId,
+    }
+
+    captions.set(captionId, updatedCaption)
+    return updatedCaption
+  }
+
+  static getPrimaryCaptionVariation(
+    captionId: string
+  ): CaptionVariation | null {
+    const caption = captions.get(captionId)
+    if (!caption || !caption.primaryVariationId) {
+      return null
+    }
+
+    const variation = caption.variations.find(
+      (v) => v.id === caption.primaryVariationId
+    )
+    return variation || null
+  }
+
   static deleteCaption(id: string): boolean {
     return captions.delete(id)
   }
@@ -643,33 +899,182 @@ export class AuthModel {
   }
 
   // Approval methods
-  static approveCaption(captionId: string): Caption | null {
+  static approveCaption(
+    captionId: string,
+    variationId?: string
+  ): Caption | null {
     const caption = captions.get(captionId)
     if (!caption) {
       return null
     }
 
-    const approvedCaption = {
-      ...caption,
+    // If no variation ID is specified, approve the primary variation or the first one
+    if (!variationId) {
+      if (caption.primaryVariationId) {
+        return this.approveCaptionVariation(
+          captionId,
+          caption.primaryVariationId
+        )
+      } else if (caption.variations.length > 0) {
+        return this.approveCaptionVariation(captionId, caption.variations[0].id)
+      } else {
+        // If no variations exist, approve the caption at the main level
+        const approvedCaption = {
+          ...caption,
+          approvalStatus: 'approved' as const,
+          approvedAt: new Date(),
+        }
+
+        captions.set(captionId, approvedCaption)
+        return approvedCaption
+      }
+    } else {
+      return this.approveCaptionVariation(captionId, variationId)
+    }
+  }
+
+  static approveCaptionVariation(
+    captionId: string,
+    variationId: string
+  ): Caption | null {
+    const caption = captions.get(captionId)
+    if (!caption) {
+      return null
+    }
+
+    const variationIndex = caption.variations.findIndex(
+      (v) => v.id === variationId
+    )
+    if (variationIndex === -1) {
+      return null
+    }
+
+    // Update the specific variation to approved
+    const updatedVariations = [...caption.variations]
+    updatedVariations[variationIndex] = {
+      ...updatedVariations[variationIndex],
       approvalStatus: 'approved' as const,
       approvedAt: new Date(),
     }
+
+    // Update the main caption approval status based on variations
+    const hasApprovedVariation = updatedVariations.some(
+      (v) => v.approvalStatus === 'approved'
+    )
+    const allVariationsRejected = updatedVariations.every(
+      (v) => v.approvalStatus === 'rejected'
+    )
+
+    let newApprovalStatus: 'pending' | 'approved' | 'rejected' = 'pending'
+    if (hasApprovedVariation) {
+      newApprovalStatus = 'approved'
+    } else if (allVariationsRejected) {
+      newApprovalStatus = 'rejected'
+    }
+
+    const approvedCaption = {
+      ...caption,
+      variations: updatedVariations,
+      approvalStatus: newApprovalStatus,
+      approvedAt:
+        newApprovalStatus === 'approved' ? new Date() : caption.approvedAt,
+    }
+
+    // Set this variation as the primary one when approved
+    approvedCaption.primaryVariationId = variationId
 
     captions.set(captionId, approvedCaption)
     return approvedCaption
   }
 
-  static rejectCaption(captionId: string, reason?: string): Caption | null {
+  static rejectCaption(
+    captionId: string,
+    reason?: string,
+    variationId?: string
+  ): Caption | null {
     const caption = captions.get(captionId)
     if (!caption) {
       return null
     }
 
-    const rejectedCaption = {
-      ...caption,
+    // If no variation ID is specified, reject the primary variation or the first one
+    if (!variationId) {
+      if (caption.primaryVariationId) {
+        return this.rejectCaptionVariation(
+          captionId,
+          reason,
+          caption.primaryVariationId
+        )
+      } else if (caption.variations.length > 0) {
+        return this.rejectCaptionVariation(
+          captionId,
+          reason,
+          caption.variations[0].id
+        )
+      } else {
+        // If no variations exist, reject the caption at the main level
+        const rejectedCaption = {
+          ...caption,
+          approvalStatus: 'rejected' as const,
+          rejectedAt: new Date(),
+          errorMessage: reason || 'Rejected by user',
+        }
+
+        captions.set(captionId, rejectedCaption)
+        return rejectedCaption
+      }
+    } else {
+      return this.rejectCaptionVariation(captionId, reason, variationId)
+    }
+  }
+
+  static rejectCaptionVariation(
+    captionId: string,
+    reason: string | undefined,
+    variationId: string
+  ): Caption | null {
+    const caption = captions.get(captionId)
+    if (!caption) {
+      return null
+    }
+
+    const variationIndex = caption.variations.findIndex(
+      (v) => v.id === variationId
+    )
+    if (variationIndex === -1) {
+      return null
+    }
+
+    // Update the specific variation to rejected
+    const updatedVariations = [...caption.variations]
+    updatedVariations[variationIndex] = {
+      ...updatedVariations[variationIndex],
       approvalStatus: 'rejected' as const,
       rejectedAt: new Date(),
-      errorMessage: reason || 'Rejected by user',
+      errorMessage: reason,
+    }
+
+    // Update the main caption approval status based on variations
+    const hasApprovedVariation = updatedVariations.some(
+      (v) => v.approvalStatus === 'approved'
+    )
+    const allVariationsRejected = updatedVariations.every(
+      (v) => v.approvalStatus === 'rejected'
+    )
+
+    let newApprovalStatus: 'pending' | 'approved' | 'rejected' = 'pending'
+    if (hasApprovedVariation) {
+      newApprovalStatus = 'approved'
+    } else if (allVariationsRejected) {
+      newApprovalStatus = 'rejected'
+    }
+
+    const rejectedCaption = {
+      ...caption,
+      variations: updatedVariations,
+      approvalStatus: newApprovalStatus,
+      rejectedAt:
+        newApprovalStatus === 'rejected' ? new Date() : caption.rejectedAt,
     }
 
     captions.set(captionId, rejectedCaption)
@@ -779,7 +1184,10 @@ export class AuthModel {
           fs.unlinkSync(job.zipFilePath)
         }
       } catch (error) {
-        console.error('Error deleting zip file:', error)
+        log.error(
+          { err: error, zipFilePath: job.zipFilePath },
+          'Error deleting zip file'
+        )
       }
     }
 
@@ -1023,7 +1431,10 @@ export class AuthModel {
         fs.unlinkSync(asset.thumbnailUrl)
       }
     } catch (error) {
-      console.error('Error deleting generated asset files:', error)
+      log.error(
+        { err: error, assetId: id },
+        'Error deleting generated asset files'
+      )
     }
 
     generatedAssets.delete(id)
@@ -1193,7 +1604,10 @@ export class AuthModel {
         fs.unlinkSync(referenceCreative.thumbnailUrl)
       }
     } catch (error) {
-      console.error('Error deleting reference creative files:', error)
+      log.error(
+        { err: error, referenceId: id },
+        'Error deleting reference creative files'
+      )
     }
 
     return referenceCreatives.delete(id)
@@ -1264,7 +1678,10 @@ export class AuthModel {
         fs.unlinkSync(adCreative.thumbnailUrl)
       }
     } catch (error) {
-      console.error('Error deleting ad creative files:', error)
+      log.error(
+        { err: error, adCreativeId: id },
+        'Error deleting ad creative files'
+      )
     }
 
     return adCreatives.delete(id)
