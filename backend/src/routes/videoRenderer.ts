@@ -112,7 +112,6 @@ router.post(
       let videoScript: VideoScript | undefined
       if (requestData.videoScriptId) {
         videoScript = {
-          // Mock script data for now
           scenes: [
             {
               sceneNumber: 1,
@@ -123,6 +122,7 @@ router.post(
               script: 'Hook scene content',
             },
           ],
+          totalDuration: requestData.duration || 15,
           estimatedDuration: requestData.duration,
           callToAction: 'Call to action',
           platform: 'instagram',

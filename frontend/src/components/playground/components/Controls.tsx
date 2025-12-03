@@ -104,7 +104,6 @@ export function Controls({ exportImg, videoExport }: ControlsProps) {
               toast.error('License verification failed');
             }
           }}
-          className={styles.input}
         />
       </div>
 
@@ -127,5 +126,4 @@ export function Controls({ exportImg, videoExport }: ControlsProps) {
     </div>
   );
 }
-
 

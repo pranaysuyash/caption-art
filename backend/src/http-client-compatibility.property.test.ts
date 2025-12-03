@@ -20,12 +20,12 @@ describe('Property 21: HTTP client compatibility', () => {
 
   beforeEach(async () => {
     // Dynamic import to avoid circular dependency
-    const serverModule = await import('./server.ts')
+    const serverModule = await import('./server')
     const createServer =
       (serverModule as any).createServer ||
       (serverModule as any).default?.createServer
     // Create app without rate limiter for testing
-    app = createServer({ enableRateLimiter: false })
+    app = createServer({ enableRateLimiter: false, loadRoutes: true })
 
     // Mock external services
     vi.spyOn(replicateService, 'generateBaseCaption').mockResolvedValue(

@@ -714,7 +714,7 @@ Respond with JSON structure:
     // Mock analysis - would use actual performance data
     return [
       {
-        type: 'color',
+        type: 'color' as const,
         element: '#0066cc',
         performance: 8.5,
         confidence: 85,
@@ -726,7 +726,7 @@ Respond with JSON structure:
     // Mock analysis - would use actual performance data
     return [
       {
-        type: 'messaging',
+        type: 'messaging' as const,
         element: 'Generic CTA',
         performance: 3.2,
         recommendations: [

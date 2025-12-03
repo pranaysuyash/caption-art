@@ -87,7 +87,7 @@ describe('Property 23: Deployment simplicity', () => {
             requiredEnv.GUMROAD_PRODUCT_PERMALINK
 
           // Import server module
-          const serverModule = await import('./server.ts')
+          const serverModule = await import('./server')
           const createServer =
             (serverModule as any).createServer ||
             (serverModule as any).default?.createServer
@@ -120,7 +120,7 @@ describe('Property 23: Deployment simplicity', () => {
 
     // Import config and server
     const { config } = await import('./config')
-    const serverModule = await import('./server.ts')
+    const serverModule = await import('./server')
     const createServer =
       (serverModule as any).createServer ||
       (serverModule as any).default?.createServer
@@ -161,7 +161,7 @@ describe('Property 23: Deployment simplicity', () => {
             requiredEnv.GUMROAD_PRODUCT_PERMALINK
 
           // Import and create server
-          const serverModule = await import('./server.ts')
+          const serverModule = await import('./server')
           const createServer =
             (serverModule as any).createServer ||
             (serverModule as any).default?.createServer
@@ -223,7 +223,7 @@ describe('Property 23: Deployment simplicity', () => {
     process.env.GUMROAD_PRODUCT_PERMALINK = 'test-product'
 
     // Import server
-    const serverModule = await import('./server.ts')
+    const serverModule = await import('./server')
     const createServer =
       (serverModule as any).createServer ||
       (serverModule as any).default?.createServer
@@ -299,7 +299,7 @@ describe('Property 23: Deployment simplicity', () => {
           process.env.GUMROAD_PRODUCT_PERMALINK =
             requiredEnv.GUMROAD_PRODUCT_PERMALINK
 
-          const { createServer: createServer1 } = await import('./server.ts')
+          const { createServer: createServer1 } = await import('./server')
           const app1 = createServer1()
           expect(app1).toBeDefined()
 
@@ -311,7 +311,7 @@ describe('Property 23: Deployment simplicity', () => {
           process.env.GUMROAD_PRODUCT_PERMALINK =
             requiredEnv.GUMROAD_PRODUCT_PERMALINK
 
-          const { createServer: createServer2 } = await import('./server.ts')
+          const { createServer: createServer2 } = await import('./server')
           const app2 = createServer2()
           expect(app2).toBeDefined()
 
@@ -323,7 +323,7 @@ describe('Property 23: Deployment simplicity', () => {
           process.env.GUMROAD_PRODUCT_PERMALINK =
             requiredEnv.GUMROAD_PRODUCT_PERMALINK
 
-          const { createServer: createServer3 } = await import('./server.ts')
+          const { createServer: createServer3 } = await import('./server')
           const app3 = createServer3()
           expect(app3).toBeDefined()
 

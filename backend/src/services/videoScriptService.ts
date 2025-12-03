@@ -1,5 +1,10 @@
 import OpenAI from 'openai'
-import { VideoScript, VideoStoryboard, BrandKit, Campaign } from '../models/auth'
+import {
+  VideoScript,
+  VideoStoryboard,
+  BrandKit,
+  Campaign,
+} from '../models/auth'
 import { CampaignAwareService, AssetContext } from './campaignAwareService'
 import { log } from '../middleware/logger'
 
@@ -76,7 +81,12 @@ export class VideoScriptService {
       // Generate storyboard if requested
       let videoStoryboard: VideoStoryboard | undefined
       if (request.includeStoryboard) {
-        videoStoryboard = await this.generateStoryboard(videoScript, request, campaign, brandKit)
+        videoStoryboard = await this.generateStoryboard(
+          videoScript,
+          request,
+          campaign,
+          brandKit
+        )
       }
 
       // Calculate quality score
@@ -86,7 +96,10 @@ export class VideoScriptService {
       const recommendations = this.generateRecommendations(videoScript, request)
 
       // Estimate performance
-      const estimatedPerformance = this.estimatePerformance(videoScript, request)
+      const estimatedPerformance = this.estimatePerformance(
+        videoScript,
+        request
+      )
 
       log.info(
         {
@@ -107,7 +120,9 @@ export class VideoScriptService {
       }
     } catch (error) {
       log.error({ err: error }, 'Video script generation error')
-      throw new Error(`Failed to generate video script: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to generate video script: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -126,7 +141,8 @@ export class VideoScriptService {
       messages: [
         {
           role: 'system',
-          content: 'You are an expert video script writer specializing in short-form social media content. Create compelling, engaging video scripts that drive action.',
+          content:
+            'You are an expert video script writer specializing in short-form social media content. Create compelling, engaging video scripts that drive action.',
         },
         {
           role: 'user',
@@ -155,7 +171,10 @@ export class VideoScriptService {
   ): string {
     // Use campaign-aware prompting if we have context
     if (campaign && brandKit) {
-      const campaignContext = this.campaignAwareService.buildCampaignContext(campaign, brandKit)
+      const campaignContext = this.campaignAwareService.buildCampaignContext(
+        campaign,
+        brandKit
+      )
 
       const assetContext: AssetContext = {
         description: request.assetDescription,
@@ -270,25 +289,37 @@ Tone: ${request.tone.join(', ')}
 ${request.customInstructions ? `Custom Instructions: ${request.customInstructions}` : ''}
 
 TARGET AUDIENCE:
-${request.targetAudience ? `
+${
+  request.targetAudience
+    ? `
 - Demographics: ${request.targetAudience.demographics}
 - Psychographics: ${request.targetAudience.psychographics}
 - Pain Points: ${request.targetAudience.painPoints?.join(', ')}
-` : 'General audience'}
+`
+    : 'General audience'
+}
 
 CAMPAIGN CONTEXT:
-${campaign ? `
+${
+  campaign
+    ? `
 - Campaign Name: ${campaign.name}
 - Key Message: ${campaign.brief?.keyMessage || 'Not specified'}
 - Primary Audience: ${campaign.brief?.primaryAudience?.demographics || 'Not specified'}
-` : 'No specific campaign context provided'}
+`
+    : 'No specific campaign context provided'
+}
 
 BRAND CONTEXT:
-${brandKit ? `
+${
+  brandKit
+    ? `
 - Brand Personality: ${brandKit.brandPersonality || 'Professional'}
 - Value Proposition: ${brandKit.valueProposition || 'Quality products'}
 - Brand Colors: ${brandKit.colors?.primary || 'Not specified'}, ${brandKit.colors?.secondary || 'Not specified'}
-` : 'No specific brand context provided'}
+`
+    : 'No specific brand context provided'
+}
 
 5-SCENE STRUCTURE:
 1. Hook (2-4s): Grab attention immediately
@@ -348,7 +379,10 @@ Generate an engaging, conversion-focused video script.
   /**
    * Parse AI response into VideoScript
    */
-  private parseVideoScriptResponse(response: string, request: VideoScriptGenerationRequest): VideoScript {
+  private parseVideoScriptResponse(
+    response: string,
+    request: VideoScriptGenerationRequest
+  ): VideoScript {
     try {
       // Extract JSON from response
       const jsonMatch = response.match(/\{[\s\S]*\}/)
@@ -381,14 +415,20 @@ Generate an engaging, conversion-focused video script.
       })
 
       // Recalculate durations to match requested total
-      const actualDuration = scriptData.scenes.reduce((sum: number, scene: any) => sum + scene.duration, 0)
+      const actualDuration = scriptData.scenes.reduce(
+        (sum: number, scene: any) => sum + scene.duration,
+        0
+      )
       const durationRatio = request.videoLength / actualDuration
 
       scriptData.scenes.forEach((scene: any) => {
         scene.duration = Math.round(scene.duration * durationRatio)
       })
 
-      scriptData.totalDuration = scriptData.scenes.reduce((sum: number, scene: any) => sum + scene.duration, 0)
+      scriptData.totalDuration = scriptData.scenes.reduce(
+        (sum: number, scene: any) => sum + scene.duration,
+        0
+      )
       scriptData.platform = request.platforms[0]
 
       return scriptData as VideoScript
@@ -403,14 +443,44 @@ Generate an engaging, conversion-focused video script.
 
       return {
         scenes: [
-          { sceneNumber: 1, type: 'hook' as const, duration: 3, description: 'Hook scene', ...baseScene },
-          { sceneNumber: 2, type: 'problem' as const, duration: 4, description: 'Problem scene', ...baseScene },
-          { sceneNumber: 3, type: 'benefit' as const, duration: 4, description: 'Benefit scene', ...baseScene },
-          { sceneNumber: 4, type: 'demo' as const, duration: 5, description: 'Demo scene', ...baseScene },
-          { sceneNumber: 5, type: 'cta' as const, duration: 2, description: 'Call to action scene', ...baseScene },
+          {
+            sceneNumber: 1,
+            type: 'hook' as const,
+            duration: 3,
+            description: 'Hook scene',
+            ...baseScene,
+          },
+          {
+            sceneNumber: 2,
+            type: 'problem' as const,
+            duration: 4,
+            description: 'Problem scene',
+            ...baseScene,
+          },
+          {
+            sceneNumber: 3,
+            type: 'benefit' as const,
+            duration: 4,
+            description: 'Benefit scene',
+            ...baseScene,
+          },
+          {
+            sceneNumber: 4,
+            type: 'demo' as const,
+            duration: 5,
+            description: 'Demo scene',
+            ...baseScene,
+          },
+          {
+            sceneNumber: 5,
+            type: 'cta' as const,
+            duration: 2,
+            description: 'Call to action scene',
+            ...baseScene,
+          },
         ],
         totalDuration: 18,
-        cta: 'Learn more about our product',
+        callToAction: 'Learn more about our product',
         platform: request.platforms[0],
       }
     }
@@ -433,19 +503,32 @@ Generate an engaging, conversion-focused video script.
 
       // For Phase 1.4, we'll use placeholder URLs since actual image generation
       // would require integration with the existing image generator service
-      const storyboardFrames = videoScript.scenes.map(scene => ({
+      const storyboardFrames = videoScript.scenes.map((scene) => ({
         sceneNumber: scene.sceneNumber,
-        type: scene.type,
+        description:
+          scene.description || `Scene ${scene.sceneNumber}: ${scene.type}`,
+        visualDescription:
+          scene.visualNotes || 'Visual description not available',
         duration: scene.duration,
-        script: scene.script,
         imageUrl: `https://via.placeholder.com/1080x1920/000000/FFFFFF?text=${encodeURIComponent(`Scene ${scene.sceneNumber}: ${scene.type.toUpperCase()}`)}`,
-        thumbnailUrl: `https://via.placeholder.com/320x568/000000/FFFFFF?text=${encodeURIComponent(`${scene.sceneNumber}`)}`,
+        shotType: 'medium',
+        composition: 'center',
+        lighting: 'natural',
+        colorPalette: ['#000000', '#FFFFFF'],
+        elements: ['text', 'background'],
       }))
 
       return {
-        videoScriptId: `storyboard-${Date.now()}`,
         scenes: storyboardFrames,
         totalDuration: videoScript.totalDuration,
+        aspectRatio: '9:16',
+        style: {
+          visualStyle: 'modern',
+          colorScheme: 'monochrome',
+          pacing: 'moderate',
+          transitionStyle: 'fade',
+        },
+        notes: 'Generated storyboard with placeholder visuals',
       }
     } catch (error) {
       log.error({ err: error }, 'Error generating storyboard')
@@ -456,36 +539,42 @@ Generate an engaging, conversion-focused video script.
   /**
    * Calculate quality score for video script
    */
-  private calculateQualityScore(videoScript: VideoScript, request: VideoScriptGenerationRequest): number {
+  private calculateQualityScore(
+    videoScript: VideoScript,
+    request: VideoScriptGenerationRequest
+  ): number {
     let score = 0
     const maxScore = 100
 
     // Check scene completeness (25 points)
     const requiredSceneTypes = ['hook', 'problem', 'benefit', 'demo', 'cta']
-    const hasAllScenes = requiredSceneTypes.every(type =>
-      videoScript.scenes.some(scene => scene.type === type)
+    const hasAllScenes = requiredSceneTypes.every((type) =>
+      videoScript.scenes.some((scene) => scene.type === type)
     )
     if (hasAllScenes) score += 25
 
     // Check duration accuracy (20 points)
-    const durationDiff = Math.abs(videoScript.totalDuration - request.videoLength)
+    const durationDiff = Math.abs(
+      videoScript.totalDuration - request.videoLength
+    )
     if (durationDiff <= 2) score += 20
     else if (durationDiff <= 5) score += 10
 
     // Check scene flow (20 points)
-    const scenesOrdered = videoScript.scenes.every((scene, index) =>
-      scene.sceneNumber === index + 1
+    const scenesOrdered = videoScript.scenes.every(
+      (scene, index) => scene.sceneNumber === index + 1
     )
     if (scenesOrdered) score += 20
 
     // Check content quality (20 points)
-    const avgScriptLength = videoScript.scenes.reduce((sum, scene) =>
-      sum + scene.script.length, 0) / videoScript.scenes.length
+    const avgScriptLength =
+      videoScript.scenes.reduce((sum, scene) => sum + scene.script.length, 0) /
+      videoScript.scenes.length
     if (avgScriptLength >= 20 && avgScriptLength <= 200) score += 10
     if (avgScriptLength > 50) score += 10
 
     // Check CTA strength (15 points)
-    const ctaScene = videoScript.scenes.find(scene => scene.type === 'cta')
+    const ctaScene = videoScript.scenes.find((scene) => scene.type === 'cta')
     if (ctaScene) {
       if (ctaScene.script.toLowerCase().includes('shop')) score += 5
       if (ctaScene.script.toLowerCase().includes('now')) score += 5
@@ -498,45 +587,60 @@ Generate an engaging, conversion-focused video script.
   /**
    * Generate recommendations for video script
    */
-  private generateRecommendations(videoScript: VideoScript, request: VideoScriptGenerationRequest): string[] {
+  private generateRecommendations(
+    videoScript: VideoScript,
+    request: VideoScriptGenerationRequest
+  ): string[] {
     const recommendations: string[] = []
 
     // Check duration
     if (Math.abs(videoScript.totalDuration - request.videoLength) > 2) {
-      recommendations.push(`Adjust scene durations to match target length of ${request.videoLength} seconds`)
+      recommendations.push(
+        `Adjust scene durations to match target length of ${request.videoLength} seconds`
+      )
     }
 
     // Check scene flow
-    const scenesOrdered = videoScript.scenes.every((scene, index) =>
-      scene.sceneNumber === index + 1
+    const scenesOrdered = videoScript.scenes.every(
+      (scene, index) => scene.sceneNumber === index + 1
     )
     if (!scenesOrdered) {
       recommendations.push('Ensure scenes are properly numbered and ordered')
     }
 
     // Check content length
-    videoScript.scenes.forEach(scene => {
+    videoScript.scenes.forEach((scene) => {
       if (scene.script.length < 10) {
-        recommendations.push(`Add more detail to Scene ${scene.sceneNumber} (${scene.type})`)
+        recommendations.push(
+          `Add more detail to Scene ${scene.sceneNumber} (${scene.type})`
+        )
       }
       if (scene.script.length > 150) {
-        recommendations.push(`Shorten Scene ${scene.sceneNumber} (${scene.type}) for better engagement`)
+        recommendations.push(
+          `Shorten Scene ${scene.sceneNumber} (${scene.type}) for better engagement`
+        )
       }
     })
 
     // Check visual notes
-    videoScript.scenes.forEach(scene => {
+    videoScript.scenes.forEach((scene) => {
       if (!scene.visualNotes || scene.visualNotes.length < 5) {
-        recommendations.push(`Add more detailed visual notes for Scene ${scene.sceneNumber}`)
+        recommendations.push(
+          `Add more detailed visual notes for Scene ${scene.sceneNumber}`
+        )
       }
     })
 
     // Check CTA
-    const ctaScene = videoScript.scenes.find(scene => scene.type === 'cta')
+    const ctaScene = videoScript.scenes.find((scene) => scene.type === 'cta')
     if (!ctaScene) {
       recommendations.push('Ensure a strong call-to-action scene is included')
-    } else if (!ctaScene.script.match(/\b(shop|buy|get|now|start|try|learn)\b/i)) {
-      recommendations.push('Strengthen the call-to-action with more action-oriented language')
+    } else if (
+      !ctaScene.script.match(/\b(shop|buy|get|now|start|try|learn)\b/i)
+    ) {
+      recommendations.push(
+        'Strengthen the call-to-action with more action-oriented language'
+      )
     }
 
     return recommendations
@@ -545,17 +649,36 @@ Generate an engaging, conversion-focused video script.
   /**
    * Estimate video performance metrics
    */
-  private estimatePerformance(videoScript: VideoScript, request: VideoScriptGenerationRequest): {
+  private estimatePerformance(
+    videoScript: VideoScript,
+    request: VideoScriptGenerationRequest
+  ): {
     engagementRate: number
     completionRate: number
     shareability: number
   } {
     // Base metrics by objective
     const baseMetrics = {
-      awareness: { engagementRate: 0.045, completionRate: 0.65, shareability: 0.025 },
-      consideration: { engagementRate: 0.055, completionRate: 0.70, shareability: 0.030 },
-      conversion: { engagementRate: 0.040, completionRate: 0.75, shareability: 0.015 },
-      retention: { engagementRate: 0.060, completionRate: 0.60, shareability: 0.020 },
+      awareness: {
+        engagementRate: 0.045,
+        completionRate: 0.65,
+        shareability: 0.025,
+      },
+      consideration: {
+        engagementRate: 0.055,
+        completionRate: 0.7,
+        shareability: 0.03,
+      },
+      conversion: {
+        engagementRate: 0.04,
+        completionRate: 0.75,
+        shareability: 0.015,
+      },
+      retention: {
+        engagementRate: 0.06,
+        completionRate: 0.6,
+        shareability: 0.02,
+      },
     }
 
     const base = baseMetrics[request.objective]
@@ -569,7 +692,7 @@ Generate an engaging, conversion-focused video script.
     }
 
     let platformMultiplier = 1.0
-    request.platforms.forEach(platform => {
+    request.platforms.forEach((platform) => {
       platformMultiplier = Math.max(
         platformMultiplier,
         platformMultipliers[platform as keyof typeof platformMultipliers] || 1.0
@@ -584,8 +707,10 @@ Generate an engaging, conversion-focused video script.
     else durationMultiplier = 0.7
 
     return {
-      engagementRate: base.engagementRate * platformMultiplier * durationMultiplier,
-      completionRate: base.completionRate * platformMultiplier * durationMultiplier,
+      engagementRate:
+        base.engagementRate * platformMultiplier * durationMultiplier,
+      completionRate:
+        base.completionRate * platformMultiplier * durationMultiplier,
       shareability: base.shareability * platformMultiplier * durationMultiplier,
     }
   }

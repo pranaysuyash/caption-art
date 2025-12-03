@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 interface LoginProps {
-  onLogin: (token: string) => void
+  onLogin: () => Promise<void> | void
 }
 
 export function Login({ onLogin }: LoginProps) {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -28,16 +29,18 @@ export function Login({ onLogin }: LoginProps) {
     setError('')
 
     try {
+      const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:3001'
       const endpoint = isSignup ? '/api/auth/signup' : '/api/auth/login'
       const body = isSignup
         ? { email, password, agencyName: agencyName || 'Default Agency' }
         : { email, password }
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}${endpoint}`, {
+      const response = await fetch(`${apiBase}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(body),
       })
 
@@ -46,8 +49,11 @@ export function Login({ onLogin }: LoginProps) {
         throw new Error(data.error || `${isSignup ? 'Signup' : 'Login'} failed`)
       }
 
-      const data = await response.json()
-      onLogin(data.token || 'mock_token') // Use backend token or mock for now
+      await response.json()
+
+      // Let the parent re-validate session against the real backend
+      await onLogin()
+      navigate('/agency/workspaces', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -61,29 +67,32 @@ export function Login({ onLogin }: LoginProps) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: 'var(--color-background, #f8fafc)',
-      fontFamily: 'var(--font-body, sans-serif)'
+      background: 'radial-gradient(circle at 20% 20%, #0ea5e933, transparent 45%), radial-gradient(circle at 80% 0%, #6366f133, transparent 40%), #0f172a',
+      fontFamily: 'var(--font-body, "Inter", system-ui, sans-serif)',
+      padding: '1.5rem'
     }}>
       <div style={{
         width: '100%',
         maxWidth: '400px',
         padding: '2rem',
-        backgroundColor: 'var(--color-surface, white)',
-        borderRadius: '8px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+        borderRadius: '14px',
+        boxShadow: '0 15px 45px rgba(15, 23, 42, 0.25), 0 2px 6px rgba(15, 23, 42, 0.08)',
+        border: '1px solid rgba(15,23,42,0.08)',
+        backdropFilter: 'blur(6px)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h1 style={{
-            fontFamily: 'var(--font-heading, sans-serif)',
-            fontSize: '1.875rem',
-            fontWeight: 'bold',
-            color: 'var(--color-text, #1f2937)',
+            fontFamily: 'var(--font-heading, "Space Grotesk", sans-serif)',
+            fontSize: '2rem',
+            fontWeight: 700,
+            color: '#0b1220',
             margin: 0
           }}>
             Caption Art
           </h1>
           <p style={{
-            color: 'var(--color-text-secondary, #6b7280)',
+            color: '#1f2937',
             marginTop: '0.5rem',
             marginBottom: 0
           }}>
@@ -102,23 +111,27 @@ export function Login({ onLogin }: LoginProps) {
               }}>
                 Agency Name
               </label>
-              <input
-                type="text"
-                value={agencyName}
-                onChange={(e) => setAgencyName(e.target.value)}
-                placeholder="My Creative Agency"
-                className="input"
-                required={isSignup}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border, #d1d5db)',
-                  borderRadius: '6px',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-          )}
+            <input
+              type="text"
+              value={agencyName}
+              onChange={(e) => setAgencyName(e.target.value)}
+              placeholder="My Creative Agency"
+              autoComplete="organization"
+              className="input"
+              required={isSignup}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #94a3b8',
+                borderRadius: '10px',
+                fontSize: '1rem',
+                backgroundColor: '#ffffff',
+                color: '#0b1220',
+                caretColor: '#0b1220'
+              }}
+            />
+          </div>
+        )}
 
           <div>
             <label style={{
@@ -134,14 +147,18 @@ export function Login({ onLogin }: LoginProps) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="agency@example.com"
+              autoComplete="email"
               className="input"
               required
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid var(--color-border, #d1d5db)',
-                borderRadius: '6px',
-                fontSize: '1rem'
+                border: '1px solid #94a3b8',
+                borderRadius: '10px',
+                fontSize: '1rem',
+                backgroundColor: '#ffffff',
+                color: '#0b1220',
+                caretColor: '#0b1220'
               }}
             />
           </div>
@@ -160,14 +177,18 @@ export function Login({ onLogin }: LoginProps) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              autoComplete="current-password"
               className="input"
               required
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid var(--color-border, #d1d5db)',
-                borderRadius: '6px',
-                fontSize: '1rem'
+                border: '1px solid #94a3b8',
+                borderRadius: '10px',
+                fontSize: '1rem',
+                backgroundColor: '#ffffff',
+                color: '#0b1220',
+                caretColor: '#0b1220'
               }}
             />
           </div>
@@ -175,10 +196,10 @@ export function Login({ onLogin }: LoginProps) {
           {error && (
             <div style={{
               padding: '0.75rem',
-              backgroundColor: 'var(--color-error-bg, #fef2f2)',
-              border: '1px solid var(--color-error, #dc2626)',
-              borderRadius: '6px',
-              color: 'var(--color-error, #dc2626)',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #dc2626',
+              borderRadius: '10px',
+              color: '#991b1b',
               fontSize: '0.875rem'
             }}>
               {error}
@@ -192,13 +213,14 @@ export function Login({ onLogin }: LoginProps) {
             style={{
               padding: '0.75rem',
               border: 'none',
-              borderRadius: '6px',
+              borderRadius: '10px',
               fontSize: '1rem',
               fontWeight: '500',
               cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: (loading || !email || !password || (isSignup && !agencyName)) ? 0.5 : 1,
-              backgroundColor: 'var(--color-primary, #2563eb)',
-              color: 'white'
+              opacity: (loading || !email || !password || (isSignup && !agencyName)) ? 0.6 : 1,
+              background: 'linear-gradient(120deg, #0ea5e9, #2563eb)',
+              color: 'white',
+              boxShadow: '0 10px 30px rgba(37, 99, 235, 0.35)'
             }}
           >
             {loading ? (isSignup ? 'Creating account...' : 'Signing in...') : (isSignup ? 'Sign Up' : 'Sign In')}
@@ -216,14 +238,14 @@ export function Login({ onLogin }: LoginProps) {
             type="button"
             onClick={isSignup ? handleBackToLogin : handleSignup}
             style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-primary, #2563eb)',
-              textDecoration: 'underline',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              marginLeft: '0.25rem'
-            }}
+            background: 'none',
+            border: 'none',
+            color: '#0ea5e9',
+            textDecoration: 'underline',
+            cursor: 'pointer',
+            fontSize: '0.875rem',
+            marginLeft: '0.25rem'
+          }}
           >
             {isSignup ? 'Sign in' : 'Sign up'}
           </button>

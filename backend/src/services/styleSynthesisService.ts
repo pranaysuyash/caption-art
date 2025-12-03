@@ -2,12 +2,7 @@ import OpenAI from 'openai'
 import sharp from 'sharp'
 import fs from 'fs/promises'
 import path from 'path'
-import {
-  StyleReference,
-  Asset,
-  BrandKit,
-  Campaign
-} from '../models/auth'
+import { StyleReference, Asset, BrandKit, Campaign } from '../models/auth'
 import { log } from '../middleware/logger'
 
 // Define interfaces locally since they don't exist in auth model
@@ -99,7 +94,10 @@ export class StyleSynthesisService {
   ): Promise<StyleAnalysisResult> {
     try {
       log.info(
-        { referenceId: reference.id, imageCount: reference.referenceImages?.length || 0 },
+        {
+          referenceId: reference.id,
+          imageCount: reference.referenceImages?.length || 0,
+        },
         'Analyzing style reference'
       )
 
@@ -142,7 +140,11 @@ Return the analysis as JSON with this structure:
       const realAnalysis = await this.analyzeRealImage(imageUrl, reference)
 
       // Enhance with AI-based analysis if OpenAI is available
-      const enhancedAnalysis = await this.enhanceAnalysisWithAI(imageUrl, reference, realAnalysis)
+      const enhancedAnalysis = await this.enhanceAnalysisWithAI(
+        imageUrl,
+        reference,
+        realAnalysis
+      )
 
       const result: StyleAnalysisResult = {
         id: `style-analysis-${Date.now()}`,
@@ -161,8 +163,13 @@ Return the analysis as JSON with this structure:
 
       return result
     } catch (error) {
-      log.error({ err: error, referenceId: reference.id }, 'Style analysis failed')
-      throw new Error(`Failed to analyze style reference: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      log.error(
+        { err: error, referenceId: reference.id },
+        'Style analysis failed'
+      )
+      throw new Error(
+        `Failed to analyze style reference: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -199,17 +206,17 @@ Return the analysis as JSON with this structure:
                 colorPalette: {
                   primary: ['#3498db'],
                   secondary: ['#2c3e50'],
-                  accent: ['#e74c3c']
+                  accent: ['#e74c3c'],
                 },
                 typography: {
                   fonts: ['Inter', 'Roboto'],
                   weights: ['regular', 'bold'],
-                  sizes: ['16px', '24px', '32px']
+                  sizes: ['16px', '24px', '32px'],
                 },
                 composition: {
                   layout: 'centered',
                   spacing: 'normal',
-                  balance: 'symmetrical'
+                  balance: 'symmetrical',
                 },
                 visualElements: {
                   gradients: false,
@@ -217,8 +224,8 @@ Return the analysis as JSON with this structure:
                   borders: false,
                   patterns: false,
                   illustration: false,
-                  photography: true
-                }
+                  photography: true,
+                },
               },
               usageCount: 0,
               workspaceId: request.workspaceId,
@@ -231,10 +238,16 @@ Return the analysis as JSON with this structure:
       )
 
       // Synthesize based on mode
-      const synthesizedStyle = this.performStyleSynthesis(analyses, request.synthesisMode)
+      const synthesizedStyle = this.performStyleSynthesis(
+        analyses,
+        request.synthesisMode
+      )
 
       // Generate style guidance
-      const styleGuidance = this.generateStyleGuidance(synthesizedStyle, request.targetFormat)
+      const styleGuidance = this.generateStyleGuidance(
+        synthesizedStyle,
+        request.targetFormat
+      )
 
       // Create mock synthesized output
       const synthesizedOutput = this.generateMockSynthesizedOutput(
@@ -245,7 +258,10 @@ Return the analysis as JSON with this structure:
       )
 
       // Calculate quality metrics
-      const qualityMetrics = this.calculateSynthesisQuality(analyses, synthesizedStyle)
+      const qualityMetrics = this.calculateSynthesisQuality(
+        analyses,
+        synthesizedStyle
+      )
 
       // Generate recommendations
       const recommendations = this.generateSynthesisRecommendations(
@@ -257,7 +273,7 @@ Return the analysis as JSON with this structure:
       const result: StyleSynthesisResult = {
         id: `style-synthesis-${Date.now()}`,
         request,
-        analyses: analyses.map(a => ({
+        analyses: analyses.map((a) => ({
           referenceId: a.referenceId,
           confidence: a.confidence,
           keyAttributes: Object.values(a.analysis).flat(),
@@ -274,7 +290,9 @@ Return the analysis as JSON with this structure:
       log.info(
         {
           synthesisId: result.id,
-          avgConfidence: analyses.reduce((sum, a) => sum + a.confidence, 0) / analyses.length,
+          avgConfidence:
+            analyses.reduce((sum, a) => sum + a.confidence, 0) /
+            analyses.length,
           qualityScore: qualityMetrics.overallScore,
         },
         'Style synthesis completed'
@@ -282,8 +300,13 @@ Return the analysis as JSON with this structure:
 
       return result
     } catch (error) {
-      log.error({ err: error, requestId: request.workspaceId }, 'Style synthesis failed')
-      throw new Error(`Failed to synthesize styles: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      log.error(
+        { err: error, requestId: request.workspaceId },
+        'Style synthesis failed'
+      )
+      throw new Error(
+        `Failed to synthesize styles: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -313,15 +336,19 @@ Return the analysis as JSON with this structure:
             'clean typography',
             'balanced layout',
           ].slice(0, Math.floor(Math.random() * 4) + 2),
-          conflictingAttributes: similarityScore < 0.8 ? [
-            'slight mood variation',
-            'different temperature tones',
-          ].slice(0, Math.floor(Math.random() * 2)) : [],
-          recommendation: similarityScore > 0.85
-            ? 'Excellent match for your aesthetic'
-            : similarityScore > 0.75
-            ? 'Good match with minor adjustments needed'
-            : 'Consider blending with complementary styles',
+          conflictingAttributes:
+            similarityScore < 0.8
+              ? ['slight mood variation', 'different temperature tones'].slice(
+                  0,
+                  Math.floor(Math.random() * 2)
+                )
+              : [],
+          recommendation:
+            similarityScore > 0.85
+              ? 'Excellent match for your aesthetic'
+              : similarityScore > 0.75
+                ? 'Good match with minor adjustments needed'
+                : 'Consider blending with complementary styles',
         })
       }
 
@@ -331,14 +358,19 @@ Return the analysis as JSON with this structure:
       return mockMatches
     } catch (error) {
       log.error({ err: error, query, workspaceId }, 'Style matching failed')
-      throw new Error(`Failed to find matching styles: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to find matching styles: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
   /**
    * Download and analyze real image data
    */
-  private async analyzeRealImage(imageUrl: string, reference: StyleReference): Promise<{
+  private async analyzeRealImage(
+    imageUrl: string,
+    reference: StyleReference
+  ): Promise<{
     colorPalette: string[]
     composition: string[]
     visualStyle: string[]
@@ -368,7 +400,7 @@ Return the analysis as JSON with this structure:
       const metadata = await image.metadata()
 
       // Extract dominant colors
-      const { dominant } = await image
+      const dominant = await image
         .resize(150, 150, { fit: 'inside' })
         .raw()
         .toBuffer({ resolveWithObject: true })
@@ -384,10 +416,14 @@ Return the analysis as JSON with this structure:
       const visualStyle = this.detectVisualStyle(stats, dominant, metadata)
 
       // Extract key elements
-      const keyElements = await this.extractKeyElements(imageBuffer, dominant, visualStyle)
+      const keyElements = await this.extractKeyElements(
+        imageBuffer,
+        dominant,
+        visualStyle
+      )
 
       return {
-        colorPalette: dominant.map(c => c.color),
+        colorPalette: dominant.map((c) => c.color),
         composition,
         visualStyle,
         keyElements,
@@ -399,11 +435,14 @@ Return the analysis as JSON with this structure:
           width: metadata.width || 0,
           height: metadata.height || 0,
           format: metadata.format || 'unknown',
-          hasTransparency: metadata.hasAlpha || false
-        }
+          hasTransparency: metadata.hasAlpha || false,
+        },
       }
     } catch (error) {
-      log.error({ err: error, referenceId: reference.id, url: imageUrl }, 'Real image analysis failed')
+      log.error(
+        { err: error, referenceId: reference.id, url: imageUrl },
+        'Real image analysis failed'
+      )
       // Fallback to mock analysis
       return this.generateFallbackAnalysis(imageUrl, reference)
     }
@@ -412,7 +451,9 @@ Return the analysis as JSON with this structure:
   /**
    * Extract dominant colors from image data using k-means clustering
    */
-  private extractDominantColors(data: Buffer): Array<{ color: string; percentage: number }> {
+  private extractDominantColors(
+    data: Buffer
+  ): Array<{ color: string; percentage: number }> {
     // Convert Buffer to pixel array
     const pixels = []
     for (let i = 0; i < data.length; i += 3) {
@@ -445,7 +486,7 @@ Return the analysis as JSON with this structure:
       const [r, g, b] = colorStr.split(',').map(Number)
       return {
         color: this.rgbToHex(r, g, b),
-        percentage: (count / totalPixels) * 100
+        percentage: (count / totalPixels) * 100,
       }
     })
   }
@@ -453,7 +494,10 @@ Return the analysis as JSON with this structure:
   /**
    * Analyze image composition and layout
    */
-  private async analyzeComposition(imageBuffer: Buffer, metadata: any): Promise<string[]> {
+  private async analyzeComposition(
+    imageBuffer: Buffer,
+    metadata: any
+  ): Promise<string[]> {
     const composition = []
 
     // Analyze aspect ratio
@@ -515,7 +559,9 @@ Return the analysis as JSON with this structure:
     // Analyze color characteristics
     const avgBrightness = this.calculateBrightness(stats)
     const colorCount = dominant.length
-    const vividColors = dominant.filter(c => this.isVividColor(c.color)).length
+    const vividColors = dominant.filter((c) =>
+      this.isVividColor(c.color)
+    ).length
 
     // Style detection based on brightness
     if (avgBrightness > 0.7) {
@@ -575,7 +621,7 @@ Return the analysis as JSON with this structure:
       elements.push('Multi-color composition')
     }
 
-    const hasGradients = dominant.some(c => c.percentage < 10)
+    const hasGradients = dominant.some((c) => c.percentage < 10)
     if (hasGradients) {
       elements.push('Smooth color transitions')
     }
@@ -625,9 +671,12 @@ Return the analysis as JSON with this structure:
           colorPalette: realAnalysis.colorPalette,
           typography: this.guessTypographyFromStyle(realAnalysis.visualStyle),
           composition: realAnalysis.composition,
-          mood: this.deriveMoodFromStyle(realAnalysis.visualStyle, realAnalysis.colorPalette),
+          mood: this.deriveMoodFromStyle(
+            realAnalysis.visualStyle,
+            realAnalysis.colorPalette
+          ),
           visualStyle: realAnalysis.visualStyle,
-          keyElements: realAnalysis.keyElements
+          keyElements: realAnalysis.keyElements,
         }
       }
 
@@ -656,10 +705,10 @@ Return JSON with: {
 }`
 
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4-turbo",
-        messages: [{ role: "user", content: prompt }],
+        model: 'gpt-4-turbo',
+        messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
-        response_format: { type: "json_object" }
+        response_format: { type: 'json_object' },
       })
 
       const aiInsights = JSON.parse(response.choices[0].message.content || '{}')
@@ -667,23 +716,36 @@ Return JSON with: {
       // Merge AI insights with real analysis
       return {
         colorPalette: aiInsights.colorPalette || realAnalysis.colorPalette,
-        typography: aiInsights.typography || this.guessTypographyFromStyle(realAnalysis.visualStyle),
+        typography:
+          aiInsights.typography ||
+          this.guessTypographyFromStyle(realAnalysis.visualStyle),
         composition: aiInsights.composition || realAnalysis.composition,
-        mood: aiInsights.mood || this.deriveMoodFromStyle(realAnalysis.visualStyle, realAnalysis.colorPalette),
+        mood:
+          aiInsights.mood ||
+          this.deriveMoodFromStyle(
+            realAnalysis.visualStyle,
+            realAnalysis.colorPalette
+          ),
         visualStyle: aiInsights.visualStyle || realAnalysis.visualStyle,
-        keyElements: aiInsights.keyElements || realAnalysis.keyElements
+        keyElements: aiInsights.keyElements || realAnalysis.keyElements,
       }
     } catch (error) {
-      log.error({ err: error, referenceId: reference.id }, 'AI enhancement failed, using basic analysis')
+      log.error(
+        { err: error, referenceId: reference.id },
+        'AI enhancement failed, using basic analysis'
+      )
 
       // Fallback to basic analysis
       return {
         colorPalette: realAnalysis.colorPalette,
         typography: this.guessTypographyFromStyle(realAnalysis.visualStyle),
         composition: realAnalysis.composition,
-        mood: this.deriveMoodFromStyle(realAnalysis.visualStyle, realAnalysis.colorPalette),
+        mood: this.deriveMoodFromStyle(
+          realAnalysis.visualStyle,
+          realAnalysis.colorPalette
+        ),
         visualStyle: realAnalysis.visualStyle,
-        keyElements: realAnalysis.keyElements
+        keyElements: realAnalysis.keyElements,
       }
     }
   }
@@ -695,7 +757,10 @@ Return JSON with: {
     let confidence = 0.5 // Base confidence
 
     // Higher confidence for good color extraction
-    if (analysis.colorPalette.length >= 3 && analysis.colorPalette.length <= 8) {
+    if (
+      analysis.colorPalette.length >= 3 &&
+      analysis.colorPalette.length <= 8
+    ) {
       confidence += 0.15
     }
 
@@ -725,19 +790,26 @@ Return JSON with: {
    * Helper methods for image analysis
    */
   private rgbToHex(r: number, g: number, b: number): string {
-    return '#' + [r, g, b].map(x => {
-      const hex = x.toString(16)
-      return hex.length === 1 ? '0' + hex : hex
-    }).join('')
+    return (
+      '#' +
+      [r, g, b]
+        .map((x) => {
+          const hex = x.toString(16)
+          return hex.length === 1 ? '0' + hex : hex
+        })
+        .join('')
+    )
   }
 
   private hexToRgb(hex: string): { r: number; g: number; b: number } | null {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null
   }
 
   private calculateBrightness(stats: any): number {
@@ -748,7 +820,7 @@ Return JSON with: {
     const b = stats.channels[2].mean / 255
 
     // Perceived brightness formula
-    return (0.299 * r + 0.587 * g + 0.114 * b)
+    return 0.299 * r + 0.587 * g + 0.114 * b
   }
 
   private calculateContrast(stats: any): number {
@@ -852,7 +924,9 @@ Return JSON with: {
       const height = info.height!
 
       // Divide image into thirds and calculate brightness
-      let leftWeight = 0, centerWeight = 0, rightWeight = 0
+      let leftWeight = 0,
+        centerWeight = 0,
+        rightWeight = 0
 
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -904,15 +978,23 @@ Return JSON with: {
       typography.push('Strong font weights')
     }
 
-    if (visualStyle.includes('Elegant') || visualStyle.includes('Sophisticated')) {
+    if (
+      visualStyle.includes('Elegant') ||
+      visualStyle.includes('Sophisticated')
+    ) {
       typography.push('Elegant script fonts')
       typography.push('Light font weights')
     }
 
-    return typography.length > 0 ? typography : ['Versatile typography', 'Standard font hierarchy']
+    return typography.length > 0
+      ? typography
+      : ['Versatile typography', 'Standard font hierarchy']
   }
 
-  private deriveMoodFromStyle(visualStyle: string[], colorPalette: string[]): string[] {
+  private deriveMoodFromStyle(
+    visualStyle: string[],
+    colorPalette: string[]
+  ): string[] {
     const mood = []
 
     // Mood from visual style
@@ -937,12 +1019,12 @@ Return JSON with: {
     }
 
     // Mood from colors
-    const warmColors = colorPalette.filter(hex => {
+    const warmColors = colorPalette.filter((hex) => {
       const rgb = this.hexToRgb(hex)
       return rgb && rgb.r > rgb.b
     }).length
 
-    const coolColors = colorPalette.filter(hex => {
+    const coolColors = colorPalette.filter((hex) => {
       const rgb = this.hexToRgb(hex)
       return rgb && rgb.b > rgb.r
     }).length
@@ -956,11 +1038,17 @@ Return JSON with: {
     return mood.length > 0 ? mood : ['Versatile', 'Professional']
   }
 
-  private generateFallbackAnalysis(imageUrl: string, reference: StyleReference): any {
+  private generateFallbackAnalysis(
+    imageUrl: string,
+    reference: StyleReference
+  ): any {
     // Generate reasonable fallback based on description
-    const hasModern = reference.description?.toLowerCase().includes('modern') || false
-    const hasMinimal = reference.description?.toLowerCase().includes('minimal') || false
-    const hasBold = reference.description?.toLowerCase().includes('bold') || false
+    const hasModern =
+      reference.description?.toLowerCase().includes('modern') || false
+    const hasMinimal =
+      reference.description?.toLowerCase().includes('minimal') || false
+    const hasBold =
+      reference.description?.toLowerCase().includes('bold') || false
 
     return {
       colorPalette: ['#3498db', '#2c3e50', '#ecf0f1', '#ffffff', '#34495e'],
@@ -968,7 +1056,7 @@ Return JSON with: {
       visualStyle: [
         hasModern ? 'Modern' : 'Contemporary',
         hasMinimal ? 'Minimalist' : 'Detailed',
-        hasBold ? 'Bold' : 'Subtle'
+        hasBold ? 'Bold' : 'Subtle',
       ],
       keyElements: ['Clean design', 'Professional appearance'],
       brightness: 0.6,
@@ -979,45 +1067,92 @@ Return JSON with: {
         { color: '#2c3e50', percentage: 25 },
         { color: '#ecf0f1', percentage: 20 },
         { color: '#ffffff', percentage: 15 },
-        { color: '#34495e', percentage: 10 }
+        { color: '#34495e', percentage: 10 },
       ],
       imageMetadata: {
         width: 1080,
         height: 1080,
         format: 'unknown',
-        hasTransparency: false
-      }
+        hasTransparency: false,
+      },
     }
   }
 
   /**
    * Generate mock analysis based on reference description
    */
-  private generateMockAnalysis(reference: StyleReference): StyleAnalysisResult['analysis'] {
+  private generateMockAnalysis(
+    reference: StyleReference
+  ): StyleAnalysisResult['analysis'] {
     const styles = [
       {
         colorPalette: ['#2C3E50', '#34495E', '#E74C3C', '#ECF0F1', '#FFFFFF'],
-        typography: ['Modern sans-serif', 'Clean geometric forms', 'Medium weight', 'Excellent readability'],
-        composition: ['Centered layout', 'Balanced asymmetry', 'Generous whitespace', 'Clear visual hierarchy'],
+        typography: [
+          'Modern sans-serif',
+          'Clean geometric forms',
+          'Medium weight',
+          'Excellent readability',
+        ],
+        composition: [
+          'Centered layout',
+          'Balanced asymmetry',
+          'Generous whitespace',
+          'Clear visual hierarchy',
+        ],
         mood: ['Professional', 'Trustworthy', 'Modern', 'Approachable'],
         visualStyle: ['Minimalist', 'Corporate', 'Clean', 'Sophisticated'],
-        keyElements: ['Bold typography', 'Subtle gradients', 'Geometric shapes', 'Monochromatic accents'],
+        keyElements: [
+          'Bold typography',
+          'Subtle gradients',
+          'Geometric shapes',
+          'Monochromatic accents',
+        ],
       },
       {
         colorPalette: ['#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#FFFFFF'],
-        typography: ['Bold display fonts', 'Playful scripts', 'Varied weights', 'Dynamic hierarchy'],
-        composition: ['Dynamic grid', 'Overlapping elements', 'Energetic flow', 'Surprising contrasts'],
+        typography: [
+          'Bold display fonts',
+          'Playful scripts',
+          'Varied weights',
+          'Dynamic hierarchy',
+        ],
+        composition: [
+          'Dynamic grid',
+          'Overlapping elements',
+          'Energetic flow',
+          'Surprising contrasts',
+        ],
         mood: ['Creative', 'Youthful', 'Energetic', 'Bold'],
         visualStyle: ['Contemporary', 'Artistic', 'Expressive', 'Vibrant'],
-        keyElements: ['Gradient backgrounds', 'Bold color blocks', 'Experimental typography', 'Artistic textures'],
+        keyElements: [
+          'Gradient backgrounds',
+          'Bold color blocks',
+          'Experimental typography',
+          'Artistic textures',
+        ],
       },
       {
         colorPalette: ['#4CAF50', '#8BC34A', '#CDDC39', '#FFC107', '#FFFFFF'],
-        typography: ['Friendly rounded fonts', 'Handwritten elements', 'Light weights', 'Organic feel'],
-        composition: ['Organic layout', 'Natural flow', 'Soft corners', 'Harmonious spacing'],
+        typography: [
+          'Friendly rounded fonts',
+          'Handwritten elements',
+          'Light weights',
+          'Organic feel',
+        ],
+        composition: [
+          'Organic layout',
+          'Natural flow',
+          'Soft corners',
+          'Harmonious spacing',
+        ],
         mood: ['Natural', 'Friendly', 'Approachable', 'Calm'],
         visualStyle: ['Organic', 'Eco-friendly', 'Soft', 'Natural'],
-        keyElements: ['Natural textures', 'Organic shapes', 'Earthy tones', 'Green accents'],
+        keyElements: [
+          'Natural textures',
+          'Organic shapes',
+          'Earthy tones',
+          'Green accents',
+        ],
       },
     ]
 
@@ -1031,12 +1166,12 @@ Return JSON with: {
     analyses: StyleAnalysisResult[],
     mode: 'dominant' | 'balanced' | 'creative' | 'conservative'
   ): StyleSynthesisResult['synthesizedStyle'] {
-    const allColors = analyses.flatMap(a => a.analysis.colorPalette)
-    const allTypography = analyses.flatMap(a => a.analysis.typography)
-    const allComposition = analyses.flatMap(a => a.analysis.composition)
-    const allMood = analyses.flatMap(a => a.analysis.mood)
-    const allVisualStyle = analyses.flatMap(a => a.analysis.visualStyle)
-    const allKeyElements = analyses.flatMap(a => a.analysis.keyElements)
+    const allColors = analyses.flatMap((a) => a.analysis.colorPalette)
+    const allTypography = analyses.flatMap((a) => a.analysis.typography)
+    const allComposition = analyses.flatMap((a) => a.analysis.composition)
+    const allMood = analyses.flatMap((a) => a.analysis.mood)
+    const allVisualStyle = analyses.flatMap((a) => a.analysis.visualStyle)
+    const allKeyElements = analyses.flatMap((a) => a.analysis.keyElements)
 
     let selectedColors: string[]
     let selectedTypography: string[]
@@ -1107,12 +1242,12 @@ Return JSON with: {
    */
   private getMostCommon<T>(items: T[], count: number): T[] {
     const counts = new Map<T, number>()
-    items.forEach(item => counts.set(item, (counts.get(item) || 0) + 1))
+    items.forEach((item) => counts.set(item, (counts.get(item) || 0) + 1))
 
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, count)
-      .map(entry => entry[0])
+      .map((entry) => entry[0])
   }
 
   private getBalancedSelection<T>(items: T[], count: number): T[] {
@@ -1180,17 +1315,21 @@ Return JSON with: {
     const dimensions = request.targetFormat?.includes('story')
       ? { width: 1080, height: 1920 }
       : request.targetFormat?.includes('landscape')
-      ? { width: 1920, height: 1080 }
-      : { width: 1080, height: 1080 }
+        ? { width: 1920, height: 1080 }
+        : { width: 1080, height: 1080 }
 
     return {
       url: `https://via.placeholder.com/${dimensions.width}x${dimensions.height}/${synthesizedStyle.colorPalette[0]?.replace('#', '') || '4A90E2'}/${synthesizedStyle.colorPalette[1]?.replace('#', '') || 'FFFFFF'}?text=SYNTHESIZED`,
-      thumbnailUrl: `https://via.placeholder.com/320x${Math.round(320 * dimensions.height / dimensions.width)}/${synthesizedStyle.colorPalette[0]?.replace('#', '') || '4A90E2'}/${synthesizedStyle.colorPalette[1]?.replace('#', '') || 'FFFFFF'}?text=STYLE`,
+      thumbnailUrl: `https://via.placeholder.com/320x${Math.round((320 * dimensions.height) / dimensions.width)}/${synthesizedStyle.colorPalette[0]?.replace('#', '') || '4A90E2'}/${synthesizedStyle.colorPalette[1]?.replace('#', '') || 'FFFFFF'}?text=STYLE`,
       dimensions,
       format: request.targetFormat || 'square',
       styleScore: synthesizedStyle.confidence * 100,
-      brandAlignment: brandKit ? 85 + Math.random() * 10 : 70 + Math.random() * 15,
-      campaignAlignment: campaign ? 80 + Math.random() * 15 : 75 + Math.random() * 10,
+      brandAlignment: brandKit
+        ? 85 + Math.random() * 10
+        : 70 + Math.random() * 15,
+      campaignAlignment: campaign
+        ? 80 + Math.random() * 15
+        : 75 + Math.random() * 10,
     }
   }
 
@@ -1201,9 +1340,13 @@ Return JSON with: {
     analyses: StyleAnalysisResult[],
     synthesizedStyle: StyleSynthesisResult['synthesizedStyle']
   ): StyleSynthesisResult['qualityMetrics'] {
-    const avgConfidence = analyses.reduce((sum, a) => sum + a.confidence, 0) / analyses.length
-    const styleDiversity = new Set(analyses.flatMap(a => Object.values(a.analysis))).size
-    const synthesisComplexity = synthesizedStyle.colorPalette.length +
+    const avgConfidence =
+      analyses.reduce((sum, a) => sum + a.confidence, 0) / analyses.length
+    const styleDiversity = new Set(
+      analyses.flatMap((a) => Object.values(a.analysis))
+    ).size
+    const synthesisComplexity =
+      synthesizedStyle.colorPalette.length +
       synthesizedStyle.typography.length +
       synthesizedStyle.keyElements.length
 
@@ -1212,7 +1355,11 @@ Return JSON with: {
       diversity: Math.round((styleDiversity / 50) * 100),
       innovation: synthesizedStyle.synthesisMode === 'creative' ? 85 : 70,
       brandConsistency: 85 + Math.random() * 10,
-      overallScore: Math.round((avgConfidence * 40 + (styleDiversity / 50) * 30 + (synthesisComplexity / 20) * 30)),
+      overallScore: Math.round(
+        avgConfidence * 40 +
+          (styleDiversity / 50) * 30 +
+          (synthesisComplexity / 20) * 30
+      ),
     }
   }
 
@@ -1227,27 +1374,42 @@ Return JSON with: {
     const recommendations: string[] = []
 
     if (qualityMetrics.coherence < 80) {
-      recommendations.push('Consider selecting more compatible style references')
+      recommendations.push(
+        'Consider selecting more compatible style references'
+      )
     }
 
     if (qualityMetrics.diversity < 60) {
-      recommendations.push('Try adding more diverse style references for richer synthesis')
+      recommendations.push(
+        'Try adding more diverse style references for richer synthesis'
+      )
     }
 
-    if (synthesizedStyle.synthesisMode === 'conservative' && qualityMetrics.innovation < 70) {
-      recommendations.push('Consider using balanced or creative mode for more distinctive results')
+    if (
+      synthesizedStyle.synthesisMode === 'conservative' &&
+      qualityMetrics.innovation < 70
+    ) {
+      recommendations.push(
+        'Consider using balanced or creative mode for more distinctive results'
+      )
     }
 
     if (synthesizedStyle.colorPalette.length > 6) {
-      recommendations.push('Simplify the color palette for better brand consistency')
+      recommendations.push(
+        'Simplify the color palette for better brand consistency'
+      )
     }
 
     if (qualityMetrics.overallScore < 85) {
-      recommendations.push('Refine style selections to improve overall synthesis quality')
+      recommendations.push(
+        'Refine style selections to improve overall synthesis quality'
+      )
     }
 
     if (recommendations.length === 0) {
-      recommendations.push('Excellent style synthesis! Consider exploring creative mode for more variety')
+      recommendations.push(
+        'Excellent style synthesis! Consider exploring creative mode for more variety'
+      )
     }
 
     return recommendations

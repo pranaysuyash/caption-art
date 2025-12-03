@@ -4,7 +4,7 @@ import {
   Campaign,
   BrandKit,
   Asset,
-  StyleReference
+  StyleReference,
 } from '../models/auth'
 import { log } from '../middleware/logger'
 
@@ -13,14 +13,50 @@ export interface CampaignTemplateGenerationRequest {
   name: string
   description: string
   industry: string
-  campaignType: 'product-launch' | 'brand-awareness' | 'lead-generation' | 'event-promotion' | 'seasonal' | 'custom'
+  campaignType:
+    | 'product-launch'
+    | 'brand-awareness'
+    | 'lead-generation'
+    | 'event-promotion'
+    | 'sale'
+    | 'content-series'
   targetAudience: {
-    demographics: string[]
-    psychographics: string[]
-    painPoints: string[]
+    demographics: {
+      ageRange: string
+      gender: string
+      location: string
+      income: string
+      segments?: string[]
+      lifestage?: string[]
+    }
     interests: string[]
+    psychographics?: string[]
+    behaviors?: string[]
+    painPoints: string[]
+    motivations?: string[]
+    mediaTouchpoints?: string[]
+    postingFrequency?: {
+      platform: string
+      cadence: string
+      rationale?: string
+    }[]
+    brandVoice?: {
+      tone?: string[]
+      personality?: string[]
+      dos?: string[]
+      donts?: string[]
+      vocabulary?: string[]
+    }
+    buyerJourneyStages?: string[]
   }
-  platforms: ('instagram' | 'facebook' | 'linkedin' | 'tiktok' | 'youtube' | 'twitter')[]
+  platforms: (
+    | 'instagram'
+    | 'facebook'
+    | 'linkedin'
+    | 'tiktok'
+    | 'youtube'
+    | 'twitter'
+  )[]
   brandKitId?: string
   styleReferenceIds?: string[]
   customRequirements?: string[]
@@ -96,16 +132,31 @@ export class CampaignTemplateService {
       const startTime = Date.now()
 
       // Generate comprehensive template structure
-      const template = await this.buildCampaignTemplate(request, brandKit, styleReferences)
+      const template = await this.buildCampaignTemplate(
+        request,
+        brandKit,
+        styleReferences
+      )
 
       // Generate platform-specific guidelines
-      const appliedGuidelines = await this.generatePlatformGuidelines(request, template)
+      const appliedGuidelines = await this.generatePlatformGuidelines(
+        request,
+        template
+      )
 
       // Generate quality recommendations
-      const recommendations = this.generateTemplateRecommendations(request, template, brandKit)
+      const recommendations = this.generateTemplateRecommendations(
+        request,
+        template,
+        brandKit
+      )
 
       // Calculate quality metrics
-      const qualityMetrics = this.calculateTemplateQuality(template, brandKit, styleReferences)
+      const qualityMetrics = this.calculateTemplateQuality(
+        template,
+        brandKit,
+        styleReferences
+      )
 
       const processingTime = Date.now() - startTime
 
@@ -139,7 +190,9 @@ export class CampaignTemplateService {
         { err: error, workspaceId: request.workspaceId },
         'Campaign template generation failed'
       )
-      throw new Error(`Failed to generate campaign template: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to generate campaign template: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -165,13 +218,23 @@ export class CampaignTemplateService {
       )
 
       // Generate campaign from template
-      const campaign = await this.createCampaignFromTemplate(template, campaignName, specificRequirements)
+      const campaign = await this.createCampaignFromTemplate(
+        template,
+        campaignName,
+        specificRequirements
+      )
 
       // Generate platform-specific adaptations
-      const adaptations = await this.generatePlatformAdaptations(template, platforms || template.targetPlatforms)
+      const adaptations = await this.generatePlatformAdaptations(
+        template,
+        platforms || template.targetPlatforms
+      )
 
       // Generate performance predictions
-      const performance = await this.predictCampaignPerformance(campaign, adaptations)
+      const performance = await this.predictCampaignPerformance(
+        campaign,
+        adaptations
+      )
 
       const result: TemplateApplicationResult = {
         id: `template-application-${Date.now()}`,
@@ -194,7 +257,9 @@ export class CampaignTemplateService {
       return result
     } catch (error) {
       log.error({ err: error, templateId }, 'Template application failed')
-      throw new Error(`Failed to apply campaign template: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to apply campaign template: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -206,7 +271,7 @@ export class CampaignTemplateService {
     workspaceId: string
   ): CampaignTemplate[] {
     return Array.from(this.templates.values()).filter(
-      template =>
+      (template) =>
         template.category === category &&
         template.workspaceId === workspaceId &&
         template.isActive
@@ -222,17 +287,18 @@ export class CampaignTemplateService {
     limit = 10
   ): CampaignTemplate[] {
     const allTemplates = Array.from(this.templates.values()).filter(
-      template => template.workspaceId === workspaceId && template.isActive
+      (template) => template.workspaceId === workspaceId && template.isActive
     )
 
     const queryLower = query.toLowerCase()
 
     return allTemplates
-      .filter(template =>
-        template.name.toLowerCase().includes(queryLower) ||
-        template.description.toLowerCase().includes(queryLower) ||
-        template.industry.toLowerCase().includes(queryLower) ||
-        template.tags.some(tag => tag.toLowerCase().includes(queryLower))
+      .filter(
+        (template) =>
+          template.name.toLowerCase().includes(queryLower) ||
+          template.description.toLowerCase().includes(queryLower) ||
+          template.industry.toLowerCase().includes(queryLower) ||
+          template.tags.some((tag) => tag.toLowerCase().includes(queryLower))
       )
       .slice(0, limit)
   }
@@ -254,14 +320,72 @@ export class CampaignTemplateService {
       industry: request.industry,
       targetAudience: request.targetAudience,
       targetPlatforms: request.platforms,
-      contentStructure: await this.generateContentStructure(request, brandKit),
-      messagingGuidelines: await this.generateMessagingGuidelines(request, brandKit),
-      visualGuidelines: await this.generateVisualGuidelines(request, brandKit, styleReferences),
-      platformOptimizations: await this.generatePlatformOptimizations(request),
+      contentStructure: {
+        phases: {
+          hook: 'Attention-grabbing opening',
+          body: 'Main content and value proposition',
+          cta: 'Clear call-to-action',
+        },
+        contentTypes: this.generateContentTypes(
+          request.campaignType,
+          request.platforms
+        ),
+      },
+      messagingGuidelines: await this.generateMessagingGuidelines(
+        request,
+        brandKit
+      ),
+      visualGuidelines: await this.generateVisualGuidelines(
+        request,
+        brandKit,
+        styleReferences
+      ),
+      platformOptimizations:
+        await this.generatePlatformOptimizationsStructured(request),
       successMetrics: await this.generateSuccessMetrics(request),
       tags: this.generateTemplateTags(request),
       isActive: true,
-      usageCount: 0,
+      templateStructure: {
+        contentTypes: this.generateContentTypes(
+          request.campaignType,
+          request.platforms
+        ) as ('image' | 'carousel' | 'story' | 'video')[],
+        captionPatterns: {
+          hook: ['Attention-grabbing opening line'],
+          body: ['Main content with value proposition'],
+          cta: ['Clear call-to-action'],
+          hashtags: ['Relevant hashtags for platform'],
+        },
+        visualStyle: {
+          colorStrategy: 'brand-colors',
+          layoutPattern: 'grid',
+          textTreatment: 'bold-headlines',
+        },
+        suggestedAssets: {
+          types: ['product', 'lifestyle'],
+          layouts: ['product-focused', 'lifestyle-integrated'],
+        },
+      },
+      placeholderVariables: {
+        productName: {
+          type: 'text',
+          description: 'Name of the product or service',
+          example: 'Premium Coffee Beans',
+          required: true,
+        },
+        targetAudience: {
+          type: 'text',
+          description: 'Description of target audience',
+          example: 'Coffee enthusiasts aged 25-45',
+          required: false,
+        },
+      },
+      usageStats: {
+        timesUsed: 0,
+        successRate: 0,
+        avgEngagement: 0,
+      },
+      isPremium: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -277,33 +401,32 @@ export class CampaignTemplateService {
     brandKit?: BrandKit
   ): Promise<CampaignTemplate['contentStructure']> {
     try {
-      const aiStructure = await this.generateAIContentStructure(request, brandKit)
+      const aiStructure = await this.generateAIContentStructure(
+        request,
+        brandKit
+      )
       if (aiStructure) {
         return aiStructure
       }
     } catch (error) {
-      log.warn({ err: error }, 'AI content structure generation failed, using fallback')
+      log.warn(
+        { err: error },
+        'AI content structure generation failed, using fallback'
+      )
     }
 
-    // Fallback to basic structure
-    const baseStructure = {
-      phases: this.generateCampaignPhases(request.campaignType),
-      touchpoints: this.generateTouchpoints(request.platforms),
-      contentTypes: this.generateContentTypes(request.campaignType, request.platforms),
-      frequency: this.generateContentFrequency(request.platforms),
-      messagingHierarchy: ['primary-message', 'secondary-benefits', 'social-proof', 'call-to-action'],
+    // Fallback to basic structure with proper interface format
+    return {
+      phases: {
+        hook: 'Attention-grabbing opening to capture interest',
+        body: 'Main content delivering value proposition and benefits',
+        cta: 'Clear call-to-action driving desired behavior',
+      },
+      contentTypes: this.generateContentTypes(
+        request.campaignType,
+        request.platforms
+      ),
     }
-
-    // Add brand-specific elements if brand kit is available
-    if (brandKit) {
-      return {
-        ...baseStructure,
-        brandVoice: brandKit.brandVoice || 'professional',
-        keyMessages: brandKit.keyDifferentiators || [],
-      }
-    }
-
-    return baseStructure
   }
 
   /**
@@ -325,38 +448,37 @@ CAMPAIGN DETAILS:
 - Platforms: ${request.platforms.join(', ')}
 - Target Audience: ${JSON.stringify(request.targetAudience, null, 2)}
 
-${brandKit ? `BRAND DETAILS:
+${
+  brandKit
+    ? `BRAND DETAILS:
 - Values: ${brandKit.values?.join(', ') || 'Not specified'}
-- Voice: ${brandKit.brandVoice || 'Not specified'}
-- Key Differentiators: ${brandKit.keyDifferentiators?.join(', ') || 'Not specified'}` : 'No brand kit provided'}
+- Voice: ${brandKit.voicePrompt || 'Not specified'}
+- Key Differentiators: ${brandKit.keyDifferentiators?.join(', ') || 'Not specified'}`
+    : 'No brand kit provided'
+}
 
 Generate a detailed content structure with:
-1. Campaign phases (awareness, consideration, conversion)
-2. Platform touchpoints
-3. Content types by platform
-4. Posting frequency recommendations
-5. Messaging hierarchy
-6. Brand voice integration
-7. Key messages based on audience pain points
+1. Campaign phases (hook, body, cta structure)
+2. Content types by platform
+3. Messaging hierarchy
 
 Return JSON with:
 {
-  "phases": ["phase1", "phase2", ...],
-  "touchpoints": ["touchpoint1", "touchpoint2", ...],
-  "contentTypes": ["type1", "type2", ...],
-  "frequency": {"platform1": "frequency", "platform2": "frequency"},
-  "messagingHierarchy": ["step1", "step2", ...],
-  "brandVoice": "description",
-  "keyMessages": ["message1", "message2", ...]
+  "phases": {
+    "hook": "description of hook phase",
+    "body": "description of body phase", 
+    "cta": "description of cta phase"
+  },
+  "contentTypes": ["type1", "type2", ...]
 }
 
 Make it specific and actionable for the campaign type and target audience.`
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "user", content: prompt }],
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     })
 
     const aiStructure = JSON.parse(response.choices[0].message.content || '{}')
@@ -371,50 +493,37 @@ Make it specific and actionable for the campaign type and target audience.`
     brandKit?: BrandKit
   ): Promise<string[]> {
     try {
-      const aiGuidelines = await this.generateAIMessagingGuidelines(request, brandKit)
+      const aiGuidelines = await this.generateAIMessagingGuidelines(
+        request,
+        brandKit
+      )
       if (aiGuidelines && aiGuidelines.length > 0) {
         return aiGuidelines
       }
     } catch (error) {
-      log.warn({ err: error }, 'AI messaging guidelines generation failed, using fallback')
+      log.warn(
+        { err: error },
+        'AI messaging guidelines generation failed, using fallback'
+      )
     }
 
     // Fallback to basic guidelines
     const guidelines = [
       `Focus on solving ${request.targetAudience.painPoints.join(', ')}`,
-      `Use language that resonates with ${request.targetAudience.psychographics.join(', ')}`,
+      `Use language that resonates with ${request.targetAudience.interests.join(', ')}`,
       `Highlight benefits relevant to ${request.targetAudience.interests.join(', ')}`,
       'Maintain consistent brand voice across all platforms',
       'Include clear calls-to-action in each message',
     ]
 
+    // Add brand-specific elements if brand kit is available
     if (brandKit) {
-      guidelines.push(`Incorporate brand values: ${brandKit.values?.join(', ') || 'professionalism and innovation'}`)
-      guidelines.push(`Use brand tone: ${brandKit.toneOfVoice || 'professional and approachable'}`)
-    }
-
-    // Add campaign type specific guidelines
-    switch (request.campaignType) {
-      case 'product-launch':
-        guidelines.push('Build anticipation through teaser content')
-        guidelines.push('Highlight unique selling propositions clearly')
-        guidelines.push('Include launch-specific urgency and scarcity')
-        break
-      case 'brand-awareness':
-        guidelines.push('Focus on brand story and values')
-        guidelines.push('Create emotionally resonant content')
-        guidelines.push('Encourage social sharing and engagement')
-        break
-      case 'lead-generation':
-        guidelines.push('Include lead magnets and value propositions')
-        guidelines.push('Use clear benefit-driven headlines')
-        guidelines.push('Minimize friction in conversion process')
-        break
-      case 'event-promotion':
-        guidelines.push('Create event-specific excitement and urgency')
-        guidelines.push('Provide clear date, time, and location information')
-        guidelines.push('Include registration details and benefits')
-        break
+      guidelines.push(
+        `Incorporate brand values: ${brandKit.values?.join(', ') || 'professionalism and innovation'}`
+      )
+      guidelines.push(
+        `Use brand tone: ${brandKit.toneOfVoice || 'professional and approachable'}`
+      )
     }
 
     return guidelines
@@ -438,17 +547,20 @@ CAMPAIGN DETAILS:
 - Industry: ${request.industry}
 - Description: ${request.description}
 - Target Audience Pain Points: ${request.targetAudience.painPoints.join(', ')}
-- Target Audience Psychographics: ${request.targetAudience.psychographics.join(', ')}
 - Target Audience Interests: ${request.targetAudience.interests.join(', ')}
 
-${brandKit ? `BRAND DETAILS:
+${
+  brandKit
+    ? `BRAND DETAILS:
 - Values: ${brandKit.values?.join(', ') || 'Not specified'}
 - Tone of Voice: ${brandKit.toneOfVoice || 'Not specified'}
-- Key Differentiators: ${brandKit.keyDifferentiators?.join(', ') || 'Not specified'}` : 'No brand kit provided'}
+- Key Differentiators: ${brandKit.keyDifferentiators?.join(', ') || 'Not specified'}`
+    : 'No brand kit provided'
+}
 
 Generate 8-12 specific, actionable messaging guidelines that will:
 1. Address the target audience's pain points
-2. Use language that resonates with their psychographics
+2. Use language that resonates with their interests and demographics
 3. Highlight benefits relevant to their interests
 4. Incorporate brand voice and values
 5. Include specific call-to-action strategies
@@ -461,10 +573,10 @@ Return as a JSON array of strings: ["guideline1", "guideline2", ...]
 Make guidelines specific, actionable, and tailored to the campaign type and audience.`
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "user", content: prompt }],
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.8,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
@@ -480,12 +592,19 @@ Make guidelines specific, actionable, and tailored to the campaign type and audi
     styleReferences?: StyleReference[]
   ): Promise<string[]> {
     try {
-      const aiGuidelines = await this.generateAIVisualGuidelines(request, brandKit, styleReferences)
+      const aiGuidelines = await this.generateAIVisualGuidelines(
+        request,
+        brandKit,
+        styleReferences
+      )
       if (aiGuidelines && aiGuidelines.length > 0) {
         return aiGuidelines
       }
     } catch (error) {
-      log.warn({ err: error }, 'AI visual guidelines generation failed, using fallback')
+      log.warn(
+        { err: error },
+        'AI visual guidelines generation failed, using fallback'
+      )
     }
 
     // Fallback to basic guidelines
@@ -498,18 +617,23 @@ Make guidelines specific, actionable, and tailored to the campaign type and audi
     ]
 
     if (brandKit) {
-      guidelines.push(`Use brand colors: ${brandKit.colors?.join(', ') || 'consistent brand palette'}`)
-      guidelines.push(`Use brand typography: ${brandKit.typography?.join(', ') || 'consistent brand fonts'}`)
-      guidelines.push(`Follow brand imagery style: ${brandKit.imageryStyle || 'professional and authentic'}`)
+      guidelines.push(
+        `Use brand colors: ${Object.values(brandKit.colors).join(', ') || 'consistent brand palette'}`
+      )
+      guidelines.push(
+        `Follow brand imagery style: ${brandKit.imageryStyle || 'professional and authentic'}`
+      )
     }
 
     if (styleReferences && styleReferences.length > 0) {
-      guidelines.push(`Incorporate elements from ${styleReferences.length} style references`)
+      guidelines.push(
+        `Incorporate elements from ${styleReferences.length} style references`
+      )
       guidelines.push('Balance brand consistency with creative elements')
     }
 
     // Add platform-specific visual guidelines
-    request.platforms.forEach(platform => {
+    request.platforms.forEach((platform) => {
       switch (platform) {
         case 'instagram':
           guidelines.push('Use square and story formats for Instagram')
@@ -517,11 +641,15 @@ Make guidelines specific, actionable, and tailored to the campaign type and audi
           break
         case 'linkedin':
           guidelines.push('Use professional, business-appropriate imagery')
-          guidelines.push('Include text overlays with clear statistics or benefits')
+          guidelines.push(
+            'Include text overlays with clear statistics or benefits'
+          )
           break
         case 'tiktok':
           guidelines.push('Use vertical video format with engaging motion')
-          guidelines.push('Include trending elements and user-generated content style')
+          guidelines.push(
+            'Include trending elements and user-generated content style'
+          )
           break
         case 'youtube':
           guidelines.push('Use high-resolution thumbnails with clear titles')
@@ -546,15 +674,21 @@ Make guidelines specific, actionable, and tailored to the campaign type and audi
     }
 
     const styleReferenceInfo = styleReferences
-      ? styleReferences.map(ref => `${ref.name}: ${ref.description}`).join('; ')
+      ? styleReferences
+          .map((ref) => `${ref.name}: ${ref.description}`)
+          .join('; ')
       : 'No style references provided'
 
-    const brandInfo = brandKit ? {
-      colors: brandKit.colors?.join(', ') || 'Not specified',
-      typography: brandKit.typography?.join(', ') || 'Not specified',
-      imageryStyle: brandKit.imageryStyle || 'Not specified',
-      logoGuidelines: brandKit.logoGuidelines || 'Not specified'
-    } : null
+    const brandInfo = brandKit
+      ? {
+          colors: Object.values(brandKit.colors).join(', ') || 'Not specified',
+          fonts:
+            `${brandKit.fonts.heading}, ${brandKit.fonts.body}` ||
+            'Not specified',
+          imageryStyle: brandKit.imageryStyle || 'Not specified',
+          logoGuidelines: 'Include brand logo consistently but subtly',
+        }
+      : null
 
     const prompt = `Generate comprehensive visual design guidelines for a marketing campaign:
 
@@ -564,11 +698,15 @@ CAMPAIGN DETAILS:
 - Platforms: ${request.platforms.join(', ')}
 - Target Audience: ${JSON.stringify(request.targetAudience.demographics)}
 
-${brandInfo ? `BRAND VISUAL IDENTITY:
+${
+  brandInfo
+    ? `BRAND VISUAL IDENTITY:
 - Colors: ${brandInfo.colors}
-- Typography: ${brandInfo.typography}
+- Fonts: ${brandInfo.fonts}
 - Imagery Style: ${brandInfo.imageryStyle}
-- Logo Guidelines: ${brandInfo.logoGuidelines}` : 'No brand kit provided'}
+- Logo Guidelines: ${brandInfo.logoGuidelines}`
+    : 'No brand kit provided'
+}
 
 STYLE REFERENCES:
 ${styleReferenceInfo}
@@ -592,10 +730,10 @@ Return as a JSON array of strings: ["guideline1", "guideline2", ...]
 Make guidelines specific, actionable, and tailored to each platform's visual requirements.`
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "user", content: prompt }],
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
@@ -603,72 +741,182 @@ Make guidelines specific, actionable, and tailored to each platform's visual req
   }
 
   /**
-   * Generate AI-powered platform-specific optimizations
+   * Generate AI-powered platform-specific optimizations with proper structure
    */
-  private async generatePlatformOptimizations(
+  private async generatePlatformOptimizationsStructured(
     request: CampaignTemplateGenerationRequest
-  ): Promise<{ [platform: string]: string[] }> {
+  ): Promise<
+    Record<
+      string,
+      {
+        tone: string
+        characterLimits: {
+          headline: number
+          body: number
+          cta: number
+          primaryText: number
+        }
+        bestPractices: string[]
+        adjustments: Record<string, string>
+      }
+    >
+  > {
     try {
-      const aiOptimizations = await this.generateAIPlatformOptimizations(request)
+      const aiOptimizations =
+        await this.generateAIPlatformOptimizationsStructured(request)
       if (aiOptimizations && Object.keys(aiOptimizations).length > 0) {
         return aiOptimizations
       }
     } catch (error) {
-      log.warn({ err: error }, 'AI platform optimizations generation failed, using fallback')
+      log.warn(
+        { err: error },
+        'AI platform optimizations generation failed, using fallback'
+      )
     }
 
-    // Fallback to basic optimizations
-    const optimizations: { [platform: string]: string[] } = {}
+    // Fallback to basic optimizations with proper structure
+    const optimizations: Record<
+      string,
+      {
+        tone: string
+        characterLimits: {
+          headline: number
+          body: number
+          cta: number
+          primaryText: number
+        }
+        bestPractices: string[]
+        adjustments: Record<string, string>
+      }
+    > = {}
 
-    request.platforms.forEach(platform => {
+    request.platforms.forEach((platform) => {
       switch (platform) {
         case 'instagram':
-          optimizations[platform] = [
-            'Post during peak engagement hours (9-11 AM, 7-9 PM)',
-            'Use 15-30 relevant hashtags',
-            'Include stories with interactive elements',
-            'Leverage carousel posts for detailed content',
-          ]
+          optimizations[platform] = {
+            tone: 'casual and engaging',
+            characterLimits: {
+              headline: 125,
+              body: 2200,
+              cta: 30,
+              primaryText: 125,
+            },
+            bestPractices: [
+              'Post during peak engagement hours (9-11 AM, 7-9 PM)',
+              'Use 15-30 relevant hashtags',
+              'Include stories with interactive elements',
+              'Leverage carousel posts for detailed content',
+            ],
+            adjustments: {
+              'mobile-optimization': 'square format preferred',
+              'hashtag-strategy': 'mix of popular and niche hashtags',
+            },
+          }
           break
         case 'facebook':
-          optimizations[platform] = [
-            'Mix of organic and boosted content',
-            'Include share-worthy content formats',
-            'Use Facebook Groups for community building',
-            'Optimize post length for mobile reading',
-          ]
+          optimizations[platform] = {
+            tone: 'conversational and community-focused',
+            characterLimits: {
+              headline: 40,
+              body: 63206,
+              cta: 30,
+              primaryText: 40,
+            },
+            bestPractices: [
+              'Mix of organic and boosted content',
+              'Include share-worthy content formats',
+              'Use Facebook Groups for community building',
+              'Optimize post length for mobile reading',
+            ],
+            adjustments: {
+              'content-format': 'mix of image, video, and link posts',
+              'engagement-focus': 'encourage comments and shares',
+            },
+          }
           break
         case 'linkedin':
-          optimizations[platform] = [
-            'Post during business hours (Tuesday-Thursday)',
-            'Include professional insights and statistics',
-            'Use LinkedIn articles for long-form content',
-            'Engage with relevant industry groups',
-          ]
+          optimizations[platform] = {
+            tone: 'professional and insightful',
+            characterLimits: {
+              headline: 70,
+              body: 3000,
+              cta: 30,
+              primaryText: 70,
+            },
+            bestPractices: [
+              'Post during business hours (Tuesday-Thursday)',
+              'Include professional insights and statistics',
+              'Use LinkedIn articles for long-form content',
+              'Engage with relevant industry groups',
+            ],
+            adjustments: {
+              'content-type': 'focus on thought leadership',
+              'visual-style': 'professional imagery with text overlays',
+            },
+          }
           break
         case 'tiktok':
-          optimizations[platform] = [
-            'Create short, attention-grabbing content (15-30 seconds)',
-            'Use trending sounds and effects',
-            'Include clear call-to-actions in captions',
-            'Post frequently to maintain engagement',
-          ]
+          optimizations[platform] = {
+            tone: 'energetic and entertaining',
+            characterLimits: {
+              headline: 80,
+              body: 2200,
+              cta: 30,
+              primaryText: 80,
+            },
+            bestPractices: [
+              'Create short, attention-grabbing content (15-30 seconds)',
+              'Use trending sounds and effects',
+              'Include clear call-to-actions in captions',
+              'Post frequently to maintain engagement',
+            ],
+            adjustments: {
+              'video-format': 'vertical 9:16 aspect ratio',
+              'content-style': 'fast-paced and trend-driven',
+            },
+          }
           break
         case 'youtube':
-          optimizations[platform] = [
-            'Create compelling thumbnails with clear titles',
-            'Optimize video descriptions with keywords',
-            'Include end screens with calls-to-action',
-            'Use YouTube Stories for behind-the-scenes content',
-          ]
+          optimizations[platform] = {
+            tone: 'educational and entertaining',
+            characterLimits: {
+              headline: 70,
+              body: 5000,
+              cta: 30,
+              primaryText: 70,
+            },
+            bestPractices: [
+              'Create compelling thumbnails with clear titles',
+              'Optimize video descriptions with keywords',
+              'Include end screens with calls-to-action',
+              'Use YouTube Stories for behind-the-scenes content',
+            ],
+            adjustments: {
+              'thumbnail-design': 'high contrast with readable text',
+              'seo-optimization': 'keyword-rich titles and descriptions',
+            },
+          }
           break
         case 'twitter':
-          optimizations[platform] = [
-            'Keep tweets concise and impactful',
-            'Use relevant hashtags and mentions',
-            'Include visual content in tweets',
-            'Engage in real-time conversations and trends',
-          ]
+          optimizations[platform] = {
+            tone: 'concise and conversational',
+            characterLimits: {
+              headline: 280,
+              body: 280,
+              cta: 30,
+              primaryText: 280,
+            },
+            bestPractices: [
+              'Keep tweets concise and impactful',
+              'Use relevant hashtags and mentions',
+              'Include visual content in tweets',
+              'Engage in real-time conversations and trends',
+            ],
+            adjustments: {
+              'thread-strategy': 'break complex messages into threads',
+              timing: 'post during peak hours for maximum reach',
+            },
+          }
           break
       }
     })
@@ -677,52 +925,93 @@ Make guidelines specific, actionable, and tailored to each platform's visual req
   }
 
   /**
-   * Generate platform optimizations using AI
+   * Generate platform optimizations using AI with proper structure
    */
-  private async generateAIPlatformOptimizations(
+  private async generateAIPlatformOptimizationsStructured(
     request: CampaignTemplateGenerationRequest
-  ): Promise<{ [platform: string]: string[] } | null> {
+  ): Promise<Record<
+    string,
+    {
+      tone: string
+      characterLimits: {
+        headline: number
+        body: number
+        cta: number
+        primaryText: number
+      }
+      bestPractices: string[]
+      adjustments: Record<string, string>
+    }
+  > | null> {
     if (!process.env.OPENAI_API_KEY) {
       return null
     }
 
-    const prompt = `Generate platform-specific optimization strategies for a marketing campaign:
+    const prompt = `Generate platform-specific optimization strategies for a marketing campaign with detailed structure:
 
 CAMPAIGN DETAILS:
 - Type: ${request.campaignType}
 - Industry: ${request.industry}
 - Target Audience: ${JSON.stringify(request.targetAudience.demographics)}
 - Platforms: ${request.platforms.join(', ')}
-- Target Audience Psychographics: ${request.targetAudience.psychographics.join(', ')}
 - Target Audience Interests: ${request.targetAudience.interests.join(', ')}
 
-For each platform, generate 5-7 specific optimization strategies that cover:
-1. Best posting times and frequency
-2. Content format optimization
-3. Engagement strategies
-4. Platform-specific features to leverage
-5. Hashtag and discovery strategies
-6. Community building approaches
-7. Algorithm optimization tactics
+For each platform, generate optimization details with:
+1. Recommended tone for the platform
+2. Character limits for different content elements
+3. Best practices (5-7 specific strategies)
+4. Platform-specific adjustments (key-value pairs)
+5. Recommended posting cadence if provided (respect request.targetAudience.postingFrequency)
+6. How to weave brand voice/tone (${JSON.stringify(request.targetAudience.brandVoice || {})}) into copy
 
-Return JSON with platform as keys and array of optimizations as values:
+Return JSON with platform as keys and structured objects as values:
 {
-  "instagram": ["strategy1", "strategy2", ...],
-  "facebook": ["strategy1", "strategy2", ...],
+  "instagram": {
+    "tone": "casual and engaging",
+    "characterLimits": {
+      "headline": 125,
+      "body": 2200,
+      "cta": 30,
+      "primaryText": 125
+    },
+    "bestPractices": ["strategy1", "strategy2", ...],
+    "adjustments": {
+      "mobile-optimization": "square format preferred",
+      "hashtag-strategy": "mix of popular and niche hashtags"
+    }
+  },
   ...
 }
 
 Make strategies specific to the campaign type, industry, and target audience.`
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "user", content: prompt }],
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
-    return result.optimizations || result || null
+    return result || null
+  }
+
+  /**
+   * Generate AI-powered platform-specific optimizations (legacy method for compatibility)
+   */
+  private async generatePlatformOptimizations(
+    request: CampaignTemplateGenerationRequest
+  ): Promise<{ [platform: string]: string[] }> {
+    const structured =
+      await this.generatePlatformOptimizationsStructured(request)
+
+    // Convert structured format to simple string arrays for backward compatibility
+    const simple: { [platform: string]: string[] } = {}
+    for (const [platform, data] of Object.entries(structured)) {
+      simple[platform] = data.bestPractices
+    }
+
+    return simple
   }
 
   /**
@@ -737,7 +1026,10 @@ Make strategies specific to the campaign type, industry, and target audience.`
         return aiMetrics
       }
     } catch (error) {
-      log.warn({ err: error }, 'AI success metrics generation failed, using fallback')
+      log.warn(
+        { err: error },
+        'AI success metrics generation failed, using fallback'
+      )
     }
 
     // Fallback to basic metrics
@@ -812,10 +1104,10 @@ Return as a JSON array of strings: ["metric1", "metric2", ...]
 Make metrics specific, actionable, and relevant to the campaign type and industry.`
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "user", content: prompt }],
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.6,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
@@ -825,21 +1117,40 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
   /**
    * Generate template tags
    */
-  private generateTemplateTags(request: CampaignTemplateGenerationRequest): string[] {
-    const tags = [
-      request.industry,
-      request.campaignType,
-      ...request.platforms,
-    ]
+  private generateTemplateTags(
+    request: CampaignTemplateGenerationRequest
+  ): string[] {
+    const tags = [request.industry, request.campaignType, ...request.platforms]
 
-    if (request.targetAudience.demographics.includes('b2b')) {
-      tags.push('b2b')
+    // Add demographic-based tags
+    if (
+      request.targetAudience.demographics.ageRange?.includes?.('25-35') ||
+      request.targetAudience.demographics.ageRange?.includes?.('18-24')
+    ) {
+      tags.push('young-adults')
     }
-    if (request.targetAudience.demographics.includes('b2c')) {
-      tags.push('b2c')
+    if (
+      request.targetAudience.demographics.location
+        ?.toLowerCase()
+        ?.includes('urban')
+    ) {
+      tags.push('urban')
     }
 
     tags.push(...request.targetAudience.interests.slice(0, 2))
+    if (request.targetAudience.psychographics?.length) {
+      tags.push(...request.targetAudience.psychographics.slice(0, 2))
+    }
+    if (request.targetAudience.demographics.segments?.length) {
+      tags.push(...request.targetAudience.demographics.segments.slice(0, 2))
+    }
+    if (request.targetAudience.buyerJourneyStages?.length) {
+      tags.push(
+        ...request.targetAudience.buyerJourneyStages
+          .map((stage) => `${stage}-stage`)
+          .slice(0, 2)
+      )
+    }
 
     return tags
   }
@@ -862,17 +1173,26 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
 
   private generateTouchpoints(platforms: string[]): string[] {
     const touchpoints = []
-    if (platforms.includes('instagram')) touchpoints.push('instagram-feed', 'instagram-stories', 'instagram-reels')
-    if (platforms.includes('facebook')) touchpoints.push('facebook-feed', 'facebook-stories', 'facebook-groups')
-    if (platforms.includes('linkedin')) touchpoints.push('linkedin-feed', 'linkedin-articles')
-    if (platforms.includes('tiktok')) touchpoints.push('tiktok-feed', 'tiktok-stories')
-    if (platforms.includes('youtube')) touchpoints.push('youtube-videos', 'youtube-shorts')
-    if (platforms.includes('twitter')) touchpoints.push('twitter-feed', 'twitter-spaces')
+    if (platforms.includes('instagram'))
+      touchpoints.push('instagram-feed', 'instagram-stories', 'instagram-reels')
+    if (platforms.includes('facebook'))
+      touchpoints.push('facebook-feed', 'facebook-stories', 'facebook-groups')
+    if (platforms.includes('linkedin'))
+      touchpoints.push('linkedin-feed', 'linkedin-articles')
+    if (platforms.includes('tiktok'))
+      touchpoints.push('tiktok-feed', 'tiktok-stories')
+    if (platforms.includes('youtube'))
+      touchpoints.push('youtube-videos', 'youtube-shorts')
+    if (platforms.includes('twitter'))
+      touchpoints.push('twitter-feed', 'twitter-spaces')
 
     return touchpoints
   }
 
-  private generateContentTypes(campaignType: string, platforms: string[]): string[] {
+  private generateContentTypes(
+    campaignType: string,
+    platforms: string[]
+  ): string[] {
     const types = ['static-image', 'carousel', 'story']
 
     if (platforms.includes('youtube') || platforms.includes('tiktok')) {
@@ -888,10 +1208,12 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
     return types
   }
 
-  private generateContentFrequency(platforms: string[]): { [platform: string]: string } {
+  private generateContentFrequency(platforms: string[]): {
+    [platform: string]: string
+  } {
     const frequency: { [platform: string]: string } = {}
 
-    platforms.forEach(platform => {
+    platforms.forEach((platform) => {
       switch (platform) {
         case 'twitter':
           frequency[platform] = '3-5 times per day'
@@ -926,16 +1248,24 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
     request: CampaignTemplateGenerationRequest,
     template: CampaignTemplate
   ): Promise<CampaignTemplateGenerationResult['appliedGuidelines']> {
+    // Convert structured platform optimizations to string arrays for the result interface
+    const platformOptimizations: { [platform: string]: string[] } = {}
+    for (const [platform, data] of Object.entries(
+      template.platformOptimizations
+    )) {
+      platformOptimizations[platform] = data.bestPractices
+    }
+
     return {
       messaging: template.messagingGuidelines,
       visualStyle: template.visualGuidelines,
       contentStrategy: [
-        `Follow ${template.contentStructure.phases.length}-phase campaign structure`,
+        `Follow structured campaign phases: hook, body, and call-to-action`,
         `Maintain consistent brand voice across ${template.targetPlatforms.length} platforms`,
         `Use content types: ${Array.isArray(template.contentStructure.contentTypes) ? template.contentStructure.contentTypes.join(', ') : 'mixed content'}`,
         `Post frequency guidelines by platform`,
       ],
-      platformOptimizations: template.platformOptimizations,
+      platformOptimizations,
     }
   }
 
@@ -955,15 +1285,21 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
     ]
 
     if (!brandKit) {
-      recommendations.push('Consider creating a brand kit for better consistency')
+      recommendations.push(
+        'Consider creating a brand kit for better consistency'
+      )
     }
 
     if (request.platforms.length < 3) {
-      recommendations.push('Consider expanding to additional platforms for greater reach')
+      recommendations.push(
+        'Consider expanding to additional platforms for greater reach'
+      )
     }
 
     if (request.campaignType === 'product-launch') {
-      recommendations.push('Prepare customer service and support for launch day inquiries')
+      recommendations.push(
+        'Prepare customer service and support for launch day inquiries'
+      )
     }
 
     return recommendations
@@ -984,7 +1320,8 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
     // Assess completeness
     if (template.messagingGuidelines.length > 5) completeness += 5
     if (template.visualGuidelines.length > 5) completeness += 5
-    if (Object.keys(template.platformOptimizations).length > 0) completeness += 5
+    if (Object.keys(template.platformOptimizations).length > 0)
+      completeness += 5
     if (template.successMetrics.length > 5) completeness += 5
 
     // Assess brand alignment
@@ -993,11 +1330,16 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
 
     // Assess platform optimization
     if (template.targetPlatforms.length >= 3) platformOptimization += 10
-    if (Object.keys(template.platformOptimizations).length === template.targetPlatforms.length) {
+    if (
+      Object.keys(template.platformOptimizations).length ===
+      template.targetPlatforms.length
+    ) {
       platformOptimization += 5
     }
 
-    const overallScore = Math.round((completeness + brandAlignment + platformOptimization) / 3)
+    const overallScore = Math.round(
+      (completeness + brandAlignment + platformOptimization) / 3
+    )
 
     return {
       completeness: Math.min(100, completeness),
@@ -1016,7 +1358,11 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
     specificRequirements: string[]
   ): Promise<Campaign> {
     try {
-      const aiCampaign = await this.generateAICampaignFromTemplate(template, campaignName, specificRequirements)
+      const aiCampaign = await this.generateAICampaignFromTemplate(
+        template,
+        campaignName,
+        specificRequirements
+      )
       if (aiCampaign) {
         return aiCampaign
       }
@@ -1030,19 +1376,22 @@ Make metrics specific, actionable, and relevant to the campaign type and industr
       name: campaignName,
       description: `${template.description} - Customized for specific requirements`,
       workspaceId: template.workspaceId,
+      brandKitId: '', // Will be set when campaign is created
+      objective: 'awareness', // Default objective
+      launchType: 'new-launch',
+      funnelStage: 'cold',
+      primaryOffer: '',
+      primaryCTA: '',
+      secondaryCTA: '',
+      placements: template.targetPlatforms as (
+        | 'ig-feed'
+        | 'ig-story'
+        | 'fb-feed'
+        | 'fb-story'
+        | 'li-feed'
+      )[],
+      targetAudience: `${template.targetAudience.demographics.ageRange} ${template.targetAudience.demographics.gender} in ${template.targetAudience.demographics.location}`,
       status: 'draft',
-      templateId: template.id,
-      targetAudience: template.targetAudience,
-      platforms: template.targetPlatforms,
-      startDate: new Date(),
-      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-      budget: {
-        total: 10000,
-        allocated: {},
-        spent: 0,
-      },
-      objectives: template.successMetrics,
-      assets: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -1098,10 +1447,10 @@ Return JSON with:
 Make it realistic and actionable for the campaign type and industry.`
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "user", content: prompt }],
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.6,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
@@ -1110,22 +1459,28 @@ Make it realistic and actionable for the campaign type and industry.`
     const campaign: Campaign = {
       id: `campaign-${Date.now()}`,
       name: campaignName,
-      description: result.description || `${template.description} - Customized for specific requirements`,
+      description:
+        result.description ||
+        `${template.description} - Customized for specific requirements`,
       workspaceId: template.workspaceId,
+      brandKitId: '', // Will be set when campaign is created
+      objective: 'awareness', // Default objective
+      launchType: 'new-launch',
+      funnelStage: 'cold',
+      primaryOffer: result.budget?.total
+        ? `$${result.budget.total} campaign budget`
+        : '',
+      primaryCTA: 'Learn More',
+      secondaryCTA: '',
+      placements: template.targetPlatforms as (
+        | 'ig-feed'
+        | 'ig-story'
+        | 'fb-feed'
+        | 'fb-story'
+        | 'li-feed'
+      )[],
+      targetAudience: `${template.targetAudience.demographics.ageRange} ${template.targetAudience.demographics.gender} in ${template.targetAudience.demographics.location}`,
       status: 'draft',
-      templateId: template.id,
-      targetAudience: template.targetAudience,
-      platforms: template.targetPlatforms,
-      startDate: new Date(),
-      endDate: new Date(Date.now() + (result.duration || 30) * 24 * 60 * 60 * 1000),
-      budget: {
-        total: result.budget?.total || 10000,
-        allocated: result.budget?.allocated || {},
-        spent: 0,
-      },
-      objectives: result.objectives || template.successMetrics,
-      assets: [],
-      contentStrategy: result.contentStrategy,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -1141,16 +1496,22 @@ Make it realistic and actionable for the campaign type and industry.`
     platforms: string[]
   ): Promise<TemplateApplicationResult['adaptations']> {
     try {
-      const aiAdaptations = await this.generateAIPlatformAdaptations(template, platforms)
+      const aiAdaptations = await this.generateAIPlatformAdaptations(
+        template,
+        platforms
+      )
       if (aiAdaptations && aiAdaptations.length > 0) {
         return aiAdaptations
       }
     } catch (error) {
-      log.warn({ err: error }, 'AI platform adaptations generation failed, using fallback')
+      log.warn(
+        { err: error },
+        'AI platform adaptations generation failed, using fallback'
+      )
     }
 
     // Fallback to basic adaptations
-    return platforms.map(platform => ({
+    return platforms.map((platform) => ({
       platform,
       modifications: [
         `Optimize content format for ${platform} specifications`,
@@ -1207,10 +1568,10 @@ Return JSON array with objects:
 Make adaptations specific to each platform's unique characteristics and audience expectations.`
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "user", content: prompt }],
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
@@ -1225,12 +1586,18 @@ Make adaptations specific to each platform's unique characteristics and audience
     adaptations: TemplateApplicationResult['adaptations']
   ): Promise<TemplateApplicationResult['performance']> {
     try {
-      const aiPerformance = await this.generateAIPerformancePrediction(campaign, adaptations)
+      const aiPerformance = await this.generateAIPerformancePrediction(
+        campaign,
+        adaptations
+      )
       if (aiPerformance) {
         return aiPerformance
       }
     } catch (error) {
-      log.warn({ err: error }, 'AI performance prediction failed, using fallback')
+      log.warn(
+        { err: error },
+        'AI performance prediction failed, using fallback'
+      )
     }
 
     // Fallback to basic prediction
@@ -1256,12 +1623,12 @@ Make adaptations specific to each platform's unique characteristics and audience
       return null
     }
 
-    const platforms = adaptations.map(a => a.platform).join(', ')
+    const platforms = adaptations.map((a) => a.platform).join(', ')
     const campaignInfo = {
       name: campaign.name,
-      objectives: campaign.objectives.slice(0, 3).join(', '),
-      targetAudience: JSON.stringify(campaign.targetAudience.demographics),
-      platforms: platforms
+      objectives: campaign.objective, // Single objective, not array
+      targetAudience: campaign.targetAudience,
+      platforms: platforms,
     }
 
     const prompt = `Predict campaign performance metrics for a marketing campaign:
@@ -1296,10 +1663,10 @@ Return JSON with:
 Be realistic and conservative in predictions. Consider this is for planning purposes.`
 
     const response = await this.openai.chat.completions.create({
-      model: "gpt-4-turbo",
-      messages: [{ role: "user", content: prompt }],
+      model: 'gpt-4-turbo',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
-      response_format: { type: "json_object" }
+      response_format: { type: 'json_object' },
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')

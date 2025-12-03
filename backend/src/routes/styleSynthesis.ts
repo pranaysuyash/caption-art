@@ -3,7 +3,10 @@ import { z } from 'zod'
 import { AuthModel, StyleReference, BrandKit, Campaign } from '../models/auth'
 import { createAuthMiddleware } from '../routes/auth'
 import validateRequest from '../middleware/validateRequest'
-import { StyleSynthesisService, StyleMatchResult } from '../services/styleSynthesisService'
+import {
+  StyleSynthesisService,
+  StyleMatchResult,
+} from '../services/styleSynthesisService'
 import { log } from '../middleware/logger'
 import { AuthenticatedRequest } from '../types/auth'
 
@@ -18,8 +21,12 @@ const analyzeStyleSchema = z.object({
 
 const synthesizeStylesSchema = z.object({
   workspaceId: z.string().min(1, 'Workspace ID is required'),
-  styleReferences: z.array(z.string()).min(1, 'At least one style reference is required'),
-  synthesisMode: z.enum(['dominant', 'balanced', 'creative', 'conservative']).optional(),
+  styleReferences: z
+    .array(z.string())
+    .min(1, 'At least one style reference is required'),
+  synthesisMode: z
+    .enum(['dominant', 'balanced', 'creative', 'conservative'])
+    .optional(),
   targetFormat: z.string().optional(),
   brandKitId: z.string().optional(),
   campaignId: z.string().optional(),
@@ -61,12 +68,36 @@ router.post(
         // Try to get from auth model or create mock for testing
         reference = {
           id: referenceId,
+          workspaceId: 'test-workspace',
           name: `Style Reference ${referenceId}`,
           description: 'Mock style reference for analysis',
-          url: `https://example.com/style/${referenceId}`,
-          type: 'image' as const,
-          tags: ['test'],
-          workspaceId: 'test-workspace',
+          referenceImages: [`https://example.com/style/${referenceId}`],
+          extractedStyles: {
+            colorPalette: {
+              primary: [],
+              secondary: [],
+              accent: [],
+            },
+            typography: {
+              fonts: [],
+              weights: [],
+              sizes: [],
+            },
+            composition: {
+              layout: 'centered',
+              spacing: 'normal',
+              balance: 'symmetrical',
+            },
+            visualElements: {
+              gradients: false,
+              shadows: false,
+              borders: false,
+              patterns: false,
+              illustration: false,
+              photography: true,
+            },
+          },
+          usageCount: 0,
           createdAt: new Date(),
         }
         styleReferences.set(referenceId, reference)
@@ -83,7 +114,8 @@ router.post(
         'Analyzing style reference'
       )
 
-      const analysis = await styleSynthesisService.analyzeStyleReference(reference)
+      const analysis =
+        await styleSynthesisService.analyzeStyleReference(reference)
 
       res.json({
         success: true,
@@ -139,8 +171,13 @@ router.post(
           return res.status(404).json({ error: 'Campaign not found' })
         }
 
-        const campaignWorkspace = AuthModel.getWorkspaceById(campaign.workspaceId)
-        if (!campaignWorkspace || campaignWorkspace.agencyId !== req.agency.id) {
+        const campaignWorkspace = AuthModel.getWorkspaceById(
+          campaign.workspaceId
+        )
+        if (
+          !campaignWorkspace ||
+          campaignWorkspace.agencyId !== req.agency.id
+        ) {
           return res.status(403).json({ error: 'Access denied' })
         }
       }
@@ -231,7 +268,11 @@ router.get(
         'Searching for matching styles'
       )
 
-      const matches = await styleSynthesisService.findMatchingStyles(query, workspaceId, limit)
+      const matches = await styleSynthesisService.findMatchingStyles(
+        query,
+        workspaceId,
+        limit
+      )
 
       res.json({
         success: true,
@@ -261,22 +302,20 @@ router.get(
  * GET /api/style-synthesis
  * List all style syntheses for the agency
  */
-router.get(
-  '/',
-  requireAuth,
-  async (req: AuthenticatedRequest, res: any) => {
-    try {
-      const { workspaceId, synthesisMode, page = 1, limit = 20 } = req.query
+router.get('/', requireAuth, async (req: AuthenticatedRequest, res: any) => {
+  try {
+    const { workspaceId, synthesisMode, page = 1, limit = 20 } = req.query
 
-      // Get all workspaces for this agency
-      const agencyWorkspaces = AuthModel.getAllWorkspaces().filter((workspace) =>
-        workspace.agencyId === req.agency.id
-      )
+    // Get all workspaces for this agency
+    const agencyWorkspaces = AuthModel.getAllWorkspaces().filter(
+      (workspace) => workspace.agencyId === req.agency.id
+    )
 
-      const workspaceIds = agencyWorkspaces.map((w) => w.id)
+    const workspaceIds = agencyWorkspaces.map((w) => w.id)
 
-      // Filter style syntheses
-      let filteredSyntheses = Array.from(styleSyntheses.values()).filter((synthesis) => {
+    // Filter style syntheses
+    let filteredSyntheses = Array.from(styleSyntheses.values()).filter(
+      (synthesis) => {
         let matches = true
 
         if (workspaceId) {
@@ -284,43 +323,47 @@ router.get(
         }
 
         if (synthesisMode) {
-          matches = matches && synthesis.result.synthesizedStyle.synthesisMode === synthesisMode
+          matches =
+            matches &&
+            synthesis.result.synthesizedStyle.synthesisMode === synthesisMode
         }
 
-        matches = matches && workspaceIds.includes(synthesis.request.workspaceId)
+        matches =
+          matches && workspaceIds.includes(synthesis.request.workspaceId)
 
         return matches
-      })
+      }
+    )
 
-      // Sort by creation date (newest first)
-      filteredSyntheses.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
+    // Sort by creation date (newest first)
+    filteredSyntheses.sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
 
-      // Pagination
-      const startIndex = (Number(page) - 1) * Number(limit)
-      const endIndex = startIndex + Number(limit)
-      const paginatedSyntheses = filteredSyntheses.slice(startIndex, endIndex)
+    // Pagination
+    const startIndex = (Number(page) - 1) * Number(limit)
+    const endIndex = startIndex + Number(limit)
+    const paginatedSyntheses = filteredSyntheses.slice(startIndex, endIndex)
 
-      res.json({
-        success: true,
-        syntheses: paginatedSyntheses,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: filteredSyntheses.length,
-          totalPages: Math.ceil(filteredSyntheses.length / Number(limit)),
-        },
-      })
-    } catch (error) {
-      log.error(
-        { err: error, requestId: (req as any).requestId },
-        'List style syntheses error'
-      )
-      res.status(500).json({ error: 'Failed to list style syntheses' })
-    }
+    res.json({
+      success: true,
+      syntheses: paginatedSyntheses,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: filteredSyntheses.length,
+        totalPages: Math.ceil(filteredSyntheses.length / Number(limit)),
+      },
+    })
+  } catch (error) {
+    log.error(
+      { err: error, requestId: (req as any).requestId },
+      'List style syntheses error'
+    )
+    res.status(500).json({ error: 'Failed to list style syntheses' })
   }
-)
+})
 
 /**
  * GET /api/style-synthesis/:synthesisId
@@ -340,7 +383,9 @@ router.get(
       }
 
       // Verify workspace access
-      const workspace = AuthModel.getWorkspaceById(synthesis.request.workspaceId)
+      const workspace = AuthModel.getWorkspaceById(
+        synthesis.request.workspaceId
+      )
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -378,7 +423,9 @@ router.post(
       }
 
       // Verify workspace access
-      const workspace = AuthModel.getWorkspaceById(existingSynthesis.request.workspaceId)
+      const workspace = AuthModel.getWorkspaceById(
+        existingSynthesis.request.workspaceId
+      )
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -389,7 +436,10 @@ router.post(
         synthesisMode: synthesisMode || existingSynthesis.request.synthesisMode,
         targetFormat: targetFormat || existingSynthesis.request.targetFormat,
         styleReferences: additionalReferences
-          ? [...existingSynthesis.request.styleReferences, ...additionalReferences]
+          ? [
+              ...existingSynthesis.request.styleReferences,
+              ...additionalReferences,
+            ]
           : existingSynthesis.request.styleReferences,
       }
 
@@ -398,7 +448,8 @@ router.post(
         'Duplicating style synthesis'
       )
 
-      const result = await styleSynthesisService.synthesizeStyles(duplicateRequest)
+      const result =
+        await styleSynthesisService.synthesizeStyles(duplicateRequest)
 
       // Store duplicate
       const duplicate = {
@@ -450,17 +501,16 @@ router.delete(
       }
 
       // Verify workspace access
-      const workspace = AuthModel.getWorkspaceById(existingSynthesis.request.workspaceId)
+      const workspace = AuthModel.getWorkspaceById(
+        existingSynthesis.request.workspaceId
+      )
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
 
       styleSyntheses.delete(synthesisId)
 
-      log.info(
-        { synthesisId },
-        'Style synthesis deleted'
-      )
+      log.info({ synthesisId }, 'Style synthesis deleted')
 
       res.json({
         success: true,
@@ -495,22 +545,37 @@ router.get(
 
       // Calculate stats
       const workspaceSyntheses = Array.from(styleSyntheses.values()).filter(
-        synthesis => synthesis.request.workspaceId === workspaceId
+        (synthesis) => synthesis.request.workspaceId === workspaceId
       )
 
       const stats = {
         totalSyntheses: workspaceSyntheses.length,
-        avgQualityScore: workspaceSyntheses.length > 0
-          ? Math.round(workspaceSyntheses.reduce((sum, s) => sum + s.result.qualityMetrics.overallScore, 0) / workspaceSyntheses.length)
-          : 0,
-        synthesisModes: workspaceSyntheses.reduce((modes, s) => {
-          const mode = s.result.synthesizedStyle.synthesisMode
-          modes[mode] = (modes[mode] || 0) + 1
-          return modes
-        }, {} as Record<string, number>),
-        avgProcessingTime: workspaceSyntheses.length > 0
-          ? Math.round(workspaceSyntheses.reduce((sum, s) => sum + s.result.processingTime, 0) / workspaceSyntheses.length)
-          : 0,
+        avgQualityScore:
+          workspaceSyntheses.length > 0
+            ? Math.round(
+                workspaceSyntheses.reduce(
+                  (sum, s) => sum + s.result.qualityMetrics.overallScore,
+                  0
+                ) / workspaceSyntheses.length
+              )
+            : 0,
+        synthesisModes: workspaceSyntheses.reduce(
+          (modes, s) => {
+            const mode = s.result.synthesizedStyle.synthesisMode
+            modes[mode] = (modes[mode] || 0) + 1
+            return modes
+          },
+          {} as Record<string, number>
+        ),
+        avgProcessingTime:
+          workspaceSyntheses.length > 0
+            ? Math.round(
+                workspaceSyntheses.reduce(
+                  (sum, s) => sum + s.result.processingTime,
+                  0
+                ) / workspaceSyntheses.length
+              )
+            : 0,
       }
 
       res.json({
@@ -522,7 +587,9 @@ router.get(
         { err: error, requestId: (req as any).requestId },
         'Get style synthesis stats error'
       )
-      res.status(500).json({ error: 'Failed to get style synthesis statistics' })
+      res
+        .status(500)
+        .json({ error: 'Failed to get style synthesis statistics' })
     }
   }
 )

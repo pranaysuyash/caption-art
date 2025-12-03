@@ -37,7 +37,7 @@ describe('Server', () => {
 
   describe('createServer', () => {
     it('should create an Express application', async () => {
-      const serverModule = await import('./server.ts')
+      const serverModule = await import('./server')
       const createServer =
         (serverModule as any).createServer ||
         (serverModule as any).default?.createServer
@@ -65,7 +65,7 @@ describe('Server', () => {
             return new Promise<void>(async (resolve, reject) => {
               try {
                 // Import server module dynamically
-                const serverModule = await import('./server.ts')
+                const serverModule = await import('./server')
                 const createServer =
                   (serverModule as any).createServer ||
                   (serverModule as any).default?.createServer

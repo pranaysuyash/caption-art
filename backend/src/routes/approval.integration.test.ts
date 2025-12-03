@@ -9,7 +9,7 @@ describe('Approval API shape', () => {
     const createServer =
       (serverModule as any).createServer ||
       (serverModule as any).default?.createServer
-    app = createServer({ enableRateLimiter: false })
+    app = createServer({ enableRateLimiter: false, loadRoutes: true })
   })
 
   it('should include approvalStatus and approved boolean consistently', async () => {

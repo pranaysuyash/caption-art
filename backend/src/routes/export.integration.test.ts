@@ -10,7 +10,7 @@ describe('Export integration', () => {
     const createServer =
       (serverModule as any).createServer ||
       (serverModule as any).default?.createServer
-    app = createServer({ enableRateLimiter: false })
+    app = createServer({ enableRateLimiter: false, loadRoutes: true })
   })
 
   afterEach(() => {

@@ -43,7 +43,7 @@ describe('Property 3: API key security', () => {
     })
 
     // Disable rate limiter for property tests that run 100 iterations
-    app = createServer({ enableRateLimiter: false })
+    app = createServer({ enableRateLimiter: false, loadRoutes: true })
   })
 
   // Patterns that might indicate API keys or tokens

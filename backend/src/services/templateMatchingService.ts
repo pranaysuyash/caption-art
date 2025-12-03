@@ -727,7 +727,10 @@ export class TemplateMatchingService {
             ],
           },
           linkedin: {
-            adjustments: { tone: 'Professional B2B', addSocialProof: true },
+            adjustments: {
+              tone: 'Professional B2B',
+              addSocialProof: 'Include social proof elements',
+            },
             characterLimits: {
               headline: 60,
               body: 500,

@@ -257,7 +257,7 @@ export class MultiFormatService {
         assetContext,
         formatSpec.platform,
         [formatSpec.platform],
-        'multi-format'
+        'caption'
       )
     }
 
@@ -352,29 +352,63 @@ Blend the above styles while maintaining brand consistency.
         sourceAssetId: request.sourceAssetId,
         workspaceId: request.workspaceId,
         formats: {
-          [formatSpec.type]: {
-            url: processedUrl,
-            thumbnailUrl,
-            dimensions: formatSpec.dimensions,
-            platform:
-              formatSpec.type === 'square'
-                ? formatSpec.platform === 'instagram'
-                  ? 'instagram-feed'
-                  : formatSpec.platform === 'facebook'
-                    ? 'facebook-feed'
-                    : 'linkedin'
-                : formatSpec.type === 'story'
-                  ? formatSpec.platform === 'instagram'
-                    ? 'instagram-story'
-                    : formatSpec.platform === 'facebook'
-                      ? 'facebook-story'
-                      : 'tiktok'
-                  : formatSpec.platform === 'youtube'
-                    ? 'youtube-thumbnail'
-                    : formatSpec.platform === 'facebook'
-                      ? 'facebook-banner'
-                      : 'linkedin-banner',
-          },
+          square:
+            formatSpec.type === 'square'
+              ? {
+                  url: processedUrl,
+                  thumbnailUrl,
+                  dimensions: { width: 1080, height: 1080 },
+                  platform:
+                    formatSpec.platform === 'instagram'
+                      ? 'instagram-feed'
+                      : formatSpec.platform === 'facebook'
+                        ? 'facebook-feed'
+                        : 'linkedin',
+                }
+              : {
+                  url: '',
+                  thumbnailUrl: '',
+                  dimensions: { width: 1080, height: 1080 },
+                  platform: 'instagram-feed',
+                },
+          story:
+            formatSpec.type === 'story'
+              ? {
+                  url: processedUrl,
+                  thumbnailUrl,
+                  dimensions: { width: 1080, height: 1920 },
+                  platform:
+                    formatSpec.platform === 'instagram'
+                      ? 'instagram-story'
+                      : formatSpec.platform === 'facebook'
+                        ? 'facebook-story'
+                        : 'tiktok',
+                }
+              : {
+                  url: '',
+                  thumbnailUrl: '',
+                  dimensions: { width: 1080, height: 1920 },
+                  platform: 'instagram-story',
+                },
+          landscape:
+            formatSpec.type === 'landscape'
+              ? {
+                  url: processedUrl,
+                  thumbnailUrl,
+                  dimensions: { width: 1920, height: 1080 },
+                  platform:
+                    formatSpec.platform === 'youtube'
+                      ? 'youtube-thumbnail'
+                      : formatSpec.platform === 'facebook'
+                        ? 'facebook-banner'
+                        : 'linkedin-banner',
+                }
+              : {
+                  url: '',
+                  thumbnailUrl: '',
+                  dimensions: { width: 1920, height: 1080 },
+                  platform: 'youtube-thumbnail',
+                },
         },
         captionVariationId: request.captionVariationId,
         qualityMetrics,

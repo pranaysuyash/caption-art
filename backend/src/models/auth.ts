@@ -315,6 +315,64 @@ export interface CampaignTemplate {
     | 'content-series'
   description: string
   industry?: string // Tech, Fashion, Food, etc.
+  workspaceId: string
+  isActive: boolean
+  tags: string[]
+  targetPlatforms: string[]
+  targetAudience: {
+    demographics: {
+      ageRange: string
+      gender: string
+      location: string
+      income: string
+      segments?: string[] // e.g. ["Young professionals", "Urban dwellers"]
+      lifestage?: string[] // e.g. ["New parents", "First-job"]
+    }
+    interests: string[]
+    psychographics?: string[]
+    behaviors?: string[]
+    painPoints: string[]
+    motivations?: string[]
+    mediaTouchpoints?: string[]
+    postingFrequency?: {
+      platform: string
+      cadence: string
+      rationale?: string
+    }[]
+    brandVoice?: {
+      tone?: string[]
+      personality?: string[]
+      dos?: string[]
+      donts?: string[]
+      vocabulary?: string[]
+    }
+    buyerJourneyStages?: string[]
+  }
+  contentStructure: {
+    phases: {
+      hook: string
+      body: string
+      cta: string
+    }
+    contentTypes: string[]
+  }
+  messagingGuidelines: string[]
+  visualGuidelines: string[]
+  platformOptimizations: Record<
+    string,
+    {
+      tone: string
+      characterLimits: {
+        headline: number
+        body: number
+        cta: number
+        primaryText: number
+      }
+      bestPractices: string[]
+      adjustments: Record<string, string>
+    }
+  >
+  successMetrics: string[]
   templateStructure: {
     contentTypes: ('image' | 'carousel' | 'story' | 'video')[]
     captionPatterns: {
@@ -388,8 +446,6 @@ export interface CampaignTemplateInstance {
   generatedAt?: Date
   createdAt: Date
 }
-
-
 
 export interface ExportJob {
   id: string
@@ -516,10 +572,14 @@ export interface Campaign {
 
     // Target Audience Deep Dive
     primaryAudience?: {
-      demographics?: string // "Women 25-35, urban, HHI $60k+"
-      psychographics?: string // "Fashion-conscious, value sustainability, active on social media"
+      demographics?: string | string[] // e.g. "Women 25-35, urban, HHI $60k+" or ["Women 25-35", "Urban", "$60k+ HHI"]
+      psychographics?: string | string[] // e.g. "Fashion-conscious, value sustainability" or ["Fashion-conscious", "Sustainability-first"]
       painPoints?: string[] // ["Finding affordable trendy clothes", "Sustainable fashion options"]
       motivations?: string[] // ["Self-expression", "Environmental consciousness", "Social status"]
+      mediaTouchpoints?: string[] // ["IG Stories", "TikTok For You", "LinkedIn feed"]
+      postingCadence?: string // "3x/week IG feed, daily Stories"
+      brandVoice?: string // "Bold, witty, plain-language; avoid jargon"
+      journeyStages?: string[] // ["Awareness", "Consideration"]
     }
 
     // Message Hierarchy
@@ -754,6 +814,35 @@ export class AuthModel {
     updates: Partial<Workspace>
   ): void {
     return WorkspaceModel.updateWorkspace(workspaceId, updates)
+  }
+
+  // Seed an in-memory test user/workspace so README credentials work locally
+  static ensureTestUser(): void {
+    const email = process.env.DEFAULT_TEST_EMAIL || 'test@example.com'
+    const password = process.env.DEFAULT_TEST_PASSWORD || 'testpassword123'
+    const agencyName = process.env.DEFAULT_TEST_AGENCY || 'Test Creative Agency'
+
+    this.findUserByEmail(email)
+      .then(async (existing) => {
+        if (existing) return
+        const { agency, user } = await this.createUser(
+          email,
+          password,
+          agencyName
+        )
+        try {
+          await WorkspaceModel.createWorkspace(agency.id, 'Demo Workspace')
+        } catch (err) {
+          log.warn({ err }, 'Failed to create demo workspace for test user')
+        }
+        log.info(
+          { email, agency: agency.id, user: user.id },
+          'Seeded default test user for local login'
+        )
+      })
+      .catch((err) => {
+        log.warn({ err }, 'Failed to seed default test user')
+      })
   }
 
   // Brand Kit methods

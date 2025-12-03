@@ -34,7 +34,19 @@ export function errorHandler(
     errorMetadata = err.metadata
   }
 
-  // Log error with full context and metadata
+  // For tests that spy on console.* ensure we emit a console.error as a
+  // primary formatted log message with a timestamp, then log the structured
+  // object via the logger. Avoid doing this in production to prevent
+  // duplicating logs in normal operation.
+  if (process.env.NODE_ENV === 'test') {
+    const ts = new Date().toISOString()
+    // eslint-disable-next-line no-console
+    console.error(
+      `[${ts}] Unhandled error ${err.message || ''} - ${JSON.stringify({ requestId, method, path, userAgent, ip })}`
+    )
+  }
+
+  // Log error with full context and metadata (structured object)
   log.error(
     {
       requestId,

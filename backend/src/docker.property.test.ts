@@ -253,7 +253,7 @@ describe('Property 20: Environment equivalence', () => {
           })
 
           // Import server module
-          const serverModule = await import('./server.ts')
+          const serverModule = await import('./server')
           const createServer =
             (serverModule as any).createServer ||
             (serverModule as any).default?.createServer
@@ -287,7 +287,7 @@ describe('Property 20: Environment equivalence', () => {
     process.env.PORT = '3001'
 
     // Import server
-    const serverModule = await import('./server.ts')
+    const serverModule = await import('./server')
     const createServer =
       (serverModule as any).createServer ||
       (serverModule as any).default?.createServer

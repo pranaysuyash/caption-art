@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { WorkspaceList } from './components/agency/WorkspaceList'
 import { CampaignList } from './components/agency/CampaignList'
 import { CampaignDetail } from './components/agency/CampaignDetail'
@@ -10,25 +10,34 @@ import { Playground } from './components/playground/Playground'
 import { ToastContainer, useToast } from './components/Toast'
 import { AgencyHeader } from './components/layout/AgencyHeader'
 
-// Mock auth state - will be replaced with real auth
 function useAuthState() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
+  const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:3001'
+
+  const checkSession = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiBase}/api/auth/me`, {
+        credentials: 'include',
+      })
+      setIsAuthenticated(res.ok)
+    } catch {
+      setIsAuthenticated(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [apiBase])
 
   useEffect(() => {
-    // Check if user has a valid session
-    const token = localStorage.getItem('auth_token')
-    setIsAuthenticated(!!token)
-    setLoading(false)
-  }, [])
+    checkSession()
+  }, [checkSession])
 
-  const login = (token: string) => {
-    localStorage.setItem('auth_token', token)
-    setIsAuthenticated(true)
+  const login = async () => {
+    await checkSession()
   }
 
   const logout = () => {
-    localStorage.removeItem('auth_token')
+    fetch(`${apiBase}/api/auth/logout`, { method: 'POST', credentials: 'include' }).catch(() => {})
     setIsAuthenticated(false)
   }
 

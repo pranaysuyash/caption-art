@@ -19,7 +19,7 @@ describe('Performance Properties', () => {
     vi.clearAllMocks()
 
     // Dynamic import to avoid circular dependency
-    const serverModule = await import('./server.ts')
+    const serverModule = await import('./server')
     const createServer =
       (serverModule as any).createServer ||
       (serverModule as any).default?.createServer
@@ -41,7 +41,7 @@ describe('Performance Properties', () => {
     })
 
     // Create server without rate limiter for performance testing
-    app = createServer({ enableRateLimiter: false })
+    app = createServer({ enableRateLimiter: false, loadRoutes: true })
   })
 
   describe('Property 9: Response time', () => {
