@@ -21,10 +21,11 @@ describe('Export integration', () => {
   it('should start an export job when approved captions exist', async () => {
     // Signup
     const agent = request.agent(app)
+    const email = `export-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.com`
     const signupResp = await agent
       .post('/api/auth/signup')
       .send({
-        email: 'export-test@test.com',
+        email,
         password: 'password',
         agencyName: 'Export Test',
       })

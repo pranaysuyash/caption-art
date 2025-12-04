@@ -1,247 +1,384 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import apiFetch from '../../lib/api/httpClient';
-import { safeLocalStorage } from '../../lib/storage/safeLocalStorage';
-import { Link, useParams } from 'react-router-dom';
 
-interface Creative {
+type ApprovalStatus = 'pending' | 'approved' | 'rejected';
+
+interface Variation {
   id: string;
-  headline: string;
-  bodyText: string;
-  ctaText: string;
-  placement: string;
-  format: string;
-  imageUrl?: string;
-  approvalStatus: 'pending' | 'approved' | 'rejected';
-  variations?: {
-    headline: string;
-    bodyText: string;
-  }[];
+  label?: string;
+  text?: string;
+  approvalStatus: ApprovalStatus;
+  approved?: boolean;
+  qualityScore?: number;
 }
 
+interface Caption {
+  id: string;
+  text?: string;
+  variations: Variation[];
+  primaryVariation?: Variation | null;
+  status?: string;
+  approvalStatus: ApprovalStatus;
+  approved?: boolean;
+  generatedAt?: string;
+  approvedAt?: string;
+  rejectedAt?: string;
+}
+
+interface Asset {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  url: string;
+  uploadedAt: string;
+}
+
+interface GridItem {
+  asset: Asset;
+  caption: Caption | null;
+}
+
+interface GridStats {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
+interface ExportJob {
+  id: string;
+  workspaceId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  assetCount: number;
+  captionCount: number;
+  generatedAssetCount?: number;
+  zipFilePath?: string;
+  errorMessage?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+interface ExportSummary {
+  workspace: { id: string; clientName: string };
+  readyForExport: boolean;
+  totalApproved: number;
+  totalAssets: number;
+  estimatedSize: string;
+  recentExports: ExportJob[];
+}
+
+const statusLabel: Record<ApprovalStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
 export function ReviewGrid() {
-  const { workspaceId, campaignId } = useParams<{
-    workspaceId: string;
-    campaignId: string;
-  }>();
-  const [creatives, setCreatives] = useState<Creative[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [filter, setFilter] = useState<
-    'all' | 'pending' | 'approved' | 'rejected'
-  >('all');
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [variationIndices, setVariationIndices] = useState<
-    Record<string, number>
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const [grid, setGrid] = useState<GridItem[]>([]);
+  const [stats, setStats] = useState<GridStats | null>(null);
+  const [selectedCaptions, setSelectedCaptions] = useState<string[]>([]);
+  const [selectedVariations, setSelectedVariations] = useState<
+    Record<string, string>
   >({});
+  const [filter, setFilter] = useState<ApprovalStatus | 'all'>('all');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [exportSummary, setExportSummary] = useState<ExportSummary | null>(
+    null
+  );
+  const [exportJobs, setExportJobs] = useState<ExportJob[]>([]);
+  const [startingExport, setStartingExport] = useState(false);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const activeJob = useMemo(
+    () => exportJobs.find((j) => j.id === activeJobId),
+    [exportJobs, activeJobId]
+  );
 
   useEffect(() => {
-    loadCreatives();
-  }, [workspaceId, campaignId]);
+    refreshAll();
+  }, [workspaceId]);
 
-  const loadCreatives = async () => {
+  const refreshAll = async () => {
+    await Promise.all([loadGrid(), loadExportSummary(), loadExportJobs()]);
+  };
+
+  const loadGrid = async () => {
+    if (!workspaceId) return;
     try {
       setLoading(true);
-
-      const response = await apiFetch(
-        `${
-          import.meta.env.VITE_API_BASE || 'http://localhost:3001'
-        }/api/ad-creatives?campaignId=${campaignId}`,
-        {
-          method: 'GET',
-        }
+      const res = await apiFetch(
+        `/api/approval/workspace/${workspaceId}/grid`,
+        { method: 'GET' }
       );
+      if (!res.ok) throw new Error('Failed to load approval grid');
+      const data = await res.json();
+      setGrid(data.grid || []);
+      setStats(data.stats || null);
 
-      if (response.ok) {
-        const data = await response.json();
-        setCreatives(data.adCreatives || []);
-      } else {
-        throw new Error('Failed to load creatives');
-      }
+      // Initialize selection to primary variation if available
+      const variationMap: Record<string, string> = {};
+      (data.grid || []).forEach((item: GridItem) => {
+        if (item.caption?.primaryVariation?.id) {
+          variationMap[item.caption.id] = item.caption.primaryVariation.id;
+        } else if (item.caption?.variations?.[0]) {
+          variationMap[item.caption.id] = item.caption.variations[0].id;
+        }
+      });
+      setSelectedVariations(variationMap);
+      setSelectedCaptions([]);
     } catch (error) {
-      console.error('Error loading creatives:', error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGenerateCreatives = async () => {
-    setGenerating(true);
+  const loadExportSummary = async () => {
+    if (!workspaceId) return;
     try {
-      // Load context from localStorage
-      const savedCampaign = safeLocalStorage.getItem(`campaign-${campaignId}`);
-      const savedBrandKit = safeLocalStorage.getItem(`brandkit-${campaignId}`);
-
-      const campaignContext = savedCampaign ? JSON.parse(savedCampaign) : {};
-      const brandContext = savedBrandKit ? JSON.parse(savedBrandKit) : {};
-
-      console.log('Generating with context:', {
-        campaignContext,
-        brandContext,
-      });
-
-      // Simulate generation process
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // In a real implementation, we would call:
-      // await api.generateCreatives({ campaignId, brandKitId: brandContext.id, ... })
-
-      // For now, generate "mock" creatives that reflect the brand settings
-      const newCreatives: Creative[] = [
-        {
-          id: `gen-${Date.now()}-1`,
-          headline: `${campaignContext.primaryOffer || 'Special Offer'} - ${
-            brandContext.brandPersonality || 'Bold'
-          } Style`,
-          bodyText: `Experience our ${
-            brandContext.targetAudience || 'premium'
-          } collection. ${brandContext.valueProposition || ''}`,
-          ctaText: 'Shop Now',
-          placement: 'ig-feed',
-          format: 'instagram-square',
-          approvalStatus: 'pending',
-          variations: [
-            {
-              headline: `${campaignContext.primaryOffer} - Variant A`,
-              bodyText: `Variant A body text focused on ${brandContext.brandPersonality}`,
-            },
-            {
-              headline: `${campaignContext.primaryOffer} - Variant B`,
-              bodyText: `Variant B body text focused on ${brandContext.valueProposition}`,
-            },
-          ],
-        },
-        {
-          id: `gen-${Date.now()}-2`,
-          headline: 'Exclusive Summer Deal',
-          bodyText: `Perfect for ${
-            brandContext.targetAudience || 'you'
-          }. Don't miss out!`,
-          ctaText: 'Learn More',
-          placement: 'fb-feed',
-          format: 'facebook-post',
-          approvalStatus: 'pending',
-        },
-      ];
-
-      setCreatives((prev) => [...newCreatives, ...prev]);
-
-      // Initialize indices for new creatives
-      const newIndices = newCreatives.reduce(
-        (acc, c) => ({ ...acc, [c.id]: 0 }),
-        {}
+      const res = await apiFetch(
+        `/api/export/workspace/${workspaceId}/summary`,
+        { method: 'GET' }
       );
-      setVariationIndices((prev) => ({ ...prev, ...newIndices }));
+      if (!res.ok) throw new Error('Failed to load export summary');
+      const data = await res.json();
+      setExportSummary(data);
     } catch (error) {
-      console.error('Error generating creatives:', error);
-    } finally {
-      setGenerating(false);
+      console.error(error);
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to load export readiness'
+      );
     }
   };
 
-  const handleApprove = (id: string) => {
-    setCreatives((prev) =>
-      prev.map((creative) =>
-        creative.id === id
-          ? { ...creative, approvalStatus: 'approved' }
-          : creative
+  const loadExportJobs = async () => {
+    if (!workspaceId) return;
+    try {
+      const res = await apiFetch(
+        `/api/export/workspace/${workspaceId}/jobs?limit=5`,
+        { method: 'GET' }
+      );
+      if (!res.ok) throw new Error('Failed to load export jobs');
+      const data = await res.json();
+      setExportJobs(data.jobs || []);
+
+      // Track active job (pending/processing) for polling
+      const active = (data.jobs || []).find((job: ExportJob) =>
+        ['pending', 'processing'].includes(job.status)
+      );
+      setActiveJobId(active ? active.id : null);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const filteredGrid = useMemo(() => {
+    if (filter === 'all') return grid;
+    return grid.filter(
+      (item) => item.caption?.approvalStatus === filter
+    );
+  }, [grid, filter]);
+
+  const updateCaptionInState = (updated: Caption) => {
+    setGrid((prev) =>
+      prev.map((item) =>
+        item.caption?.id === updated.id ? { ...item, caption: updated } : item
       )
     );
-  };
-
-  const handleReject = (id: string) => {
-    setCreatives((prev) =>
-      prev.map((creative) =>
-        creative.id === id
-          ? { ...creative, approvalStatus: 'rejected' }
-          : creative
-      )
+    setSelectedCaptions((prev) =>
+      prev.filter((id) => id !== updated.id)
     );
   };
 
-  const handleBulkApprove = () => {
-    setCreatives((prev) =>
-      prev.map((creative) =>
-        selectedIds.includes(creative.id)
-          ? { ...creative, approvalStatus: 'approved' }
-          : creative
-      )
+  const refreshExportData = async () => {
+    await Promise.all([loadExportSummary(), loadExportJobs()]);
+  };
+
+  const approveCaption = async (captionId: string) => {
+    try {
+      setSubmitting(true);
+      const variationId = selectedVariations[captionId];
+      const res = await apiFetch(
+        `/api/approval/captions/${captionId}/approve`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(
+            variationId ? { variationId } : {}
+          ),
+        }
+      );
+      if (!res.ok) throw new Error('Failed to approve caption');
+      const data = await res.json();
+      updateCaptionInState(data.caption);
+      refreshExportData();
+    } catch (error) {
+      console.error(error);
+      alert('Failed to approve caption. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const rejectCaption = async (captionId: string) => {
+    try {
+      const reason = window.prompt('Add an optional reason?') || undefined;
+      setSubmitting(true);
+      const variationId = selectedVariations[captionId];
+      const res = await apiFetch(
+        `/api/approval/captions/${captionId}/reject`,
+        {
+          method: 'PUT',
+          body: JSON.stringify(
+            variationId ? { reason, variationId } : { reason }
+          ),
+        }
+      );
+      if (!res.ok) throw new Error('Failed to reject caption');
+      const data = await res.json();
+      updateCaptionInState(data.caption);
+      refreshExportData();
+    } catch (error) {
+      console.error(error);
+      alert('Failed to reject caption. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const bulkApprove = async () => {
+    if (!selectedCaptions.length) return;
+    try {
+      setSubmitting(true);
+      const res = await apiFetch('/api/approval/batch-approve', {
+        method: 'POST',
+        body: JSON.stringify({ captionIds: selectedCaptions }),
+      });
+      if (!res.ok) throw new Error('Failed to bulk approve');
+      await loadGrid();
+      await refreshExportData();
+    } catch (error) {
+      console.error(error);
+      alert('Bulk approve failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const bulkReject = async () => {
+    if (!selectedCaptions.length) return;
+    const reason = window.prompt('Optional rejection reason?') || undefined;
+    try {
+      setSubmitting(true);
+      const res = await apiFetch('/api/approval/batch-reject', {
+        method: 'POST',
+        body: JSON.stringify({ captionIds: selectedCaptions, reason }),
+      });
+      if (!res.ok) throw new Error('Failed to bulk reject');
+      await loadGrid();
+      await refreshExportData();
+    } catch (error) {
+      console.error(error);
+      alert('Bulk reject failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleSelection = (captionId: string) => {
+    setSelectedCaptions((prev) =>
+      prev.includes(captionId)
+        ? prev.filter((id) => id !== captionId)
+        : [...prev, captionId]
     );
-    setSelectedIds([]);
   };
 
-  const handleBulkReject = () => {
-    setCreatives((prev) =>
-      prev.map((creative) =>
-        selectedIds.includes(creative.id)
-          ? { ...creative, approvalStatus: 'rejected' }
-          : creative
-      )
-    );
-    setSelectedIds([]);
+  const toggleSelectAll = () => {
+    const ids = filteredGrid
+      .map((item) => item.caption?.id)
+      .filter(Boolean) as string[];
+    const allSelected = ids.every((id) => selectedCaptions.includes(id));
+    setSelectedCaptions(allSelected ? [] : ids);
   };
 
-  const handleSelect = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((selectedId) => selectedId !== id)
-        : [...prev, id]
-    );
+  const startExport = async () => {
+    if (!workspaceId) return;
+    if (exportSummary && !exportSummary.readyForExport) {
+      setExportError('No approved captions available to export yet.');
+      return;
+    }
+    try {
+      setStartingExport(true);
+      setExportError(null);
+      const res = await apiFetch(
+        `/api/export/workspace/${workspaceId}/start`,
+        { method: 'POST' }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to start export');
+      }
+      if (data.jobId) {
+        setActiveJobId(data.jobId);
+      }
+      await refreshExportData();
+    } catch (error) {
+      console.error(error);
+      alert(
+        error instanceof Error ? error.message : 'Failed to start export'
+      );
+      setExportError(
+        error instanceof Error ? error.message : 'Failed to start export'
+      );
+    } finally {
+      setStartingExport(false);
+    }
   };
 
-  const handleSelectAll = () => {
-    const filteredCreatives =
-      filter === 'all'
-        ? creatives
-        : creatives.filter((c) => c.approvalStatus === filter);
-    setSelectedIds(filteredCreatives.map((c) => c.id));
+  // Poll active export job
+  useEffect(() => {
+    if (!activeJobId) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiFetch(`/api/export/jobs/${activeJobId}`, {
+          method: 'GET',
+        });
+        if (!res.ok) throw new Error('Failed to fetch export job');
+        const data = await res.json();
+        const job: ExportJob | undefined = data.job;
+        if (job) {
+          setExportJobs((prev) =>
+            prev.map((j) => (j.id === job.id ? job : j))
+          );
+          if (job.status === 'completed' || job.status === 'failed') {
+            setActiveJobId(null);
+            refreshExportData();
+            if (job.status === 'failed') {
+              setExportError(job.errorMessage || 'Export failed');
+            }
+          }
+        }
+      } catch (error) {
+        console.error(error);
+        setExportError(
+          error instanceof Error ? error.message : 'Failed to poll export job'
+        );
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [activeJobId]);
+
+  const downloadExport = async (jobId: string) => {
+    const downloadUrl = `${
+      import.meta.env.VITE_API_BASE || 'http://localhost:3001'
+    }/api/export/jobs/${jobId}/download`;
+    window.open(downloadUrl, '_blank');
   };
-
-  const handleNextVariation = (id: string, total: number) => {
-    setVariationIndices((prev) => ({
-      ...prev,
-      [id]: ((prev[id] || 0) + 1) % total,
-    }));
-  };
-
-  const handlePrevVariation = (id: string, total: number) => {
-    setVariationIndices((prev) => ({
-      ...prev,
-      [id]: ((prev[id] || 0) - 1 + total) % total,
-    }));
-  };
-
-  const handleExportCsv = () => {
-    const approved = creatives.filter((c) => c.approvalStatus === 'approved');
-    const headers = ['ID', 'Headline', 'Body Text', 'CTA', 'Format'];
-    const rows = approved.map((c) => [
-      c.id,
-      `"${c.headline.replace(/"/g, '""')}"`,
-      `"${c.bodyText.replace(/"/g, '""')}"`,
-      c.ctaText,
-      c.format,
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map((r) => r.join(',')),
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `campaign-${campaignId}-export.csv`;
-    link.click();
-  };
-
-  const filteredCreatives =
-    filter === 'all'
-      ? creatives
-      : creatives.filter((creative) => creative.approvalStatus === filter);
-
-  const approvedCount = creatives.filter(
-    (c) => c.approvalStatus === 'approved'
-  ).length;
 
   if (loading) {
     return (
@@ -253,622 +390,507 @@ export function ReviewGrid() {
           fontFamily: 'var(--font-body, sans-serif)',
         }}
       >
-        Loading review grid...
+        Loading approvals...
       </div>
     );
   }
 
   return (
     <div
-      style={{ padding: '2rem', fontFamily: 'var(--font-body, sans-serif)' }}
+      style={{
+        padding: '2rem',
+        fontFamily: 'var(--font-body, sans-serif)',
+      }}
     >
-      {/* Header */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '2rem',
+          marginBottom: '1.5rem',
+          gap: '1rem',
         }}
       >
         <div>
           <h1
             style={{
               fontFamily: 'var(--font-heading, sans-serif)',
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              color: 'var(--color-text, #1f2937)',
               margin: 0,
+              fontSize: '1.8rem',
             }}
           >
-            Review & Approve
+            Approval Grid
           </h1>
-          <p
-            style={{
-              color: 'var(--color-text-secondary, #6b7280)',
-              marginTop: '0.5rem',
-              marginBottom: 0,
-            }}
-          >
-            Approved: {approvedCount} / {creatives.length} creatives
-          </p>
-        </div>
-
-        {creatives.length === 0 ? (
-          <button
-            onClick={handleGenerateCreatives}
-            disabled={generating}
-            className='btn btn-primary'
-          >
-            {generating ? 'Generating...' : 'Generate Creatives'}
-          </button>
-        ) : (
-          approvedCount > 0 && (
-            <button
-              onClick={() => setShowExportModal(true)}
-              className='btn btn-primary'
+          {stats && (
+            <p
               style={{
-                backgroundColor: 'var(--color-success, #16a34a)',
-                color: 'white',
+                margin: '0.25rem 0 0',
+                color: 'var(--color-text-secondary, #6b7280)',
               }}
             >
-              Export {approvedCount} Approved →
-            </button>
-          )
-        )}
-      </div>
-
-      {/* Empty State */}
-      {creatives.length === 0 && !generating && (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '4rem 2rem',
-            backgroundColor: 'var(--color-background, #f8fafc)',
-            borderRadius: '12px',
-            border: '2px dashed var(--color-border, #d1d5db)',
-          }}
-        >
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎨</div>
-          <h3
-            style={{
-              fontFamily: 'var(--font-heading, sans-serif)',
-              fontSize: '1.25rem',
-              fontWeight: '600',
-              color: 'var(--color-text, #1f2937)',
-              margin: '0 0 0.5rem 0',
-            }}
+              {stats.approved} approved • {stats.pending} pending •{' '}
+              {stats.rejected} rejected
+            </p>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as any)}
+            style={{ padding: '0.5rem', borderRadius: '8px' }}
           >
-            No creatives yet
-          </h3>
-          <p
-            style={{
-              color: 'var(--color-text-secondary, #6b7280)',
-              marginBottom: '1.5rem',
-              maxWidth: '400px',
-              margin: '0 auto 1.5rem',
-            }}
-          >
-            Generate your first set of creatives using your brand kit and
-            campaign assets.
-          </p>
+            <option value='all'>All statuses</option>
+            <option value='pending'>Pending</option>
+            <option value='approved'>Approved</option>
+            <option value='rejected'>Rejected</option>
+          </select>
           <button
-            onClick={handleGenerateCreatives}
-            disabled={generating}
-            className='btn btn-primary'
+            className='btn btn-ghost'
+            onClick={toggleSelectAll}
+            disabled={!filteredGrid.length}
           >
-            {generating ? 'Generating...' : 'Generate Your First Creatives'}
+            {filteredGrid.length &&
+            filteredGrid
+              .map((i) => i.caption?.id)
+              .filter(Boolean)
+              .every((id) => selectedCaptions.includes(id as string))
+              ? 'Clear selection'
+              : 'Select all'}
+          </button>
+          <button
+            className='btn btn-ghost'
+            onClick={loadGrid}
+            disabled={submitting}
+          >
+            Refresh
+          </button>
+          <button
+            className='btn btn-primary'
+            onClick={bulkApprove}
+            disabled={!selectedCaptions.length || submitting}
+          >
+            Approve selected
+          </button>
+          <button
+            className='btn btn-secondary'
+            onClick={bulkReject}
+            disabled={!selectedCaptions.length || submitting}
+          >
+            Reject selected
           </button>
         </div>
-      )}
+      </div>
 
-      {/* Generating State */}
-      {generating && (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '3rem',
-            backgroundColor: 'var(--color-bg-secondary, white)',
-            border: '1px solid var(--color-border, #e5e7eb)',
-            borderRadius: '12px',
-          }}
-        >
+      {/* Export summary & actions */}
+      <div
+        style={{
+          marginBottom: '1rem',
+          padding: '1rem',
+          border: '1px solid var(--color-border, #e5e7eb)',
+          borderRadius: '12px',
+          background: 'var(--color-bg-secondary, #f8fafc)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '1rem',
+        }}
+      >
+        <div>
           <div
             style={{
-              width: '40px',
-              height: '40px',
-              border: '4px solid var(--color-border, #e5e7eb)',
-              borderTop: '4px solid var(--color-primary, #2563eb)',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 1rem',
-            }}
-          />
-          <h3
-            style={{
-              fontFamily: 'var(--font-heading, sans-serif)',
-              fontSize: '1.25rem',
-              color: 'var(--color-text, #1f2937)',
-              margin: '0 0 0.5rem 0',
+              fontWeight: 700,
+              fontSize: '1rem',
+              color: 'var(--color-text, #0f172a)',
             }}
           >
-            Generating Creatives
-          </h3>
-          <p
+            Export
+          </div>
+          <div
             style={{
               color: 'var(--color-text-secondary, #6b7280)',
-              margin: 0,
+              marginTop: '0.25rem',
             }}
           >
-            Our Creative Engine is working on your campaign...
-          </p>
+            {exportSummary
+              ? `${exportSummary.totalApproved} approved • Estimated ${exportSummary.estimatedSize}`
+              : 'Loading export summary...'}
+            {exportError && (
+              <div
+                style={{
+                  marginTop: '0.25rem',
+                  color: '#b91c1c',
+                  fontSize: '0.9rem',
+                }}
+              >
+                {exportError}
+              </div>
+            )}
+          </div>
         </div>
-      )}
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button
+            className='btn btn-ghost'
+            onClick={refreshExportData}
+            disabled={startingExport || submitting}
+          >
+            Refresh export
+          </button>
+          <button
+            className='btn btn-primary'
+            onClick={startExport}
+            disabled={
+              startingExport ||
+              submitting ||
+              !exportSummary?.readyForExport ||
+              !!activeJobId
+            }
+          >
+            {startingExport || activeJobId
+              ? 'Exporting...'
+              : 'Start export'}
+          </button>
+        </div>
+      </div>
 
-      {/* Filters and Bulk Actions */}
-      {creatives.length > 0 && !generating && (
+      {activeJob && (
         <div
           style={{
+            marginBottom: '1rem',
+            padding: '0.85rem',
+            borderRadius: '10px',
+            border: '1px solid var(--color-border, #e5e7eb)',
+            background: 'rgba(37,99,235,0.06)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            marginBottom: '1.5rem',
-            padding: '1rem',
-            backgroundColor: 'var(--color-bg-secondary, white)',
-            border: '1px solid var(--color-border, #e5e7eb)',
-            borderRadius: '8px',
+            gap: '0.75rem',
           }}
         >
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <select
-              aria-label='Filter creatives'
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as any)}
-              style={{
-                padding: '0.5rem',
-                border: '1px solid var(--color-border, #d1d5db)',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-              }}
-            >
-              <option value='all'>All ({creatives.length})</option>
-              <option value='pending'>
-                Pending (
-                {creatives.filter((c) => c.approvalStatus === 'pending').length}
-                )
-              </option>
-              <option value='approved'>Approved ({approvedCount})</option>
-              <option value='rejected'>
-                Rejected (
-                {
-                  creatives.filter((c) => c.approvalStatus === 'rejected')
-                    .length
-                }
-                )
-              </option>
-            </select>
-
-            <button onClick={handleSelectAll} className='btn btn-secondary'>
-              Select All
-            </button>
+          <div style={{ color: 'var(--color-text, #0f172a)' }}>
+            Export {activeJob.id.slice(0, 8)} is {activeJob.status}...
           </div>
-
-          {selectedIds.length > 0 && (
-            <div
-              style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}
-            >
-              <span
-                style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-secondary, #6b7280)',
-                }}
-              >
-                {selectedIds.length} selected
-              </span>
-              <button
-                onClick={handleBulkApprove}
-                className='btn btn-primary'
-                style={{
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.875rem',
-                  backgroundColor: 'var(--color-success, #16a34a)',
-                  color: 'white',
-                }}
-              >
-                Approve Selected
-              </button>
-              <button
-                onClick={handleBulkReject}
-                className='btn btn-secondary'
-                style={{
-                  padding: '0.5rem 1rem',
-                  fontSize: '0.875rem',
-                  border: '1px solid var(--color-error, #dc2626)',
-                  color: 'var(--color-error, #dc2626)',
-                }}
-              >
-                Reject Selected
-              </button>
-            </div>
-          )}
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              border: '4px solid rgba(37,99,235,0.2)',
+              borderTop: '4px solid rgba(37,99,235,0.8)',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+            }}
+          />
+          <style>
+            {`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}
+          </style>
         </div>
       )}
 
-      {/* Creatives Grid */}
-      {filteredCreatives.length > 0 && !generating && (
+      {/* Recent exports */}
+      {exportJobs.length > 0 && (
+        <div
+          style={{
+            marginBottom: '1rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '0.75rem',
+          }}
+        >
+          {exportJobs.map((job) => (
+            <div
+              key={job.id}
+              style={{
+                border: '1px solid var(--color-border, #e5e7eb)',
+                borderRadius: '10px',
+                padding: '0.75rem',
+                background: 'var(--color-bg-secondary, white)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.5rem',
+                  fontWeight: 600,
+                }}
+              >
+                <span>Export {job.id.slice(0, 8)}</span>
+                <span
+                  style={{
+                    textTransform: 'capitalize',
+                    color:
+                      job.status === 'completed'
+                        ? '#15803d'
+                        : job.status === 'failed'
+                        ? '#b91c1c'
+                        : '#92400e',
+                  }}
+                >
+                  {job.status}
+                </span>
+              </div>
+              <div
+                style={{
+                  color: 'var(--color-text-secondary, #6b7280)',
+                  fontSize: '0.85rem',
+                }}
+              >
+                {job.captionCount} captions • {job.generatedAssetCount || 0}{' '}
+                renders
+              </div>
+              {job.status === 'completed' && (
+                <button
+                  className='btn btn-secondary'
+                  style={{ marginTop: '0.5rem' }}
+                  onClick={() => downloadExport(job.id)}
+                >
+                  Download ZIP
+                </button>
+              )}
+              {job.status === 'failed' && job.errorMessage && (
+                <div
+                  style={{
+                    color: '#b91c1c',
+                    fontSize: '0.85rem',
+                    marginTop: '0.35rem',
+                  }}
+                >
+                  {job.errorMessage}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!filteredGrid.length ? (
+        <div
+          style={{
+            padding: '3rem',
+            textAlign: 'center',
+            border: '2px dashed var(--color-border, #d1d5db)',
+            borderRadius: '12px',
+            color: 'var(--color-text-secondary, #6b7280)',
+          }}
+        >
+          No items found for this status.
+        </div>
+      ) : (
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-            gap: '1.5rem',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+            gap: '1rem',
           }}
         >
-          {filteredCreatives.map((creative) => {
-            const variationCount = (creative.variations?.length || 0) + 1;
-            const currentIndex = variationIndices[creative.id] || 0;
-
-            let currentHeadline = creative.headline;
-            let currentBody = creative.bodyText;
-
-            if (currentIndex > 0 && creative.variations) {
-              const variation = creative.variations[currentIndex - 1];
-              currentHeadline = variation.headline;
-              currentBody = variation.bodyText;
-            }
+          {filteredGrid.map((item) => {
+            const caption = item.caption;
+            const selectedVariationId = caption
+              ? selectedVariations[caption.id]
+              : undefined;
+            const selectedVariation = caption?.variations.find(
+              (v) => v.id === selectedVariationId
+            );
 
             return (
               <div
-                key={creative.id}
+                key={item.asset.id}
                 style={{
-                  backgroundColor: 'var(--color-bg-secondary, white)',
                   border: '1px solid var(--color-border, #e5e7eb)',
                   borderRadius: '12px',
+                  background: 'var(--color-bg-secondary, white)',
                   overflow: 'hidden',
-                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
                 }}
               >
-                {/* Checkbox */}
-                <div style={{ padding: '1rem 1rem 0' }}>
-                  <input
-                    type='checkbox'
-                    checked={selectedIds.includes(creative.id)}
-                    onChange={() => handleSelect(creative.id)}
+                <div style={{ position: 'relative' }}>
+                  <img
+                    src={item.asset.url}
+                    alt={item.asset.originalName}
                     style={{
-                      cursor: 'pointer',
+                      width: '100%',
+                      height: '180px',
+                      objectFit: 'cover',
                     }}
                   />
-                </div>
-
-                {/* Creative Preview */}
-                <div
-                  style={{
-                    width: '100%',
-                    height: '200px',
-                    backgroundColor: 'var(--color-background, #f8fafc)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 1rem 1rem',
-                    borderRadius: '8px',
-                    border: '1px solid var(--color-border, #e5e7eb)',
-                  }}
-                >
-                  <div
-                    style={{
-                      textAlign: 'center',
-                      color: 'var(--color-text-secondary, #6b7280)',
-                    }}
-                  >
-                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-                      🖼️
-                    </div>
-                    <div style={{ fontSize: '0.875rem' }}>
-                      {creative.format} • {creative.placement}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div style={{ padding: '0 1rem 1rem' }}>
-                  <h4
-                    style={{
-                      fontFamily: 'var(--font-heading, sans-serif)',
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      color: 'var(--color-text, #1f2937)',
-                      margin: '0 0 0.5rem 0',
-                      lineHeight: '1.4',
-                    }}
-                  >
-                    {creative.headline}
-                  </h4>
-
-                  <p
-                    style={{
-                      fontSize: '0.875rem',
-                      color: 'var(--color-text, #1f2937)',
-                      margin: '0 0 0.5rem 0',
-                      lineHeight: '1.5',
-                    }}
-                  >
-                    {creative.bodyText}
-                  </p>
-
-                  <div
-                    style={{
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      color: 'var(--color-primary, #2563eb)',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    {creative.ctaText}
-                  </div>
-
-                  {/* Status Badge */}
-                  <div
-                    style={{
-                      padding: '0.25rem 0.75rem',
-                      borderRadius: '12px',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      textAlign: 'center',
-                      marginBottom: '1rem',
-                      backgroundColor:
-                        creative.approvalStatus === 'approved'
-                          ? 'var(--color-success-bg, #f0fdf4)'
-                          : creative.approvalStatus === 'rejected'
-                          ? 'var(--color-error-bg, #fef2f2)'
-                          : 'var(--color-background, #f8fafc)',
-                      color:
-                        creative.approvalStatus === 'approved'
-                          ? 'var(--color-success, #16a34a)'
-                          : creative.approvalStatus === 'rejected'
-                          ? 'var(--color-error, #dc2626)'
-                          : 'var(--color-text-secondary, #6b7280)',
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {creative.approvalStatus}
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => handleApprove(creative.id)}
-                      disabled={creative.approvalStatus === 'approved'}
+                  {caption?.approvalStatus && (
+                    <span
                       style={{
-                        flex: 1,
-                        padding: '0.5rem',
-                        border: '1px solid var(--color-success, #16a34a)',
-                        backgroundColor:
-                          creative.approvalStatus === 'approved'
-                            ? 'var(--color-success, #16a34a)'
-                            : 'transparent',
+                        position: 'absolute',
+                        top: '10px',
+                        left: '10px',
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '999px',
+                        background:
+                          caption.approvalStatus === 'approved'
+                            ? 'rgba(34,197,94,0.15)'
+                            : caption.approvalStatus === 'rejected'
+                            ? 'rgba(239,68,68,0.15)'
+                            : 'rgba(251,191,36,0.2)',
                         color:
-                          creative.approvalStatus === 'approved'
-                            ? 'white'
-                            : 'var(--color-success, #16a34a)',
-                        borderRadius: '6px',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        cursor:
-                          creative.approvalStatus === 'approved'
-                            ? 'not-allowed'
-                            : 'pointer',
+                          caption.approvalStatus === 'approved'
+                            ? '#15803d'
+                            : caption.approvalStatus === 'rejected'
+                            ? '#b91c1c'
+                            : '#92400e',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
                       }}
                     >
-                      {creative.approvalStatus === 'approved'
-                        ? 'Approved'
-                        : 'Approve'}
-                    </button>
-                    <button
-                      onClick={() => handleReject(creative.id)}
-                      disabled={creative.approvalStatus === 'rejected'}
+                      {statusLabel[caption.approvalStatus]}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ padding: '1rem', flex: 1 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.75rem',
+                      gap: '0.5rem',
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>
+                      {item.asset.originalName}
+                    </div>
+                    {caption && (
+                      <label style={{ display: 'flex', gap: '0.35rem' }}>
+                        <input
+                          type='checkbox'
+                          checked={selectedCaptions.includes(caption.id)}
+                          onChange={() => toggleSelection(caption.id)}
+                          aria-label='Select caption'
+                        />
+                        Select
+                      </label>
+                    )}
+                  </div>
+
+                  {caption ? (
+                    <>
+                      <p
+                        style={{
+                          margin: 0,
+                          color: 'var(--color-text, #0f172a)',
+                          fontSize: '0.95rem',
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {selectedVariation?.text ||
+                          caption.primaryVariation?.text ||
+                          caption.text ||
+                          'No caption text available'}
+                      </p>
+
+                      {caption.variations.length > 1 && (
+                        <div
+                          style={{
+                            marginTop: '0.75rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.35rem',
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: '0.85rem',
+                              color:
+                                'var(--color-text-secondary, #6b7280)',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Variations
+                          </div>
+                          {caption.variations.map((variation) => (
+                            <label
+                              key={variation.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                fontSize: '0.85rem',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              <input
+                                type='radio'
+                                name={`variation-${caption.id}`}
+                                checked={
+                                  selectedVariationId === variation.id
+                                }
+                                onChange={() =>
+                                  setSelectedVariations((prev) => ({
+                                    ...prev,
+                                    [caption.id]: variation.id,
+                                  }))
+                                }
+                              />
+                              <span
+                                style={{
+                                  fontWeight: 600,
+                                  color:
+                                    variation.approvalStatus === 'approved'
+                                      ? '#15803d'
+                                      : 'var(--color-text, #0f172a)',
+                                }}
+                              >
+                                {variation.label || 'Variation'}
+                              </span>
+                              <span
+                                style={{
+                                  color:
+                                    'var(--color-text-secondary, #6b7280)',
+                                }}
+                              >
+                                {variation.text?.slice(0, 70) || '—'}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p
                       style={{
-                        flex: 1,
-                        padding: '0.5rem',
-                        border: '1px solid var(--color-error, #dc2626)',
-                        backgroundColor:
-                          creative.approvalStatus === 'rejected'
-                            ? 'var(--color-error, #dc2626)'
-                            : 'transparent',
-                        color:
-                          creative.approvalStatus === 'rejected'
-                            ? 'white'
-                            : 'var(--color-error, #dc2626)',
-                        borderRadius: '6px',
-                        fontSize: '0.875rem',
-                        fontWeight: '500',
-                        cursor:
-                          creative.approvalStatus === 'rejected'
-                            ? 'not-allowed'
-                            : 'pointer',
+                        margin: 0,
+                        color: 'var(--color-text-secondary, #6b7280)',
                       }}
                     >
-                      {creative.approvalStatus === 'rejected'
-                        ? 'Rejected'
-                        : 'Reject'}
+                      No caption generated yet for this asset.
+                    </p>
+                  )}
+                </div>
+
+                {caption && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: '0.5rem',
+                      padding: '0.75rem 1rem 1rem',
+                    }}
+                  >
+                    <button
+                      className='btn btn-primary'
+                      onClick={() => approveCaption(caption.id)}
+                      disabled={submitting}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className='btn btn-secondary'
+                      onClick={() => rejectCaption(caption.id)}
+                      disabled={submitting}
+                    >
+                      Reject
                     </button>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Animation styles */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-
-      {/* Simple Export Modal */}
-      {showExportModal && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: 'var(--color-bg-secondary, white)',
-              borderRadius: '12px',
-              padding: '2rem',
-              width: '100%',
-              maxWidth: '500px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem',
-              }}
-            >
-              <h2
-                style={{
-                  fontFamily: 'var(--font-heading, sans-serif)',
-                  fontSize: '1.5rem',
-                  fontWeight: 'bold',
-                  color: 'var(--color-text, #1f2937)',
-                  margin: 0,
-                }}
-              >
-                Export Creatives
-              </h2>
-              <button
-                onClick={() => setShowExportModal(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  cursor: 'pointer',
-                  color: 'var(--color-text-secondary, #6b7280)',
-                  padding: '0.5rem',
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
-              <h3
-                style={{
-                  fontFamily: 'var(--font-heading, sans-serif)',
-                  fontSize: '1.25rem',
-                  color: 'var(--color-primary, #2563eb)',
-                  margin: '0 0 0.5rem 0',
-                }}
-              >
-                Ready for Export
-              </h3>
-              <p
-                style={{
-                  color: 'var(--color-text, #1f2937)',
-                  margin: '0 0 1.5rem 0',
-                }}
-              >
-                {approvedCount} approved creative
-                {approvedCount !== 1 ? 's' : ''} ready for delivery
-              </p>
-
-              <button
-                onClick={handleExportCsv}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: 'var(--color-primary, #2563eb)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  marginBottom: '1rem',
-                  width: '100%',
-                }}
-              >
-                Download CSV
-              </button>
-
-              <button
-                onClick={async () => {
-                  try {
-                    // Start export
-                    const response = await apiFetch(
-                      `${
-                        import.meta.env.VITE_API_BASE || 'http://localhost:3001'
-                      }/api/export/workspace/${workspaceId}/start`,
-                      {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                      }
-                    );
-
-                    if (!response.ok) {
-                      const errorData = await response
-                        .json()
-                        .catch(() => ({ error: 'Export failed' }));
-                      throw new Error(
-                        errorData.error ||
-                          `Export failed with status ${response.status}`
-                      );
-                    }
-
-                    const data = await response.json();
-                    console.log('Export started:', data);
-                    // Simple download after short delay
-                    setTimeout(() => {
-                      window.open(
-                        `${
-                          import.meta.env.VITE_API_BASE ||
-                          'http://localhost:3001'
-                        }/api/export/jobs/${data.jobId}/download`,
-                        '_blank'
-                      );
-                      setShowExportModal(false);
-                    }, 2000);
-                  } catch (error) {
-                    console.error('Export failed:', error);
-                    alert(
-                      `Export failed: ${
-                        error instanceof Error ? error.message : 'Unknown error'
-                      }`
-                    );
-                  }
-                }}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  backgroundColor: 'var(--color-primary, #2563eb)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                }}
-              >
-                Start Export
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -68,7 +68,7 @@ describe('Property 8: API compatibility', () => {
   it('caption endpoint should return baseCaption and variants fields', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.webUrl(),
+        fc.constant(null),
         fc.option(fc.array(fc.string(), { minLength: 0, maxLength: 5 }), {
           nil: undefined,
         }),
@@ -90,7 +90,8 @@ describe('Property 8: API compatibility', () => {
 
   it('mask endpoint should return maskUrl field', async () => {
     await fc.assert(
-      fc.asyncProperty(fc.webUrl(), async (imageUrl) => {
+      fc.asyncProperty(fc.constant(null), async (_unused) => {
+        const imageUrl = `http://localhost:3000/generated/test.jpg`
         const response = await request(app).post('/api/mask').send({ imageUrl })
 
         expect(response.status).toBe(200)

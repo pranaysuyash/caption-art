@@ -144,7 +144,8 @@ export class AdCopyService {
         category: 'ad-copy',
         features: request.targetAudience?.painPoints,
         benefits: [
-          (campaign.briefData as any)?.keyMessage || campaign.brief?.keyMessage ||
+          (campaign.briefData as any)?.keyMessage ||
+            campaign.brief?.keyMessage ||
             brandKit.valueProposition ||
             'High quality products',
         ],

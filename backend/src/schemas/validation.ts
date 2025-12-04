@@ -8,17 +8,17 @@ import { z } from 'zod'
 
 // Rate limiting configuration types
 export interface RateLimitConfig {
-  windowMs: number;    // Time window in milliseconds
-  max: number;         // Maximum requests per window
-  points: number;      // Cost points for this endpoint (higher = more expensive)
-  tier: 'basic' | 'standard' | 'premium' | 'enterprise';  // Service tier
+  windowMs: number // Time window in milliseconds
+  max: number // Maximum requests per window
+  points: number // Cost points for this endpoint (higher = more expensive)
+  tier: 'basic' | 'standard' | 'premium' | 'enterprise' // Service tier
 }
 
 // Enhanced schema with rate limiting metadata
 export interface SchemaWithMetadata<T extends z.ZodTypeAny> {
-  schema: T;
-  rateLimit: RateLimitConfig;
-  securityTags?: string[]; // Tags for security scanning/prompt injection
+  schema: T
+  rateLimit: RateLimitConfig
+  securityTags?: string[] // Tags for security scanning/prompt injection
 }
 
 // Common validation patterns
@@ -32,26 +32,26 @@ export const RATE_LIMIT_TIERS = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10,
     points: 1,
-    tier: 'basic' as const
+    tier: 'basic' as const,
   },
   standard: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 50,
     points: 1,
-    tier: 'standard' as const
+    tier: 'standard' as const,
   },
   premium: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 100,
     points: 1,
-    tier: 'premium' as const
+    tier: 'premium' as const,
   },
   enterprise: {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 500,
     points: 1,
-    tier: 'enterprise' as const
-  }
+    tier: 'enterprise' as const,
+  },
 }
 
 // Cost-based rate limiting configurations
@@ -60,10 +60,10 @@ export const COST_BASED_RATE_LIMITS = {
   low: { points: 1, description: 'Simple read operations' },
   medium: { points: 3, description: 'Basic AI processing' },
   high: { points: 5, description: 'Complex AI processing' },
-  veryHigh: { points: 10, description: 'Multiple AI services' }
+  veryHigh: { points: 10, description: 'Multiple AI services' },
 }
 
-export const Tones = z.enum(['default', 'witty', 'inspirational', 'formal']);
+export const Tones = z.enum(['default', 'witty', 'inspirational', 'formal'])
 
 /**
  * Schema for caption generation requests
@@ -93,10 +93,10 @@ export const CaptionRequestSchema: SchemaWithMetadata<z.ZodObject<any>> = {
   rateLimit: {
     ...RATE_LIMIT_TIERS.standard,
     points: COST_BASED_RATE_LIMITS.medium.points,
-    tier: 'standard'
+    tier: 'standard',
   },
-  securityTags: ['prompt', 'image-url']
-};
+  securityTags: ['prompt', 'image-url'],
+}
 
 /**
  * Schema for mask generation requests
@@ -124,10 +124,10 @@ export const MaskRequestSchema: SchemaWithMetadata<z.ZodObject<any>> = {
   rateLimit: {
     ...RATE_LIMIT_TIERS.standard,
     points: COST_BASED_RATE_LIMITS.medium.points,
-    tier: 'standard'
+    tier: 'standard',
   },
-  securityTags: ['image-url']
-};
+  securityTags: ['image-url'],
+}
 
 /**
  * Schema for batch caption generation
@@ -135,117 +135,204 @@ export const MaskRequestSchema: SchemaWithMetadata<z.ZodObject<any>> = {
 export const BatchCaptionSchema: SchemaWithMetadata<z.ZodObject<any>> = {
   schema: z.object({
     workspaceId: workspaceIdSchema,
-    assetIds: z.array(assetIdSchema).min(1, 'At least one asset is required').max(30, 'Maximum 30 assets per batch'),
+    assetIds: z
+      .array(assetIdSchema)
+      .min(1, 'At least one asset is required')
+      .max(30, 'Maximum 30 assets per batch'),
     generateAdCopy: z.boolean().optional().default(false),
-    variationsCount: z.number().min(1).max(10).optional().default(3)
+    variationsCount: z.number().min(1).max(10).optional().default(3),
   }),
   rateLimit: {
     ...RATE_LIMIT_TIERS.standard,
     points: COST_BASED_RATE_LIMITS.high.points, // Higher cost due to multiple processing
-    tier: 'standard'
+    tier: 'standard',
   },
-  securityTags: ['workspace', 'assets']
-};
+  securityTags: ['workspace', 'assets'],
+}
 
 /**
  * Schema for workspace creation
  */
 export const CreateWorkspaceSchema: SchemaWithMetadata<z.ZodObject<any>> = {
   schema: z.object({
-    clientName: z.string().min(1, 'Client name is required').max(100, 'Client name too long'),
+    clientName: z
+      .string()
+      .min(1, 'Client name is required')
+      .max(100, 'Client name too long'),
     industry: z.string().max(100).optional(),
   }),
   rateLimit: {
     ...RATE_LIMIT_TIERS.basic,
     points: COST_BASED_RATE_LIMITS.low.points,
-    tier: 'basic'
+    tier: 'basic',
   },
-  securityTags: ['workspace']
-};
+  securityTags: ['workspace'],
+}
 
 /**
  * Schema for workspace update
  */
 export const UpdateWorkspaceSchema = z.object({
-  clientName: z.string().min(1, 'Client name is required').max(100, 'Client name too long').optional(),
+  clientName: z
+    .string()
+    .min(1, 'Client name is required')
+    .max(100, 'Client name too long')
+    .optional(),
   industry: z.string().max(100).optional(),
 })
 
 /**
  * Schema for brand kit creation
+ * Kept comprehensive to match Prisma + agency needs so we don't strip fields during validation.
  */
 export const CreateBrandKitSchema = z.object({
+  workspaceId: workspaceIdSchema,
+  name: z.string().max(120).optional(),
   colors: z.object({
-    primary: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
-    secondary: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
-    tertiary: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
+    primary: z
+      .string()
+      .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
+    secondary: z
+      .string()
+      .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
+    tertiary: z
+      .string()
+      .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
   }),
   fonts: z.object({
     heading: z.string().min(1, 'Heading font is required'),
     body: z.string().min(1, 'Body font is required'),
   }),
-  voicePrompt: z.string().min(10, 'Voice prompt must be at least 10 characters'),
+  logo: z
+    .object({
+      url: z.string().url('Logo must be a valid URL'),
+      position: z.enum([
+        'top-left',
+        'top-right',
+        'bottom-left',
+        'bottom-right',
+      ]),
+    })
+    .optional(),
+  voicePrompt: z
+    .string()
+    .min(10, 'Voice prompt must be at least 10 characters'),
   brandPersonality: z.string().optional(),
   targetAudience: z.string().optional(),
   valueProposition: z.string().optional(),
-  forbiddenPhrases: z.array(z.string()).optional(),
-  preferredPhrases: z.array(z.string()).optional(),
-  toneStyle: z.enum(['professional', 'playful', 'bold', 'minimal', 'luxury', 'edgy']).optional(),
+  toneOfVoice: z.string().optional(),
+  forbiddenPhrases: z.array(z.string()).optional().default([]),
+  preferredPhrases: z.array(z.string()).optional().default([]),
+  toneStyle: z
+    .enum(['professional', 'playful', 'bold', 'minimal', 'luxury', 'edgy'])
+    .optional(),
+  keywords: z.array(z.string()).optional().default([]),
+  values: z.array(z.string()).optional().default([]),
+  keyDifferentiators: z.array(z.string()).optional().default([]),
+  imageryStyle: z.string().optional(),
+  maskingModel: z
+    .enum(['rembg-replicate', 'sam3', 'rf-detr', 'roboflow', 'hf-model-id'])
+    .optional(),
 })
 
 /**
  * Schema for campaign creation
+ * Expanded to keep agency context (offers, CTAs, targeting, constraints) intact.
  */
 export const CreateCampaignSchema = z
   .object({
-  workspaceId: workspaceIdSchema.optional(),
-  brandKitId: z.string().min(1, 'Brand kit ID is required').optional(),
-  name: z.string().min(1, 'Campaign name is required').max(100, 'Campaign name too long'),
-  description: z.string().optional(),
-  objective: z.enum(['awareness', 'traffic', 'conversion', 'engagement']),
-  launchType: z.enum(['new-launch', 'evergreen', 'seasonal', 'sale', 'event']),
-  funnelStage: z.enum(['cold', 'warm', 'hot']),
-  placements: z.array(z.enum(['ig-feed', 'ig-story', 'fb-feed', 'fb-story', 'li-feed'])).optional(),
-  // Campaign brief fields
-  brief: z.object({
-    clientOverview: z.string().optional(),
-    campaignPurpose: z.string().optional(),
-    primaryKPI: z.string().optional(),
-    secondaryKPIs: z.array(z.string()).optional(),
-    targetMetrics: z.object({
-      impressions: z.number().optional(),
-      reach: z.number().optional(),
-      engagement: z.number().optional(),
-      conversions: z.number().optional(),
-      roi: z.number().optional(),
-    }).optional(),
-    competitorInsights: z.array(z.string()).optional(),
-    differentiators: z.array(z.string()).optional(),
-    primaryAudience: z.object({
-      demographics: z.string().optional(),
-      psychographics: z.string().optional(),
-      painPoints: z.array(z.string()).optional(),
-      motivations: z.array(z.string()).optional(),
-    }).optional(),
-    keyMessage: z.string().optional(),
-    supportingPoints: z.array(z.string()).optional(),
-    emotionalAppeal: z.string().optional(),
-    mandatoryInclusions: z.array(z.string()).optional(),
-    mandatoryExclusions: z.array(z.string()).optional(),
-    platformStrategy: z.object({
-      placements: z.array(z.string()).optional(),
-      formatPreferences: z.array(z.string()).optional(),
-      postingSchedule: z.string().optional(),
-    }).optional(),
-    campaignDuration: z.string().optional(),
-    seasonality: z.string().optional(),
-    budgetConstraints: z.string().optional(),
-    successMetrics: z.object({
-      primary: z.string().optional(),
-      secondary: z.string().optional(),
-      trackingMethods: z.array(z.string()).optional(),
-    }).optional(),
-  }).optional(),
+    workspaceId: workspaceIdSchema.optional(),
+    brandKitId: z.string().min(1, 'Brand kit ID is required').optional(),
+    name: z
+      .string()
+      .min(1, 'Campaign name is required')
+      .max(100, 'Campaign name too long'),
+    description: z.string().optional(),
+    objective: z.enum(['awareness', 'traffic', 'conversion', 'engagement']),
+    launchType: z.enum([
+      'new-launch',
+      'evergreen',
+      'seasonal',
+      'sale',
+      'event',
+    ]),
+    funnelStage: z.enum(['cold', 'warm', 'hot']),
+    status: z.enum(['draft', 'active', 'paused', 'completed']).optional(),
+    placements: z
+      .array(z.enum(['ig-feed', 'ig-story', 'fb-feed', 'fb-story', 'li-feed']))
+      .default(['ig-feed']),
+    primaryOffer: z.string().max(200).optional(),
+    primaryCTA: z.string().max(120).optional(),
+    callToAction: z.string().max(120).optional(), // alias for primaryCTA
+    secondaryCTA: z.string().max(120).optional(),
+    targetAudience: z.string().optional(),
+    referenceCaptions: z.array(z.string()).optional().default([]),
+    headlineMaxLength: z.number().optional(),
+    bodyMaxLength: z.number().optional(),
+    mustIncludePhrases: z.array(z.string()).optional().default([]),
+    mustExcludePhrases: z.array(z.string()).optional().default([]),
+    keywords: z.array(z.string()).optional().default([]),
+    // Campaign brief fields
+    brief: z
+      .object({
+        clientOverview: z.string().optional(),
+        campaignPurpose: z.string().optional(),
+        primaryKPI: z.string().optional(),
+        secondaryKPIs: z.array(z.string()).optional(),
+        targetMetrics: z
+          .object({
+            impressions: z.number().optional(),
+            reach: z.number().optional(),
+            engagement: z.number().optional(),
+            conversions: z.number().optional(),
+            roi: z.number().optional(),
+          })
+          .optional(),
+        competitorInsights: z.array(z.string()).optional(),
+        differentiators: z.array(z.string()).optional(),
+        primaryAudience: z
+          .object({
+            demographics: z.string().optional(),
+            psychographics: z.string().optional(),
+            painPoints: z.array(z.string()).optional(),
+            motivations: z.array(z.string()).optional(),
+            mediaTouchpoints: z.array(z.string()).optional(),
+            postingCadence: z.string().optional(),
+            brandVoice: z.string().optional(),
+            journeyStages: z.array(z.string()).optional(),
+          })
+          .optional(),
+        keyMessage: z.string().optional(),
+        supportingPoints: z.array(z.string()).optional(),
+        emotionalAppeal: z.string().optional(),
+        socialProof: z.array(z.string()).optional(),
+        keywords: z.array(z.string()).optional(),
+        tone: z.array(z.string()).optional(),
+        style: z.array(z.string()).optional(),
+        avoidWords: z.array(z.string()).optional(),
+        mandatoryInclusions: z.array(z.string()).optional(),
+        mandatoryExclusions: z.array(z.string()).optional(),
+        legalRequirements: z.array(z.string()).optional(),
+        platformStrategy: z
+          .object({
+            placements: z.array(z.string()).optional(),
+            formatPreferences: z.array(z.string()).optional(),
+            postingSchedule: z.string().optional(),
+          })
+          .optional(),
+        campaignDuration: z.string().optional(),
+        seasonality: z.string().optional(),
+        urgency: z.string().optional(),
+        budgetConstraints: z.string().optional(),
+        successMetrics: z
+          .object({
+            primary: z.string().optional(),
+            secondary: z.string().optional(),
+            trackingMethods: z.array(z.string()).optional(),
+          })
+          .optional(),
+      })
+      .optional(),
   })
   .refine((data) => !!data.workspaceId || !!data.brandKitId, {
     message: 'Either workspaceId or brandKitId must be provided',
@@ -261,40 +348,55 @@ export const UpdateCampaignBriefSchema = z.object({
     campaignPurpose: z.string().optional(),
     primaryKPI: z.string().optional(),
     secondaryKPIs: z.array(z.string()).optional(),
-    targetMetrics: z.object({
-      impressions: z.number().optional(),
-      reach: z.number().optional(),
-      engagement: z.number().optional(),
-      conversions: z.number().optional(),
-      roi: z.number().optional(),
-    }).optional(),
+    targetMetrics: z
+      .object({
+        impressions: z.number().optional(),
+        reach: z.number().optional(),
+        engagement: z.number().optional(),
+        conversions: z.number().optional(),
+        roi: z.number().optional(),
+      })
+      .optional(),
     competitorInsights: z.array(z.string()).optional(),
     differentiators: z.array(z.string()).optional(),
-    primaryAudience: z.object({
-      demographics: z.string().optional(),
-      psychographics: z.string().optional(),
-      painPoints: z.array(z.string()).optional(),
-      motivations: z.array(z.string()).optional(),
-    }).optional(),
+    primaryAudience: z
+      .object({
+        demographics: z.string().optional(),
+        psychographics: z.string().optional(),
+        painPoints: z.array(z.string()).optional(),
+        motivations: z.array(z.string()).optional(),
+      })
+      .optional(),
     keyMessage: z.string().optional(),
     supportingPoints: z.array(z.string()).optional(),
     emotionalAppeal: z.string().optional(),
+    socialProof: z.array(z.string()).optional(),
+    keywords: z.array(z.string()).optional(),
+    tone: z.array(z.string()).optional(),
+    style: z.array(z.string()).optional(),
+    avoidWords: z.array(z.string()).optional(),
     mandatoryInclusions: z.array(z.string()).optional(),
     mandatoryExclusions: z.array(z.string()).optional(),
-    platformStrategy: z.object({
-      placements: z.array(z.string()).optional(),
-      formatPreferences: z.array(z.string()).optional(),
-      postingSchedule: z.string().optional(),
-    }).optional(),
+    legalRequirements: z.array(z.string()).optional(),
+    platformStrategy: z
+      .object({
+        placements: z.array(z.string()).optional(),
+        formatPreferences: z.array(z.string()).optional(),
+        postingSchedule: z.string().optional(),
+    })
+    .optional(),
     campaignDuration: z.string().optional(),
     seasonality: z.string().optional(),
+    urgency: z.string().optional(),
     budgetConstraints: z.string().optional(),
-    successMetrics: z.object({
-      primary: z.string().optional(),
-      secondary: z.string().optional(),
-      trackingMethods: z.array(z.string()).optional(),
-    }).optional(),
-  })
+    successMetrics: z
+      .object({
+        primary: z.string().optional(),
+        secondary: z.string().optional(),
+        trackingMethods: z.array(z.string()).optional(),
+      })
+      .optional(),
+  }),
 })
 
 /**
@@ -319,6 +421,7 @@ export const LoginSchema = z.object({
  */
 export const ApproveRejectSchema = z.object({
   reason: z.string().optional(),
+  variationId: z.string().optional(), // allows targeting a specific variation when approving/rejecting
 })
 
 /**
@@ -330,15 +433,24 @@ export const BatchApproveRejectSchema = z.object({
 })
 
 /**
+ * Schema for approving captions with optional variation targeting
+ */
+export const ApproveCaptionSchema = z.object({
+  variationId: z.string().optional(),
+})
+
+/**
  * Schema for creative engine generation
  */
 export const GenerateCreativesSchema = z.object({
-  sourceAssets: z.array(z.object({
-    id: z.string(),
-    url: z.string(),
-    name: z.string(),
-    type: z.string(),
-  })),
+  sourceAssets: z.array(
+    z.object({
+      id: z.string(),
+      url: z.string(),
+      name: z.string(),
+      type: z.string(),
+    })
+  ),
   campaignId: z.string().optional(),
   workspaceId: workspaceIdSchema,
   brandKitId: z.string().optional(),
@@ -347,18 +459,20 @@ export const GenerateCreativesSchema = z.object({
   outputCount: z.number().min(1).max(10).optional().default(3),
   referenceCreatives: z.array(z.string()).optional(),
   generateVariations: z.boolean().optional().default(true),
-  styleConstraints: z.object({
-    platforms: z.array(z.string()).optional(),
-    objectives: z.array(z.string()).optional(),
-    funnelStage: z.string().optional(),
-    targetAudience: z.string().optional(),
-    brandPersonality: z.string().optional(),
-    valueProposition: z.string().optional(),
-    mustInclude: z.array(z.string()).optional(),
-    mustExclude: z.array(z.string()).optional(),
-    toneStyle: z.string().optional(),
-    referenceCaptions: z.array(z.string()).optional(),
-  }).optional(),
+  styleConstraints: z
+    .object({
+      platforms: z.array(z.string()).optional(),
+      objectives: z.array(z.string()).optional(),
+      funnelStage: z.string().optional(),
+      targetAudience: z.string().optional(),
+      brandPersonality: z.string().optional(),
+      valueProposition: z.string().optional(),
+      mustInclude: z.array(z.string()).optional(),
+      mustExclude: z.array(z.string()).optional(),
+      toneStyle: z.string().optional(),
+      referenceCaptions: z.array(z.string()).optional(),
+    })
+    .optional(),
 })
 
 /**
@@ -380,26 +494,34 @@ export const GenerateRequirementsSchema = z.object({
   workspaceId: workspaceIdSchema,
   campaignId: z.string().optional(),
   brandKitId: z.string().optional(),
-  clientContext: z.object({
-    companyDescription: z.string().optional(),
-    productService: z.string().optional(),
-    uniqueSellingProposition: z.string().optional(),
-  }).optional(),
-  businessGoals: z.object({
-    primaryObjective: z.string().optional(),
-    successMetrics: z.array(z.string()).optional(),
-    timeline: z.string().optional(),
-  }).optional(),
-  targetAudience: z.object({
-    demographics: z.string().optional(),
-    psychographics: z.string().optional(),
-    painPoints: z.array(z.string()).optional(),
-    buyingBehavior: z.string().optional(),
-  }).optional(),
-  competitiveLandscape: z.object({
-    mainCompetitors: z.array(z.string()).optional(),
-    positioning: z.string().optional(),
-  }).optional(),
+  clientContext: z
+    .object({
+      companyDescription: z.string().optional(),
+      productService: z.string().optional(),
+      uniqueSellingProposition: z.string().optional(),
+    })
+    .optional(),
+  businessGoals: z
+    .object({
+      primaryObjective: z.string().optional(),
+      successMetrics: z.array(z.string()).optional(),
+      timeline: z.string().optional(),
+    })
+    .optional(),
+  targetAudience: z
+    .object({
+      demographics: z.string().optional(),
+      psychographics: z.string().optional(),
+      painPoints: z.array(z.string()).optional(),
+      buyingBehavior: z.string().optional(),
+    })
+    .optional(),
+  competitiveLandscape: z
+    .object({
+      mainCompetitors: z.array(z.string()).optional(),
+      positioning: z.string().optional(),
+    })
+    .optional(),
 })
 
 /**
@@ -416,11 +538,15 @@ export const NextFrameRequestSchema = z.object({
  */
 export const UploadAssetsSchema = z.object({
   workspaceId: workspaceIdSchema,
-  files: z.array(z.object({
-    originalname: z.string(),
-    mimetype: z.string().regex(/^image\//, 'Only image files are allowed'),
-    size: z.number().max(50 * 1024 * 1024, 'File size must be less than 50MB'), // 50MB
-  })),
+  files: z.array(
+    z.object({
+      originalname: z.string(),
+      mimetype: z.string().regex(/^image\//, 'Only image files are allowed'),
+      size: z
+        .number()
+        .max(50 * 1024 * 1024, 'File size must be less than 50MB'), // 50MB
+    })
+  ),
 })
 
 /**
@@ -442,14 +568,21 @@ export type CreateWorkspaceRequest = z.infer<typeof CreateWorkspaceSchema>
 export type UpdateWorkspaceRequest = z.infer<typeof UpdateWorkspaceSchema>
 export type CreateBrandKitRequest = z.infer<typeof CreateBrandKitSchema>
 export type CreateCampaignRequest = z.infer<typeof CreateCampaignSchema>
-export type UpdateCampaignBriefRequest = z.infer<typeof UpdateCampaignBriefSchema>
+export type UpdateCampaignBriefRequest = z.infer<
+  typeof UpdateCampaignBriefSchema
+>
 export type SignupRequest = z.infer<typeof SignupSchema>
 export type LoginRequest = z.infer<typeof LoginSchema>
 export type ApproveRejectRequest = z.infer<typeof ApproveRejectSchema>
+export type ApproveCaptionRequest = z.infer<typeof ApproveCaptionSchema>
 export type BatchApproveRejectRequest = z.infer<typeof BatchApproveRejectSchema>
 export type GenerateCreativesRequest = z.infer<typeof GenerateCreativesSchema>
-export type CreateReferenceCreativeRequest = z.infer<typeof CreateReferenceCreativeSchema>
-export type GenerateRequirementsRequest = z.infer<typeof GenerateRequirementsSchema>
+export type CreateReferenceCreativeRequest = z.infer<
+  typeof CreateReferenceCreativeSchema
+>
+export type GenerateRequirementsRequest = z.infer<
+  typeof GenerateRequirementsSchema
+>
 export type NextFrameRequest = z.infer<typeof NextFrameRequestSchema>
 export type UploadAssetsRequest = z.infer<typeof UploadAssetsSchema>
 export type StartBatchRequest = z.infer<typeof StartBatchSchema>

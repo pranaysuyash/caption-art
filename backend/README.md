@@ -65,6 +65,24 @@ curl -X POST http://localhost:3001/api/caption \
 
 ## API Endpoints
 
+## Local Development
+
+Before starting the server, copy the example env and update the values:
+
+```bash
+cp .env.example .env
+# Edit .env with your actual keys — DO NOT commit this file
+```
+
+We also provide helper scripts under `backend/scripts`:
+
+- `backup-env.js` — saves a timestamped copy of `.env` to `.env.bak.*`
+- `ensure-env.js` — checks if required env vars are present and exits with an error if not
+- `cp-env-if-missing.sh` — only copies `.env.example` to `.env` when `.env` doesn't already exist
+- `restore-env-from-shell.js` — optionally writes env vars from the current shell into `.env` (useful after a reset)
+
+Use these to protect from accidental overwrites and missing keys when running local scripts or CI jobs.
+
 ### Health Check
 
 **GET** `/api/health`
@@ -72,6 +90,7 @@ curl -X POST http://localhost:3001/api/caption \
 Returns the service health status.
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -87,6 +106,7 @@ Returns the service health status.
 Generates AI-powered caption suggestions for an image.
 
 **Request:**
+
 ```json
 {
   "imageUrl": "https://example.com/image.jpg"
@@ -94,6 +114,7 @@ Generates AI-powered caption suggestions for an image.
 ```
 
 **Response:**
+
 ```json
 {
   "baseCaption": "a person standing on a mountain",
@@ -108,6 +129,7 @@ Generates AI-powered caption suggestions for an image.
 ```
 
 **Error Responses:**
+
 - `400 Bad Request`: Missing or invalid imageUrl
 - `502 Bad Gateway`: External API (Replicate/OpenAI) failure
 - `504 Gateway Timeout`: Request timeout
@@ -119,6 +141,7 @@ Generates AI-powered caption suggestions for an image.
 Generates a subject mask for the "text behind subject" effect.
 
 **Request:**
+
 ```json
 {
   "imageUrl": "https://example.com/image.jpg"
@@ -126,6 +149,7 @@ Generates a subject mask for the "text behind subject" effect.
 ```
 
 **Response:**
+
 ```json
 {
   "maskUrl": "https://replicate.delivery/pbxt/mask-output.png"
@@ -133,6 +157,7 @@ Generates a subject mask for the "text behind subject" effect.
 ```
 
 **Error Responses:**
+
 - `400 Bad Request`: Missing or invalid imageUrl
 - `502 Bad Gateway`: Replicate API failure
 - `504 Gateway Timeout`: Request timeout
@@ -144,6 +169,7 @@ Generates a subject mask for the "text behind subject" effect.
 Verifies a Gumroad license key.
 
 **Request:**
+
 ```json
 {
   "licenseKey": "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
@@ -151,6 +177,7 @@ Verifies a Gumroad license key.
 ```
 
 **Response:**
+
 ```json
 {
   "valid": true,
@@ -159,6 +186,7 @@ Verifies a Gumroad license key.
 ```
 
 **Error Responses:**
+
 - `400 Bad Request`: Missing license key
 - `502 Bad Gateway`: Gumroad API failure
 
@@ -168,24 +196,24 @@ All configuration is done through environment variables. See `.env.example` for 
 
 ### Required Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `REPLICATE_API_TOKEN` | Replicate API authentication token | `r8_xxxxx...` |
-| `OPENAI_API_KEY` | OpenAI API authentication key | `sk-xxxxx...` |
-| `GUMROAD_PRODUCT_PERMALINK` | Gumroad product identifier | `caption-art` |
+| Variable                    | Description                        | Example       |
+| --------------------------- | ---------------------------------- | ------------- |
+| `REPLICATE_API_TOKEN`       | Replicate API authentication token | `r8_xxxxx...` |
+| `OPENAI_API_KEY`            | OpenAI API authentication key      | `sk-xxxxx...` |
+| `GUMROAD_PRODUCT_PERMALINK` | Gumroad product identifier         | `caption-art` |
 
 ### Optional Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment mode | `development` |
-| `PORT` | Server port | `3001` |
-| `CORS_ORIGIN` | Allowed CORS origins | `*` |
-| `REPLICATE_BLIP_MODEL` | BLIP model version | (see .env.example) |
-| `REPLICATE_REMBG_MODEL` | rembg model version | (see .env.example) |
-| `OPENAI_MODEL` | OpenAI model name | `gpt-3.5-turbo` |
-| `OPENAI_TEMPERATURE` | Caption creativity (0-2) | `0.8` |
-| `GUMROAD_ACCESS_TOKEN` | Gumroad API token | (optional) |
+| Variable                | Description              | Default            |
+| ----------------------- | ------------------------ | ------------------ |
+| `NODE_ENV`              | Environment mode         | `development`      |
+| `PORT`                  | Server port              | `3001`             |
+| `CORS_ORIGIN`           | Allowed CORS origins     | `*`                |
+| `REPLICATE_BLIP_MODEL`  | BLIP model version       | (see .env.example) |
+| `REPLICATE_REMBG_MODEL` | rembg model version      | (see .env.example) |
+| `OPENAI_MODEL`          | OpenAI model name        | `gpt-3.5-turbo`    |
+| `OPENAI_TEMPERATURE`    | Caption creativity (0-2) | `0.8`              |
+| `GUMROAD_ACCESS_TOKEN`  | Gumroad API token        | (optional)         |
 
 ## Deployment Options
 
@@ -346,15 +374,15 @@ const router = Router()
 router.post('/', async (req: Request, res: Response) => {
   try {
     const { input } = req.body
-    
+
     // Validate input
     if (!input) {
       return res.status(400).json({ error: 'Input required' })
     }
-    
+
     // Process request
     const result = await processInput(input)
-    
+
     res.json({ result })
   } catch (error) {
     console.error('Example error:', error)
@@ -412,6 +440,7 @@ docker logs <container-id>
 **Problem**: Error on startup
 
 **Solutions**:
+
 - Check that all required environment variables are set
 - Verify the port is not already in use
 - Ensure Node.js version is 18 or higher
@@ -422,6 +451,7 @@ docker logs <container-id>
 **Problem**: 502 Bad Gateway responses
 
 **Solutions**:
+
 - Verify API keys are correct and active
 - Check API service status (Replicate, OpenAI)
 - Review rate limits on external services
@@ -432,6 +462,7 @@ docker logs <container-id>
 **Problem**: Browser shows CORS errors
 
 **Solutions**:
+
 - Verify `CORS_ORIGIN` includes your frontend domain
 - Check that preflight requests are handled
 - Ensure the frontend is using the correct backend URL
@@ -442,6 +473,7 @@ docker logs <container-id>
 **Problem**: Slow response times
 
 **Solutions**:
+
 - Check external API latency (Replicate, OpenAI)
 - Monitor memory usage with `pm2 monit` or similar
 - Review concurrent request handling
@@ -453,6 +485,7 @@ docker logs <container-id>
 **Problem**: 429 Too Many Requests
 
 **Solutions**:
+
 - Adjust rate limit settings in `src/middleware/rateLimiter.ts`
 - Implement request queuing on the frontend
 - Consider upgrading to a higher tier on external services
@@ -463,6 +496,7 @@ docker logs <container-id>
 ### Request Logging
 
 All requests are logged with:
+
 - Timestamp
 - HTTP method and path
 - Response status code
@@ -471,6 +505,7 @@ All requests are logged with:
 ### Error Logging
 
 Errors are logged with:
+
 - Timestamp
 - Error message and stack trace
 - Request context (method, path, body)
@@ -479,6 +514,7 @@ Errors are logged with:
 ### Production Monitoring
 
 For production deployments, consider:
+
 - **Application monitoring**: New Relic, Datadog, or similar
 - **Log aggregation**: Loggly, Papertrail, or CloudWatch
 - **Uptime monitoring**: UptimeRobot, Pingdom
@@ -489,6 +525,7 @@ For production deployments, consider:
 If you're migrating from the AWS Lambda version, see [MIGRATION.md](./MIGRATION.md) for a detailed guide.
 
 Key differences:
+
 - Environment variables replace AWS SSM Parameter Store
 - Direct image URLs replace S3 presigned URLs
 - Express route handlers replace Lambda handlers
@@ -510,6 +547,7 @@ Key differences:
 ## Support
 
 For issues and questions:
+
 - GitHub Issues: [your-repo-url]/issues
 - Documentation: [your-docs-url]
 - Email: [your-email]
@@ -517,6 +555,7 @@ For issues and questions:
 ## Changelog
 
 ### v1.0.0 (2024-01-15)
+
 - Initial platform-agnostic release
 - Express.js server with RESTful API
 - Docker support

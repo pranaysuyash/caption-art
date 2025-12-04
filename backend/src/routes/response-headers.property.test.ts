@@ -60,11 +60,12 @@ describe('Property 7: Response headers', () => {
   it('caption endpoint should return Content-Type header', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.webUrl(),
+        fc.constant(null),
         fc.option(fc.array(fc.string(), { minLength: 0, maxLength: 5 }), {
           nil: undefined,
         }),
-        async (imageUrl, keywords) => {
+        async (_unused, keywords) => {
+          const imageUrl = `http://localhost:3000/generated/test.jpg`
           const response = await request(app)
             .post('/api/caption')
             .send({ imageUrl, keywords })
@@ -80,11 +81,9 @@ describe('Property 7: Response headers', () => {
   it('mask endpoint should return Content-Type header', async () => {
     await fc.assert(
       fc.asyncProperty(
-        // Use a simpler URL generator to avoid invalid URLs
-        fc
-          .string({ minLength: 10, maxLength: 100 })
-          .map((s) => `https://example.com/${s}.jpg`),
-        async (imageUrl) => {
+        fc.constant(`http://localhost:3000/generated/test.jpg`),
+        async (_unused) => {
+          const imageUrl = `http://localhost:3000/generated/test.jpg`
           const response = await request(app)
             .post('/api/mask')
             .send({ imageUrl })

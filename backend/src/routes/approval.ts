@@ -6,6 +6,7 @@ import { validateRequest } from '../middleware/validation'
 import { AuthenticatedRequest } from '../types/auth'
 import {
   ApproveRejectSchema,
+  ApproveCaptionSchema,
   BatchApproveRejectSchema,
 } from '../schemas/validation'
 import { log } from '../middleware/logger'
@@ -96,53 +97,64 @@ router.get('/workspace/:workspaceId/grid', requireAuth, async (req, res) => {
   }
 })
 
-// PUT /api/approval/captions/:captionId/approve - Approve a caption
-router.put('/captions/:captionId/approve', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { captionId } = req.params
+// PUT /api/approval/captions/:captionId/approve - Approve a caption (optionally a specific variation)
+router.put(
+  '/captions/:captionId/approve',
+  requireAuth,
+  validateRequest({ body: ApproveCaptionSchema.optional() }),
+  async (req, res) => {
+    try {
+      const authenticatedReq = req as unknown as AuthenticatedRequest
+      const { captionId } = req.params
+      const { variationId } = req.body || {}
 
-    const caption = AuthModel.getCaptionById(captionId)
-    if (!caption) {
-      return res.status(404).json({ error: 'Caption not found' })
+      const caption = AuthModel.getCaptionById(captionId)
+      if (!caption) {
+        return res.status(404).json({ error: 'Caption not found' })
+      }
+
+      // Verify caption belongs to agency via workspace
+      const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
+      if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+        return res.status(403).json({ error: 'Access denied' })
+      }
+
+      const approvedCaption = AuthModel.approveCaption(captionId, variationId)
+      if (!approvedCaption) {
+        return res.status(404).json({ error: 'Caption not found' })
+      }
+
+      res.json({
+        message: 'Caption approved successfully',
+        caption: {
+          ...approvedCaption,
+          text:
+            approvedCaption.variations.length > 0
+              ? approvedCaption.variations[0]?.text || ''
+              : '', // For backward compatibility
+          approved: approvedCaption.approvalStatus === 'approved',
+          variations: approvedCaption.variations.map((v) => ({
+            ...v,
+            approved: v.approvalStatus === 'approved',
+          })),
+          primaryVariation: approvedCaption.primaryVariationId
+            ? approvedCaption.variations.find(
+                (v) => v.id === approvedCaption.primaryVariationId
+              )
+            : approvedCaption.variations[0] || null,
+        },
+      })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ error: 'Invalid input', details: error.issues })
+      }
+      log.error({ error }, 'Approve caption error')
+      res.status(500).json({ error: 'Internal server error' })
     }
-
-    // Verify caption belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
-    if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
-
-    const approvedCaption = AuthModel.approveCaption(captionId)
-    if (!approvedCaption) {
-      return res.status(404).json({ error: 'Caption not found' })
-    }
-
-    res.json({
-      message: 'Caption approved successfully',
-      caption: {
-        ...approvedCaption,
-        text:
-          approvedCaption.variations.length > 0
-            ? approvedCaption.variations[0]?.text || ''
-            : '', // For backward compatibility
-        approved: approvedCaption.approvalStatus === 'approved',
-        variations: approvedCaption.variations.map((v) => ({
-          ...v,
-          approved: v.approvalStatus === 'approved',
-        })),
-        primaryVariation: approvedCaption.primaryVariationId
-          ? approvedCaption.variations.find(
-              (v) => v.id === approvedCaption.primaryVariationId
-            )
-          : approvedCaption.variations[0] || null,
-      },
-    })
-  } catch (error) {
-    log.error({ error }, 'Approve caption error')
-    res.status(500).json({ error: 'Internal server error' })
   }
-})
+)
 
 // PUT /api/approval/captions/:captionId/reject - Reject a caption
 router.put(
@@ -156,7 +168,7 @@ router.put(
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { captionId } = req.params
-      const { reason } = req.body
+      const { reason, variationId } = req.body
 
       const caption = AuthModel.getCaptionById(captionId)
       if (!caption) {
@@ -169,7 +181,11 @@ router.put(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const rejectedCaption = AuthModel.rejectCaption(captionId, reason)
+      const rejectedCaption = AuthModel.rejectCaption(
+        captionId,
+        reason,
+        variationId
+      )
       if (!rejectedCaption) {
         return res.status(404).json({ error: 'Caption not found' })
       }

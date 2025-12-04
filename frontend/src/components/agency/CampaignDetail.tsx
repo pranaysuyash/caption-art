@@ -17,6 +17,7 @@ export function CampaignDetail() {
     'brand-kit' | 'assets' | 'campaign-brief'
   >('brand-kit');
   const [showBriefEditor, setShowBriefEditor] = useState(false);
+  const [maskingModels, setMaskingModels] = useState<string[]>([]);
 
   useEffect(() => {
     loadCampaignData();
@@ -47,7 +48,41 @@ export function CampaignDetail() {
           );
           if (brandKitRes.ok) {
             const bkData = await brandKitRes.json();
-            setBrandKit(bkData);
+            // Normalize brand kit shape to match editor expectations
+            setBrandKit({
+              ...bkData.brandKit,
+              colors: {
+                primary: bkData.brandKit.primaryColor || '#000000',
+                secondary: bkData.brandKit.secondaryColor || '#000000',
+                tertiary: bkData.brandKit.tertiaryColor || '#000000',
+              },
+              fonts: {
+                heading: bkData.brandKit.headingFont || '',
+                body: bkData.brandKit.bodyFont || '',
+              },
+              logo: bkData.brandKit.logoUrl
+                ? {
+                    url: bkData.brandKit.logoUrl,
+                    position: bkData.brandKit.logoPosition || 'top-left',
+                  }
+                : undefined,
+              preferredPhrases: bkData.brandKit.preferredPhrases
+                ? JSON.parse(bkData.brandKit.preferredPhrases)
+                : [],
+              forbiddenPhrases: bkData.brandKit.forbiddenPhrases
+                ? JSON.parse(bkData.brandKit.forbiddenPhrases)
+                : [],
+              keywords: bkData.brandKit.keywords
+                ? JSON.parse(bkData.brandKit.keywords)
+                : [],
+              values: bkData.brandKit.values
+                ? JSON.parse(bkData.brandKit.values)
+                : [],
+              keyDifferentiators: bkData.brandKit.keyDifferentiators
+                ? JSON.parse(bkData.brandKit.keyDifferentiators)
+                : [],
+              maskingModel: bkData.brandKit.maskingModel || 'rembg-replicate',
+            });
           }
         }
       }
@@ -69,6 +104,25 @@ export function CampaignDetail() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const loadMaskingModels = async () => {
+      try {
+        const res = await apiFetch(
+          `${
+            import.meta.env.VITE_API_BASE || 'http://localhost:3001'
+          }/api/brand-kits/masking-models`,
+          { method: 'GET' }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        setMaskingModels(Object.keys(data.models || {}));
+      } catch (err) {
+        // ignore
+      }
+    };
+    loadMaskingModels();
+  }, []);
 
   const handleSave = async () => {
     if (!campaignId || !brandKit) return;
@@ -95,7 +149,24 @@ export function CampaignDetail() {
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(brandKit),
+            body: JSON.stringify({
+              colors: brandKit.colors,
+              fonts: brandKit.fonts,
+              logo: brandKit.logo,
+              voicePrompt: brandKit.voicePrompt,
+              brandPersonality: brandKit.brandPersonality,
+              targetAudience: brandKit.targetAudience,
+              valueProposition: brandKit.valueProposition,
+              toneStyle: brandKit.toneStyle,
+              toneOfVoice: brandKit.toneOfVoice,
+              preferredPhrases: brandKit.preferredPhrases,
+              forbiddenPhrases: brandKit.forbiddenPhrases,
+              keywords: brandKit.keywords,
+              values: brandKit.values,
+              keyDifferentiators: brandKit.keyDifferentiators,
+              imageryStyle: brandKit.imageryStyle,
+              maskingModel: brandKit.maskingModel,
+            }),
           }
         );
       }
@@ -134,6 +205,26 @@ export function CampaignDetail() {
     <div
       style={{ padding: '2rem', fontFamily: 'var(--font-body, sans-serif)' }}
     >
+      <style>
+        {`.brand-form-input {
+            background: #161616;
+            border: 1px solid #333;
+            color: #f5f5f5;
+            padding: 0.75rem;
+            border-radius: 6px;
+            width: 100%;
+            box-sizing: border-box;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+          }
+          .brand-form-input::placeholder {
+            color: #9ca3af;
+          }
+          .brand-form-input:focus {
+            outline: none;
+            border-color: #7c8cff;
+            box-shadow: 0 0 0 2px rgba(124, 140, 255, 0.2);
+          }`}
+      </style>
       {hasQualityInsights && (
         <section
           style={{
@@ -433,6 +524,7 @@ export function CampaignDetail() {
                   Brand Personality
                 </label>
                 <textarea
+                  className='brand-form-input'
                   value={brandKit?.brandPersonality || ''}
                   onChange={(e) =>
                     setBrandKit({
@@ -442,12 +534,8 @@ export function CampaignDetail() {
                   }
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border, #d1d5db)',
-                    borderRadius: '6px',
-                    fontSize: '0.875rem',
+                    fontSize: '0.9rem',
                     minHeight: '60px',
-                    backgroundColor: 'white',
                   }}
                 />
               </div>
@@ -486,10 +574,11 @@ export function CampaignDetail() {
                     fontWeight: '500',
                     color: 'var(--color-text, #1f2937)',
                   }}
-                >
-                  Primary Offer
-                </label>
-                <input
+               >
+                 Primary Offer
+               </label>
+               <input
+                  className='brand-form-input'
                   type='text'
                   value={campaign?.primaryOffer || ''}
                   onChange={(e) =>
@@ -497,11 +586,7 @@ export function CampaignDetail() {
                   }
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border, #d1d5db)',
-                    borderRadius: '6px',
                     fontSize: '1rem',
-                    backgroundColor: 'white',
                   }}
                 />
               </div>
@@ -514,24 +599,285 @@ export function CampaignDetail() {
                     fontWeight: '500',
                     color: 'var(--color-text, #1f2937)',
                   }}
-                >
-                  Target Audience
-                </label>
-                <textarea
+               >
+                 Target Audience
+               </label>
+               <textarea
+                  className='brand-form-input'
                   value={brandKit?.targetAudience || ''}
                   onChange={(e) =>
                     setBrandKit({ ...brandKit, targetAudience: e.target.value })
                   }
                   style={{
                     width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border, #d1d5db)',
-                    borderRadius: '6px',
                     fontSize: '0.875rem',
                     minHeight: '60px',
-                    backgroundColor: 'white',
                   }}
                 />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: '500',
+                    color: 'var(--color-text, #1f2937)',
+                  }}
+               >
+                 Voice Prompt
+               </label>
+               <textarea
+                  className='brand-form-input'
+                  value={brandKit?.voicePrompt || ''}
+                  onChange={(e) =>
+                    setBrandKit({ ...brandKit, voicePrompt: e.target.value })
+                  }
+                  style={{
+                    width: '100%',
+                    fontSize: '0.9rem',
+                    minHeight: '80px',
+                  }}
+                  placeholder='Describe the tone/voice the AI should follow'
+                />
+              </div>
+
+              <div
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: 'var(--color-text, #1f2937)',
+                    }}
+                  >
+                    Tone Style
+                  </label>
+                 <select
+                    className='brand-form-input'
+                    value={brandKit?.toneStyle || ''}
+                    onChange={(e) =>
+                      setBrandKit({ ...brandKit, toneStyle: e.target.value })
+                    }
+                    style={{
+                      width: '100%',
+                    }}
+                  >
+                    <option value=''>Select tone</option>
+                    {['professional', 'playful', 'bold', 'minimal', 'luxury', 'edgy'].map(
+                      (tone) => (
+                        <option key={tone} value={tone}>
+                          {tone}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: 'var(--color-text, #1f2937)',
+                    }}
+                  >
+                    Tone of Voice
+                  </label>
+                 <input
+                    className='brand-form-input'
+                    type='text'
+                    value={brandKit?.toneOfVoice || ''}
+                    onChange={(e) =>
+                      setBrandKit({ ...brandKit, toneOfVoice: e.target.value })
+                    }
+                    style={{
+                      width: '100%',
+                      fontSize: '1rem',
+                    }}
+                    placeholder='Confident, witty, etc.'
+                  />
+                </div>
+              </div>
+
+              <div
+                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
+              >
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: 'var(--color-text, #1f2937)',
+                    }}
+                  >
+                    Preferred Phrases
+                  </label>
+                 <textarea
+                    className='brand-form-input'
+                    value={(brandKit?.preferredPhrases || []).join('\n')}
+                    onChange={(e) =>
+                      setBrandKit({
+                        ...brandKit,
+                        preferredPhrases: e.target.value
+                          .split('\n')
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    style={{
+                      width: '100%',
+                      fontSize: '0.9rem',
+                      minHeight: '80px',
+                    }}
+                    placeholder={'One per line\nAlways mention sustainability\nUse “creators” instead of “users”'}
+                  />
+                </div>
+                <div>
+                  <label
+                    style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontWeight: '500',
+                      color: 'var(--color-text, #1f2937)',
+                    }}
+                  >
+                    Forbidden Phrases
+                  </label>
+                 <textarea
+                    className='brand-form-input'
+                    value={(brandKit?.forbiddenPhrases || []).join('\n')}
+                    onChange={(e) =>
+                      setBrandKit({
+                        ...brandKit,
+                        forbiddenPhrases: e.target.value
+                          .split('\n')
+                          .map((s) => s.trim())
+                          .filter(Boolean),
+                      })
+                    }
+                    style={{
+                      width: '100%',
+                      fontSize: '0.9rem',
+                      minHeight: '80px',
+                    }}
+                    placeholder={'One per line\nDo not use “cheap”\nAvoid slang'}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: '500',
+                    color: 'var(--color-text, #1f2937)',
+                  }}
+               >
+                 Logo URL
+               </label>
+               <input
+                  className='brand-form-input'
+                  type='url'
+                  value={brandKit?.logo?.url || ''}
+                  onChange={(e) =>
+                    setBrandKit({
+                      ...brandKit,
+                      logo: e.target.value
+                        ? {
+                            ...(brandKit.logo || {}),
+                            url: e.target.value,
+                            position: brandKit.logo?.position || 'top-left',
+                          }
+                        : undefined,
+                    })
+                  }
+                  style={{
+                    width: '100%',
+                    fontSize: '1rem',
+                  }}
+                  placeholder='https://.../logo.png'
+                />
+                {brandKit?.logo && (
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        marginBottom: '0.25rem',
+                        fontWeight: '500',
+                        color: 'var(--color-text, #1f2937)',
+                      }}
+                    >
+                      Logo Position
+                    </label>
+                    <select
+                      className='brand-form-input'
+                      value={brandKit.logo.position || 'top-left'}
+                      onChange={(e) =>
+                        setBrandKit({
+                          ...brandKit,
+                          logo: { ...brandKit.logo, position: e.target.value },
+                        })
+                      }
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem',
+                      }}
+                    >
+                      {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map(
+                        (pos) => (
+                          <option key={pos} value={pos}>
+                            {pos}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    marginBottom: '0.5rem',
+                    fontWeight: '500',
+                    color: 'var(--color-text, #1f2937)',
+                  }}
+                >
+                  Masking Model
+                </label>
+                <select
+                  className='brand-form-input'
+                  value={brandKit?.maskingModel || ''}
+                  onChange={(e) =>
+                    setBrandKit({ ...brandKit, maskingModel: e.target.value })
+                  }
+                  style={{
+                    width: '100%',
+                  }}
+                >
+                  <option value=''>Select model</option>
+                  {maskingModels.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+                <small
+                  style={{
+                    display: 'block',
+                    marginTop: '0.35rem',
+                    color: 'var(--color-text-secondary, #6b7280)',
+                  }}
+                >
+                  Controls which background-removal model to use for text masking.
+                </small>
               </div>
             </div>
           </div>

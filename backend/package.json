@@ -9,6 +9,8 @@
     "start": "node dist/server.js",
     "test": "vitest --run",
     "test:watch": "vitest",
+    "prisma:migrate:dev": "prisma migrate dev --name init --preview-feature",
+    "prisma:migrate:deploy": "prisma migrate deploy",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
@@ -56,6 +58,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
+    "pg": "^8.11.0",
     "@prisma/client": "^6.19.0",
     "@prisma/internals": "^7.1.0",
     "bcrypt": "^6.0.0",

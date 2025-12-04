@@ -2,8 +2,11 @@
 // Defines the database schema for Caption Art platform
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./app.sqlite"
+  // Provider and url are now configurable via environment variables.
+  // This allows running SQLite locally (provider=sqlite) and Postgres in
+  // production (provider=postgresql) without editing the schema file.
+  provider = env("DATABASE_PROVIDER")
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -124,11 +127,18 @@ model Campaign {
   brandKitId        String?  
   name              String
   description       String?
-  status            String   @default("draft") // draft | active | completed | archived
+  status            String   @default("draft") // draft | active | paused | completed | archived
   primaryOffer      String?
   targetAudience    String?
   callToAction      String?
+  secondaryCTA      String?
   keywords          String?   // Stored as JSON string
+  placements        String?   // Stored as JSON string
+  mustIncludePhrases String?  // Stored as JSON string
+  mustExcludePhrases String?  // Stored as JSON string
+  headlineMaxLength Int?
+  bodyMaxLength     Int?
+  referenceCaptions String?   // Stored as JSON string
   
   // Campaign brief data
   briefData         Json?   // Stores campaign brief as JSON

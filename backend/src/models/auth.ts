@@ -909,7 +909,11 @@ export class AuthModel {
           agencyName
         )
         try {
-          await WorkspaceModel.createWorkspace(agency.id, 'Demo Workspace', 'General')
+          await WorkspaceModel.createWorkspace(
+            agency.id,
+            'Demo Workspace',
+            'General'
+          )
         } catch (err) {
           log.warn({ err }, 'Failed to create demo workspace for test user')
         }
@@ -928,22 +932,23 @@ export class AuthModel {
   // The previous file had methods for BrandKits, Campaigns, etc. which were using Maps.
   // I should preserve those Map-based methods for now until I migrate them too.
   // I will copy the Map-based methods from the previous file content I viewed.
-  
+
   // Actually, I should probably migrate BrandKit too since it's in the schema?
   // The user said "refactor and improve anything".
   // The schema has BrandKit, Campaign, etc.
-  // I should try to migrate as much as possible, but maybe start with AuthModel (Users/Agencies) first to be safe, 
+  // I should try to migrate as much as possible, but maybe start with AuthModel (Users/Agencies) first to be safe,
   // and keep the others as Maps for this step, then do a second pass.
   // The prompt above only implements User/Agency in Prisma.
   // I will keep the Map implementations for BrandKit, etc. for now to avoid breaking too much at once.
-  
+
   // Re-implementing the Map getters/setters for the other entities:
-  
+
   // ... (Campaign methods)
 
-  static computeCampaignQuality(
-    campaignId: string
-  ): { qualityScore: number; scoreBreakdown: Record<string, number> } {
+  static computeCampaignQuality(campaignId: string): {
+    qualityScore: number
+    scoreBreakdown: Record<string, number>
+  } {
     const captionsForCampaign = this.getCaptionsByCampaign(campaignId)
     const scores: number[] = []
     const breakdown: Record<string, number[]> = {}

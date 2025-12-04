@@ -32,9 +32,17 @@ export function CreateCampaignModal({
     objective: 'awareness',
     launchType: 'new-launch',
     funnelStage: 'cold',
+    primaryOffer: '',
     primaryCTA: '',
+    secondaryCTA: '',
+    targetAudience: '',
     placements: ['ig-feed'],
     referenceCaptions: [],
+    keywords: [],
+    mustIncludePhrases: [],
+    mustExcludePhrases: [],
+    headlineMaxLength: undefined,
+    bodyMaxLength: undefined,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,10 +68,14 @@ export function CreateCampaignModal({
         workspaceId: formData.workspaceId || workspaceId,
         launchType: formData.launchType || 'new-launch',
         funnelStage: formData.funnelStage || 'cold',
+        callToAction: formData.primaryCTA || undefined,
         placements:
           formData.placements && formData.placements.length
             ? formData.placements
             : ['ig-feed'],
+        keywords: (formData.keywords || []).filter(Boolean),
+        mustIncludePhrases: (formData.mustIncludePhrases || []).filter(Boolean),
+        mustExcludePhrases: (formData.mustExcludePhrases || []).filter(Boolean),
       };
       await campaignClient.createCampaign(payload);
       onCreated();
@@ -287,6 +299,135 @@ export function CreateCampaignModal({
                 setFormData({ ...formData, primaryCTA: e.target.value })
               }
               placeholder='Shop Now, Learn More, etc.'
+            />
+          </div>
+
+          <div className='form-group'>
+            <label>Secondary CTA</label>
+            <input
+              type='text'
+              value={formData.secondaryCTA}
+              onChange={(e) =>
+                setFormData({ ...formData, secondaryCTA: e.target.value })
+              }
+              placeholder='Optional backup CTA'
+            />
+          </div>
+
+          <div className='form-group'>
+            <label>Primary Offer</label>
+            <input
+              type='text'
+              value={formData.primaryOffer}
+              onChange={(e) =>
+                setFormData({ ...formData, primaryOffer: e.target.value })
+              }
+              placeholder='20% off summer collection, New drop, etc.'
+            />
+          </div>
+
+          <div className='form-group'>
+            <label>Target Audience</label>
+            <input
+              type='text'
+              value={formData.targetAudience}
+              onChange={(e) =>
+                setFormData({ ...formData, targetAudience: e.target.value })
+              }
+              placeholder='Eg. Women 25-35, urban, fitness-focused'
+            />
+          </div>
+
+          <div className='form-row'>
+            <div className='form-group'>
+              <label>Headline Max Length</label>
+              <input
+                type='number'
+                min={20}
+                max={200}
+                value={formData.headlineMaxLength || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    headlineMaxLength: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
+                placeholder='e.g., 80'
+              />
+            </div>
+            <div className='form-group'>
+              <label>Body Max Length</label>
+              <input
+                type='number'
+                min={40}
+                max={1000}
+                value={formData.bodyMaxLength || ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    bodyMaxLength: e.target.value
+                      ? Number(e.target.value)
+                      : undefined,
+                  })
+                }
+                placeholder='e.g., 220'
+              />
+            </div>
+          </div>
+
+          <div className='form-group'>
+            <label>Keywords (comma-separated)</label>
+            <input
+              type='text'
+              value={(formData.keywords || []).join(', ')}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  keywords: e.target.value
+                    .split(',')
+                    .map((k) => k.trim())
+                    .filter(Boolean),
+                })
+              }
+              placeholder='eco-friendly, breathable fabric, limited drop'
+            />
+          </div>
+
+          <div className='form-group'>
+            <label>Must Include Phrases</label>
+            <textarea
+              value={(formData.mustIncludePhrases || []).join('\n')}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  mustIncludePhrases: e.target.value
+                    .split('\n')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                })
+              }
+              placeholder={'One phrase per line\nBrand name must appear\nAlways mention free shipping'}
+              rows={3}
+            />
+          </div>
+
+          <div className='form-group'>
+            <label>Must Exclude Phrases</label>
+            <textarea
+              value={(formData.mustExcludePhrases || []).join('\n')}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  mustExcludePhrases: e.target.value
+                    .split('\n')
+                    .map((s) => s.trim())
+                    .filter(Boolean),
+                })
+              }
+              placeholder={'One phrase per line\nNo discounts language\nAvoid jargon'}
+              rows={3}
             />
           </div>
 

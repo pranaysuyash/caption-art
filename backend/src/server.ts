@@ -186,16 +186,16 @@ function createServerImpl(
       resave: false,
       saveUninitialized: false,
       cookie: {
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: true,
-          maxAge: 24 * 60 * 60 * 1000, // 24 hours
-          // In development we allow cross-site cookies for the local dev setup
-          // to support frontend running on a different port (Vite dev server).
-          // In production default to 'lax' unless overridden by SESSION_SAMESITE.
-          sameSite:
-            (process.env.SESSION_SAMESITE as any) ||
-            (process.env.NODE_ENV === 'production' ? 'lax' : 'none'),
-        },
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        // In development we allow cross-site cookies for the local dev setup
+        // to support frontend running on a different port (Vite dev server).
+        // In production default to 'lax' unless overridden by SESSION_SAMESITE.
+        sameSite:
+          (process.env.SESSION_SAMESITE as any) ||
+          (process.env.NODE_ENV === 'production' ? 'lax' : 'none'),
+      },
     })
   )
 
@@ -581,7 +581,6 @@ function startServerImpl(): void {
   app.listen(port, () => {
     // Initialize database
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-
 
     // Seed test user
     // eslint-disable-next-line @typescript-eslint/no-var-requires

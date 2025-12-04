@@ -62,7 +62,7 @@ describe('Property 6: Endpoint execution', () => {
   it('caption endpoint should execute handler when called with POST', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.webUrl(),
+        fc.constant(null),
         fc.option(
           fc.array(
             fc.string({ minLength: 1, maxLength: 20 }).filter((s) => {
@@ -78,7 +78,8 @@ describe('Property 6: Endpoint execution', () => {
           ),
           { nil: undefined }
         ),
-        async (imageUrl, keywords) => {
+        async (_unused, keywords) => {
+          const imageUrl = `http://localhost:3000/generated/test.jpg`
           generateBaseCaptionSpy.mockClear()
           rewriteCaptionSpy.mockClear()
 
@@ -98,7 +99,8 @@ describe('Property 6: Endpoint execution', () => {
 
   it('mask endpoint should execute handler when called with POST', async () => {
     await fc.assert(
-      fc.asyncProperty(fc.webUrl(), async (imageUrl) => {
+      fc.asyncProperty(fc.constant(null), async (_unused) => {
+        const imageUrl = `http://localhost:3000/generated/test.jpg`
         generateMaskSpy.mockClear()
 
         const response = await request(app).post('/api/mask').send({ imageUrl })

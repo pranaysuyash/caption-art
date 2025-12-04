@@ -275,7 +275,8 @@ function PlaygroundContent() {
   };
 
   return (
-    <div
+    <main
+      role='main'
       style={{
         fontFamily: 'var(--font-body, system-ui, -apple-system, sans-serif)',
         minHeight: '100vh',
@@ -302,7 +303,7 @@ function PlaygroundContent() {
           onMouseUp={handleMouseUp}
         />
       </div>
-    </div>
+    </main>
   );
 }
 

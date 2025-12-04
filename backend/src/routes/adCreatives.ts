@@ -611,14 +611,20 @@ router.post(
           demographics: Array.isArray(
             (campaign.briefData as any)?.primaryAudience?.demographics
           )
-            ? (campaign.briefData as any).primaryAudience.demographics.join(', ')
+            ? (campaign.briefData as any).primaryAudience.demographics.join(
+                ', '
+              )
             : (campaign.briefData as any)?.primaryAudience?.demographics || '',
           psychographics: Array.isArray(
             (campaign.briefData as any)?.primaryAudience?.psychographics
           )
-            ? (campaign.briefData as any).primaryAudience.psychographics.join(', ')
-            : (campaign.briefData as any)?.primaryAudience?.psychographics || '',
-          painPoints: (campaign.briefData as any)?.primaryAudience?.painPoints || [],
+            ? (campaign.briefData as any).primaryAudience.psychographics.join(
+                ', '
+              )
+            : (campaign.briefData as any)?.primaryAudience?.psychographics ||
+              '',
+          painPoints:
+            (campaign.briefData as any)?.primaryAudience?.painPoints || [],
         },
         keyMessage: (campaign.briefData as any)?.keyMessage || '',
         cta: campaign.callToAction || '',
@@ -1090,7 +1096,9 @@ router.post(
             brandKit.valueProposition ||
             'High quality products',
         ],
-        useCases: [`Drive ${(campaign.briefData as any)?.objective || 'engagement'} through compelling content`],
+        useCases: [
+          `Drive ${(campaign.briefData as any)?.objective || 'engagement'} through compelling content`,
+        ],
       }
 
       const prompt = campaignAwareService.generateCampaignAwarePrompt(

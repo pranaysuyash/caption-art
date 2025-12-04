@@ -71,7 +71,9 @@ const generateRequirementsSchema = z.object({
 router.put(
   '/:campaignId',
   requireAuth,
-  validateRequest({ body: z.object({ brief: updateCampaignBriefSchema.shape.brief }) }),
+  validateRequest({
+    body: z.object({ brief: updateCampaignBriefSchema.shape.brief }),
+  }),
   async (req: AuthenticatedRequest, res: any) => {
     try {
       const { campaignId } = req.params
@@ -210,7 +212,8 @@ router.get(
           primaryOffer: brief?.primaryOffer || campaign.primaryOffer || null,
           primaryCTA: brief?.primaryCTA || campaign.callToAction || null,
           secondaryCTA: brief?.secondaryCTA || null,
-          targetAudience: brief?.targetAudience || campaign.targetAudience || null,
+          targetAudience:
+            brief?.targetAudience || campaign.targetAudience || null,
           placements: brief?.placements || null,
         },
       })

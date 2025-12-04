@@ -1,6 +1,6 @@
 /**
  * RembgClient - Client for interacting with Replicate's rembg model API
- * 
+ *
  * This client handles:
  * - Creating predictions for background removal
  * - Polling for prediction completion
@@ -29,7 +29,8 @@ export interface RembgPrediction {
 export class RembgClient {
   private apiKey: string;
   private baseUrl = 'https://api.replicate.com/v1';
-  private modelVersion = 'fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003';
+  private modelVersion =
+    'fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003';
   private abortController: AbortController | null = null;
 
   constructor(apiKey: string) {
@@ -43,7 +44,10 @@ export class RembgClient {
    * Create a new prediction for background removal with retry logic
    * Requirements: 1.1, 1.2, 5.1, 5.2, 5.3
    */
-  async createPrediction(imageDataUrl: string, maxRetries: number = 3): Promise<RembgPrediction> {
+  async createPrediction(
+    imageDataUrl: string,
+    maxRetries: number = 3
+  ): Promise<RembgPrediction> {
     this.abortController = new AbortController();
 
     let lastError: any;
@@ -53,7 +57,7 @@ export class RembgClient {
         const response = await fetch(`${this.baseUrl}/predictions`, {
           method: 'POST',
           headers: {
-            'Authorization': `Token ${this.apiKey}`,
+            Authorization: `Token ${this.apiKey}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -67,27 +71,30 @@ export class RembgClient {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          const error = this.createSegmentationError(response.status, errorData);
-          
+          const error = this.createSegmentationError(
+            response.status,
+            errorData
+          );
+
           // Don't retry if not retryable (e.g., auth errors)
           if (!error.retryable) {
             throw error;
           }
-          
+
           // Handle rate limiting with retry-after
           if (error.retryAfter && attempt < maxRetries - 1) {
             await this.sleep(error.retryAfter * 1000);
             continue;
           }
-          
+
           lastError = error;
-          
+
           // Retry with exponential backoff for retryable errors
           if (attempt < maxRetries - 1) {
             await this.sleep(Math.pow(2, attempt) * 1000);
             continue;
           }
-          
+
           throw error;
         }
 
@@ -95,25 +102,27 @@ export class RembgClient {
         return prediction;
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
-          throw this.createSegmentationError(0, { detail: 'Request was cancelled' });
+          throw this.createSegmentationError(0, {
+            detail: 'Request was cancelled',
+          });
         }
-        
+
         // If it's already a SegmentationError, check if retryable
         if (this.isSegmentationError(error)) {
           if (!error.retryable) {
             throw error;
           }
           lastError = error;
-          
+
           // Retry with exponential backoff
           if (attempt < maxRetries - 1) {
             await this.sleep(Math.pow(2, attempt) * 1000);
             continue;
           }
         }
-        
+
         lastError = error;
-        
+
         // For network errors, retry
         if (attempt < maxRetries - 1) {
           await this.sleep(Math.pow(2, attempt) * 1000);
@@ -123,9 +132,12 @@ export class RembgClient {
     }
 
     // All retries exhausted
-    throw lastError || this.createSegmentationError(0, { 
-      detail: 'Unable to connect to mask service. Please try again later.' 
-    });
+    throw (
+      lastError ||
+      this.createSegmentationError(0, {
+        detail: 'Unable to connect to mask service. Please try again later.',
+      })
+    );
   }
 
   /**
@@ -134,14 +146,17 @@ export class RembgClient {
    */
   async getPrediction(predictionId: string): Promise<RembgPrediction> {
     try {
-      const response = await fetch(`${this.baseUrl}/predictions/${predictionId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Token ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        signal: this.abortController?.signal,
-      });
+      const response = await fetch(
+        `${this.baseUrl}/predictions/${predictionId}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Token ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          signal: this.abortController?.signal,
+        }
+      );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -152,7 +167,9 @@ export class RembgClient {
       return prediction;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw this.createSegmentationError(0, { detail: 'Request was cancelled' });
+        throw this.createSegmentationError(0, {
+          detail: 'Request was cancelled',
+        });
       }
       throw error;
     }
@@ -170,13 +187,16 @@ export class RembgClient {
       }
 
       // Call Replicate API to cancel the prediction
-      const response = await fetch(`${this.baseUrl}/predictions/${predictionId}/cancel`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await fetch(
+        `${this.baseUrl}/predictions/${predictionId}/cancel`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Token ${this.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       // Cancellation endpoint may return 200 or 404 if already complete
       if (!response.ok && response.status !== 404) {
@@ -208,7 +228,10 @@ export class RembgClient {
    * Wait for prediction to complete with polling
    * Requirements: 1.3, 3.1, 3.2, 5.1, 5.4
    */
-  async waitForCompletion(predictionId: string, timeout: number = 45000): Promise<string> {
+  async waitForCompletion(
+    predictionId: string,
+    timeout: number = 45000
+  ): Promise<string> {
     const maxAttempts = 45;
     const pollInterval = 1000; // 1 second
     const startTime = Date.now();
@@ -227,8 +250,9 @@ export class RembgClient {
           const maskUrl = this.extractMaskUrl(prediction.output);
           if (!maskUrl) {
             // No subject detected (Requirement 5.4)
-            throw this.createSegmentationError(0, { 
-              detail: 'No subject detected. Text will appear on top of image.' 
+            // Use 400 so error maps to 'replicate' type
+            throw this.createSegmentationError(400, {
+              detail: 'No subject detected. Text will appear on top of image.',
             });
           }
           return maskUrl;
@@ -236,14 +260,19 @@ export class RembgClient {
 
         // Handle failed status (Requirement 5.1)
         if (prediction.status === 'failed') {
-          const errorMessage = prediction.error || 'Mask generation failed. Please try again.';
+          const errorMessage =
+            prediction.error || 'Mask generation failed. Please try again.';
           // Sanitize and provide user-friendly error
-          throw this.createSegmentationError(0, { detail: errorMessage });
+          // Use 400 so this is treated as a replicate/API error, not network
+          throw this.createSegmentationError(400, { detail: errorMessage });
         }
 
         // Handle canceled status
         if (prediction.status === 'canceled') {
-          throw this.createSegmentationError(0, { detail: 'Mask generation was cancelled.' });
+          // Treat cancellation as an API-level response that maps to 'replicate'
+          throw this.createSegmentationError(400, {
+            detail: 'Mask generation was cancelled.',
+          });
         }
 
         // Wait before next poll
@@ -256,7 +285,9 @@ export class RembgClient {
 
         // Handle network errors during polling (Requirement 5.5)
         if (error instanceof Error && error.name === 'AbortError') {
-          throw this.createSegmentationError(0, { detail: 'Request was cancelled' });
+          throw this.createSegmentationError(0, {
+            detail: 'Request was cancelled',
+          });
         }
 
         // For other errors during polling, retry if we have attempts left
@@ -266,8 +297,8 @@ export class RembgClient {
         }
 
         // If we're out of retries, throw a network error
-        throw this.createSegmentationError(0, { 
-          detail: 'Unable to connect to mask service. Please try again.' 
+        throw this.createSegmentationError(0, {
+          detail: 'Unable to connect to mask service. Please try again.',
         });
       }
     }
@@ -310,14 +341,17 @@ export class RembgClient {
    * Sleep utility for polling
    */
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
    * Create a SegmentationError from API response
    * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
    */
-  private createSegmentationError(status: number, errorData: any): SegmentationError {
+  private createSegmentationError(
+    status: number,
+    errorData: any
+  ): SegmentationError {
     // Handle rate limiting (Requirement 5.3)
     if (status === 429) {
       const retryAfter = errorData.retry_after || 60;
@@ -349,12 +383,14 @@ export class RembgClient {
 
     // Parse error message first to check for specific conditions (Requirement 5.1, 5.4)
     const errorMessage = errorData.detail || errorData.error || '';
-    
+
     // Check for "no subject detected" type errors BEFORE handling 400 (Requirement 5.4)
-    if (errorMessage.toLowerCase().includes('no subject') || 
-        errorMessage.toLowerCase().includes('no foreground') ||
-        errorMessage.toLowerCase().includes('empty') ||
-        errorMessage.toLowerCase().includes('nothing detected')) {
+    if (
+      errorMessage.toLowerCase().includes('no subject') ||
+      errorMessage.toLowerCase().includes('no foreground') ||
+      errorMessage.toLowerCase().includes('empty') ||
+      errorMessage.toLowerCase().includes('nothing detected')
+    ) {
       return {
         type: 'replicate',
         message: 'No subject detected. Text will appear on top of image.',
@@ -366,14 +402,18 @@ export class RembgClient {
     if (status === 400) {
       return {
         type: 'replicate',
-        message: `Invalid request: ${errorMessage || 'Please check your image format.'}`,
+        message: `Invalid request: ${
+          errorMessage || 'Please check your image format.'
+        }`,
         retryable: false,
       };
     }
 
     // Check for timeout errors (Requirement 5.1)
-    if (errorMessage.toLowerCase().includes('timeout') ||
-        errorMessage.toLowerCase().includes('timed out')) {
+    if (
+      errorMessage.toLowerCase().includes('timeout') ||
+      errorMessage.toLowerCase().includes('timed out')
+    ) {
       return {
         type: 'timeout',
         message: 'Mask generation timed out. Please try again.',
@@ -382,8 +422,10 @@ export class RembgClient {
     }
 
     // Check for model capacity errors (Requirement 5.1)
-    if (errorMessage.toLowerCase().includes('capacity') ||
-        errorMessage.toLowerCase().includes('overloaded')) {
+    if (
+      errorMessage.toLowerCase().includes('capacity') ||
+      errorMessage.toLowerCase().includes('overloaded')
+    ) {
       return {
         type: 'replicate',
         message: 'Service is currently busy. Please try again in a moment.',
@@ -393,10 +435,10 @@ export class RembgClient {
 
     // Handle other errors with user-friendly messages (Requirement 5.1)
     const message = errorMessage || 'Mask generation failed. Please try again.';
-    
+
     // Sanitize error message to be user-friendly (no stack traces or technical details)
     const userFriendlyMessage = this.sanitizeErrorMessage(message);
-    
+
     return {
       type: 'replicate',
       message: userFriendlyMessage,
@@ -423,12 +465,14 @@ export class RembgClient {
       .replace(/^NetworkError:\s*/i, '');
 
     // If message is too technical or empty, provide generic message
-    if (!cleaned || 
-        cleaned.length < 5 || 
-        cleaned.includes('undefined') ||
-        cleaned.includes('null') ||
-        cleaned.includes('{}') ||
-        cleaned.includes('[object Object]')) {
+    if (
+      !cleaned ||
+      cleaned.length < 5 ||
+      cleaned.includes('undefined') ||
+      cleaned.includes('null') ||
+      cleaned.includes('{}') ||
+      cleaned.includes('[object Object]')
+    ) {
       return 'Mask generation failed. Please try again.';
     }
 
@@ -440,10 +484,12 @@ export class RembgClient {
    * Type guard for SegmentationError
    */
   private isSegmentationError(error: any): error is SegmentationError {
-    return error && 
-           typeof error === 'object' && 
-           'type' in error && 
-           'message' in error && 
-           'retryable' in error;
+    return (
+      error &&
+      typeof error === 'object' &&
+      'type' in error &&
+      'message' in error &&
+      'retryable' in error
+    );
   }
 }

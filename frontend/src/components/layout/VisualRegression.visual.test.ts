@@ -54,6 +54,36 @@ async function loginAsDemoUser(page: any) {
       `loginAsDemoUser session validation failed: ${meResponse.status()} ${meResponse.statusText()}`
     );
   }
+
+  // Navigate to app root to ensure cookie is set in the browser context
+  // and the app UI is loaded for Playwright tests. This makes tests less
+  // dependent on the backend seed timing.
+  await page.goto('/');
+  await page.waitForSelector('header, [role="banner"], main, h1');
+}
+
+// Helper to stabilize screenshots by fixing main height to the current
+// viewport. This reduces variability from longer pages and ensures we
+// capture consistent images across environments.
+async function setMainToViewportHeight(page: any) {
+  await page.evaluate(() => {
+    const m = document.querySelector('main');
+    if (m) {
+      // Lock the main height to prevent screenshots from including
+      // additional document content below the fold
+      (m as HTMLElement).style.height = window.innerHeight + 'px';
+      (m as HTMLElement).style.overflow = 'hidden';
+    }
+  });
+}
+
+async function getFirstWorkspaceId(page: any) {
+  const res = await page.request.get(`${API_BASE}/api/workspaces`);
+  if (!res.ok()) throw new Error('Failed to fetch workspaces');
+  const body = await res.json();
+  const id = body?.workspaces?.[0]?.id;
+  if (!id) throw new Error('No workspace found for demo user');
+  return id;
 }
 
 // Viewport sizes to test
@@ -77,14 +107,26 @@ test.describe('Visual Regression Tests - Layout Components', () => {
       // Wait for layout to stabilize
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+      await setMainToViewportHeight(page);
+
+      // Make the main area fixed to viewport height to reduce
+      // visual diff noise caused by variable content height
+      await setMainToViewportHeight(page);
 
       // Capture screenshot
-      await expect(page.locator('main')).toHaveScreenshot(
-        'layout-320px-mobile.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('layout-320px-mobile.png', {
+        animations: 'disabled',
+      });
     });
 
     test('should render correctly at 768px width (tablet)', async ({
@@ -96,13 +138,11 @@ test.describe('Visual Regression Tests - Layout Components', () => {
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
+      await setMainToViewportHeight(page);
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'layout-768px-tablet.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('layout-768px-tablet.png', {
+        animations: 'disabled',
+      });
     });
 
     test('should render correctly at 1024px width (desktop)', async ({
@@ -114,13 +154,11 @@ test.describe('Visual Regression Tests - Layout Components', () => {
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
+      await setMainToViewportHeight(page);
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'layout-1024px-desktop.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('layout-1024px-desktop.png', {
+        animations: 'disabled',
+      });
     });
 
     test('should render correctly at 1920px width (large desktop)', async ({
@@ -132,13 +170,11 @@ test.describe('Visual Regression Tests - Layout Components', () => {
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
+      await setMainToViewportHeight(page);
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'layout-1920px-desktop-large.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('layout-1920px-desktop-large.png', {
+        animations: 'disabled',
+      });
     });
   });
 
@@ -146,14 +182,16 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     test('should render with sidebar expanded on desktop', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.desktop);
       await loginAsDemoUser(page);
-      await page.goto('/playground');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
 
-      // Verify sidebar is visible
-      const sidebar = page.locator('.app-layout__sidebar');
-      await expect(sidebar).toBeVisible();
+      // Verify page header is visible (CampaignList page) as
+      // an alternative to the legacy app-layout sidebar.
+      const header = page.locator('h1');
+      await expect(header).toHaveText(/Campaigns/i);
 
       await expect(page).toHaveScreenshot('sidebar-expanded-desktop.png', {
         fullPage: true,
@@ -166,7 +204,8 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     }) => {
       await page.setViewportSize(VIEWPORTS.desktop);
       await loginAsDemoUser(page);
-      await page.goto('/playground');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
@@ -177,18 +216,16 @@ test.describe('Visual Regression Tests - Layout Components', () => {
       // Wait for animation to complete
       await page.waitForTimeout(400);
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'sidebar-collapsed-desktop.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('sidebar-collapsed-desktop.png', {
+        animations: 'disabled',
+      });
     });
 
     test('should render with sidebar collapsed on mobile', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.mobile);
       await loginAsDemoUser(page);
-      await page.goto('/playground');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
@@ -200,18 +237,16 @@ test.describe('Visual Regression Tests - Layout Components', () => {
         await page.waitForTimeout(400);
       }
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'sidebar-collapsed-mobile.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('sidebar-collapsed-mobile.png', {
+        animations: 'disabled',
+      });
     });
 
     test('should render with sidebar expanded on mobile', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.mobile);
       await loginAsDemoUser(page);
-      await page.goto('/playground');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
@@ -227,12 +262,9 @@ test.describe('Visual Regression Tests - Layout Components', () => {
         }
       }
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'sidebar-expanded-mobile.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('sidebar-expanded-mobile.png', {
+        animations: 'disabled',
+      });
     });
   });
 
@@ -246,12 +278,9 @@ test.describe('Visual Regression Tests - Layout Components', () => {
       await page.waitForTimeout(500);
 
       // Initial state - only upload section visible
-      await expect(page.locator('main')).toHaveScreenshot(
-        'layout-no-image.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('layout-no-image.png', {
+        animations: 'disabled',
+      });
     });
 
     test('should render with image uploaded', async ({ page }) => {
@@ -271,12 +300,9 @@ test.describe('Visual Regression Tests - Layout Components', () => {
       // For visual regression, we're capturing the state after upload would occur
       // This test documents the expected visual state
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'layout-with-image.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('layout-with-image.png', {
+        animations: 'disabled',
+      });
     });
 
     test('should render with image and text', async ({ page }) => {
@@ -292,12 +318,9 @@ test.describe('Visual Regression Tests - Layout Components', () => {
       // 2. Enter text
       // This test documents the expected visual state with both
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'layout-with-image-and-text.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('layout-with-image-and-text.png', {
+        animations: 'disabled',
+      });
     });
   });
 
@@ -310,11 +333,13 @@ test.describe('Visual Regression Tests - Layout Components', () => {
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
 
-      // Verify only upload section is visible
-      const sidebar = page.locator('.sidebar');
-      await expect(sidebar).toBeVisible();
+      // Verify only upload section is visible on the playground
+      const uploadZone = page.locator(
+        '[data-testid="upload-zone"], .upload-zone, input[type="file"]'
+      );
+      await expect(uploadZone).toBeVisible();
 
-      await expect(page.locator('main')).toHaveScreenshot(
+      await expect(page).toHaveScreenshot(
         'progressive-disclosure-initial.png',
         {
           animations: 'disabled',
@@ -335,7 +360,7 @@ test.describe('Visual Regression Tests - Layout Components', () => {
       // Note: In a real test, you would upload an image here
       // and verify that Captions and Text sections appear
 
-      await expect(page.locator('main')).toHaveScreenshot(
+      await expect(page).toHaveScreenshot(
         'progressive-disclosure-with-image.png',
         {
           animations: 'disabled',
@@ -356,18 +381,15 @@ test.describe('Visual Regression Tests - Layout Components', () => {
       const canvasArea = page.locator('.canvas-area, [role="main"]');
       await expect(canvasArea).toBeVisible();
 
-      await expect(page.locator('main')).toHaveScreenshot(
-        'canvas-area-desktop.png',
-        {
-          animations: 'disabled',
-        }
-      );
+      await expect(page).toHaveScreenshot('canvas-area-desktop.png', {
+        animations: 'disabled',
+      });
     });
 
     test('should render canvas area on tablet', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.tablet);
       await loginAsDemoUser(page);
-      await page.goto('/');
+      await page.goto('/playground');
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
@@ -383,7 +405,7 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     test('should render canvas area on mobile', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.mobile);
       await loginAsDemoUser(page);
-      await page.goto('/');
+      await page.goto('/playground');
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
@@ -401,15 +423,20 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     test('should render toolbar on desktop', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.desktop);
       await loginAsDemoUser(page);
-      await page.goto('/');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
 
-      const toolbar = page.locator('.app-layout__toolbar, [role="banner"]');
-      await expect(toolbar).toBeVisible();
+      const captionArtLink = page.locator('a:has-text("Caption Art")');
+      await expect(captionArtLink).toBeVisible();
 
       // Take screenshot of just the toolbar area
+      const toolbar = page.locator(
+        'header, [role="banner"], .app-layout__toolbar'
+      );
+      await expect(toolbar).toBeVisible();
       await expect(toolbar).toHaveScreenshot('toolbar-desktop.png', {
         animations: 'disabled',
       });
@@ -420,14 +447,19 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     }) => {
       await page.setViewportSize(VIEWPORTS.mobile);
       await loginAsDemoUser(page);
-      await page.goto('/');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
 
-      const toolbar = page.locator('.app-layout__toolbar, [role="banner"]');
-      await expect(toolbar).toBeVisible();
+      const captionArtLink = page.locator('a:has-text("Caption Art")');
+      await expect(captionArtLink).toBeVisible();
 
+      const toolbar = page.locator(
+        'header, [role="banner"], .app-layout__toolbar'
+      );
+      await expect(toolbar).toBeVisible();
       await expect(toolbar).toHaveScreenshot('toolbar-mobile.png', {
         animations: 'disabled',
       });
@@ -438,7 +470,8 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     test('should render in light theme', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.desktop);
       await loginAsDemoUser(page);
-      await page.goto('/');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
@@ -460,7 +493,8 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     test('should render in dark theme', async ({ page }) => {
       await page.setViewportSize(VIEWPORTS.desktop);
       await loginAsDemoUser(page);
-      await page.goto('/');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
@@ -486,7 +520,8 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     }) => {
       await page.setViewportSize(VIEWPORTS.desktop);
       await loginAsDemoUser(page);
-      await page.goto('/');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);
@@ -505,7 +540,8 @@ test.describe('Visual Regression Tests - Layout Components', () => {
     }) => {
       await page.setViewportSize(VIEWPORTS.desktop);
       await loginAsDemoUser(page);
-      await page.goto('/');
+      const workspaceId = await getFirstWorkspaceId(page);
+      await page.goto(`/agency/workspaces/${workspaceId}/campaigns`);
 
       await page.waitForLoadState('networkidle');
       await page.waitForTimeout(500);

@@ -14,10 +14,11 @@ describe('Approval API shape', () => {
 
   it('should include approvalStatus and approved boolean consistently', async () => {
     const agent = request.agent(app)
+    const email = `approval-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@test.com`
     await agent
       .post('/api/auth/signup')
       .send({
-        email: 'approval@test.com',
+        email,
         password: 'password',
         agencyName: 'Approval Test',
       })

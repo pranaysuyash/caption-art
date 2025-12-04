@@ -56,8 +56,8 @@ If you have questions about converting `briefData` to first-class columns in the
 
 - Create a campaign using brandKitId (server resolves workspaceId):
   curl -s -X POST http://localhost:3001/api/campaigns \
-    -H "Content-Type: application/json" \
-    -d '{"brandKitId":"<brandKitId>","name":"Test","objective":"awareness","launchType":"evergreen","funnelStage":"cold","placements":["ig-feed","ig-story"]}' | jq .
+   -H "Content-Type: application/json" \
+   -d '{"brandKitId":"<brandKitId>","name":"Test","objective":"awareness","launchType":"evergreen","funnelStage":"cold","placements":["ig-feed","ig-story"]}' | jq .
 
 ## Rollback plan (simple)
 

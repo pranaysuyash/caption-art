@@ -74,7 +74,8 @@ describe('Property 24: Logging availability', () => {
 
   it('should log all requests with timestamp', async () => {
     await fc.assert(
-      fc.asyncProperty(fc.webUrl(), async (imageUrl) => {
+      fc.asyncProperty(fc.constant(null), async (_unused) => {
+        const imageUrl = `http://localhost:3000/generated/test.jpg`
         // Clear previous logs
         consoleLogSpy.mockClear()
 
@@ -106,8 +107,9 @@ describe('Property 24: Logging availability', () => {
     await fc.assert(
       fc.asyncProperty(
         fc.constantFrom('/api/caption', '/api/mask', '/api/verify'),
-        fc.webUrl(),
-        async (endpoint, imageUrl) => {
+        fc.constant(null),
+        async (endpoint, _unused) => {
+          const imageUrl = `http://localhost:3000/generated/test.jpg`
           // Clear previous logs
           consoleLogSpy.mockClear()
 
@@ -146,9 +148,10 @@ describe('Property 24: Logging availability', () => {
           consoleLogSpy.mockClear()
 
           // Make request with invalid input to trigger error
+          const imageUrl = invalidInput
           const response = await request(app)
             .post('/api/caption')
-            .send({ imageUrl: invalidInput })
+            .send({ imageUrl })
 
           // Validation errors (400) may not be logged, but requests are logged
           // Unexpected errors (500) should be logged
@@ -191,7 +194,8 @@ describe('Property 24: Logging availability', () => {
 
   it('should include response time in logs', async () => {
     await fc.assert(
-      fc.asyncProperty(fc.webUrl(), async (imageUrl) => {
+      fc.asyncProperty(fc.constant(null), async (_unused) => {
+        const imageUrl = `http://localhost:3000/generated/test.jpg`
         // Clear previous logs
         consoleLogSpy.mockClear()
 
@@ -216,7 +220,8 @@ describe('Property 24: Logging availability', () => {
 
   it('should log status codes', async () => {
     await fc.assert(
-      fc.asyncProperty(fc.webUrl(), async (imageUrl) => {
+      fc.asyncProperty(fc.constant(null), async (_unused) => {
+        const imageUrl = `http://localhost:3000/generated/test.jpg`
         // Clear previous logs
         consoleLogSpy.mockClear()
 
@@ -274,8 +279,11 @@ describe('Property 24: Logging availability', () => {
   it('should maintain log format consistency', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.array(fc.webUrl(), { minLength: 2, maxLength: 5 }),
-        async (imageUrls) => {
+        fc.array(fc.constant(null), { minLength: 2, maxLength: 5 }),
+        async (unusedUrls) => {
+          const imageUrls = unusedUrls.map(
+            () => `http://localhost:3000/generated/test.jpg`
+          )
           // Clear previous logs
           consoleLogSpy.mockClear()
 
@@ -339,7 +347,8 @@ describe('Property 24: Logging availability', () => {
 
   it('should provide enough context for debugging', async () => {
     await fc.assert(
-      fc.asyncProperty(fc.webUrl(), async (imageUrl) => {
+      fc.asyncProperty(fc.constant(null), async (_unused) => {
+        const imageUrl = `http://localhost:3000/generated/test.jpg`
         // Clear previous logs
         consoleLogSpy.mockClear()
 

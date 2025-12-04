@@ -55,10 +55,16 @@ export interface CreateCampaignData {
   funnelStage: FunnelStage;
   primaryOffer?: string;
   primaryCTA?: string;
+  callToAction?: string;
   secondaryCTA?: string;
   targetAudience?: string;
   placements: Placement[];
   referenceCaptions?: string[];
+  keywords?: string[];
+  mustIncludePhrases?: string[];
+  mustExcludePhrases?: string[];
+  headlineMaxLength?: number;
+  bodyMaxLength?: number;
 }
 
 export async function getCampaigns(workspaceId?: string): Promise<Campaign[]> {

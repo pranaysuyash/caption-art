@@ -1,5 +1,5 @@
 // Safe wrapper around localStorage accesses to avoid exceptions in restricted contexts
-let _localStorageWarned = false
+let _localStorageWarned = false;
 export const safeLocalStorage = {
   getItem: (key: string): string | null => {
     try {
@@ -12,7 +12,7 @@ export const safeLocalStorage = {
       if (!_localStorageWarned) {
         // eslint-disable-next-line no-console
         console.warn('localStorage.getItem() unavailable:', e);
-        _localStorageWarned = true
+        _localStorageWarned = true;
       }
       return null;
     }
@@ -26,7 +26,7 @@ export const safeLocalStorage = {
       if (!_localStorageWarned) {
         // eslint-disable-next-line no-console
         console.warn('localStorage.setItem() unavailable:', e);
-        _localStorageWarned = true
+        _localStorageWarned = true;
       }
     }
   },
@@ -38,7 +38,7 @@ export const safeLocalStorage = {
       if (!_localStorageWarned) {
         // eslint-disable-next-line no-console
         console.warn('localStorage.removeItem() unavailable:', e);
-        _localStorageWarned = true
+        _localStorageWarned = true;
       }
     }
   },
@@ -50,7 +50,7 @@ export const safeLocalStorage = {
       if (!_localStorageWarned) {
         // eslint-disable-next-line no-console
         console.warn('localStorage.clear() unavailable:', e);
-        _localStorageWarned = true
+        _localStorageWarned = true;
       }
     }
   },
@@ -63,7 +63,7 @@ export const safeLocalStorage = {
       if (!_localStorageWarned) {
         // eslint-disable-next-line no-console
         console.warn('localStorage.length unavailable:', e);
-        _localStorageWarned = true
+        _localStorageWarned = true;
       }
       return 0;
     }
@@ -77,7 +77,7 @@ export const safeLocalStorage = {
       if (!_localStorageWarned) {
         // eslint-disable-next-line no-console
         console.warn('localStorage.key() unavailable:', e);
-        _localStorageWarned = true
+        _localStorageWarned = true;
       }
       return null;
     }
@@ -96,7 +96,7 @@ export const safeLocalStorage = {
       if (!_localStorageWarned) {
         // eslint-disable-next-line no-console
         console.warn('localStorage.keys() unavailable:', e);
-        _localStorageWarned = true
+        _localStorageWarned = true;
       }
       return [];
     }

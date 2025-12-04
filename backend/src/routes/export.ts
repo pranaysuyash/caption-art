@@ -100,33 +100,6 @@ router.get('/jobs/:jobId', requireAuth, async (req, res) => {
   }
 })
 
-// GET /api/export/workspace/:workspaceId/jobs - Get export jobs for workspace
-router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
-  try {
-    const authenticatedReq = req as unknown as AuthenticatedRequest
-    const { workspaceId } = req.params
-
-    // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
-    if (!workspace) {
-      return res.status(404).json({ error: 'Workspace not found' })
-    }
-
-    if (workspace.agencyId !== authenticatedReq.agency.id) {
-      return res.status(403).json({ error: 'Access denied' })
-    }
-
-    const jobs = AuthModel.getExportJobsByWorkspace(workspaceId)
-    res.json({ jobs })
-  } catch (error) {
-    log.error(
-      { requestId: (req as any).requestId, err: error },
-      'Get export jobs error'
-    )
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
-
 // GET /api/export/jobs/:jobId/download - Download completed export
 router.get('/jobs/:jobId/download', requireAuth, async (req, res) => {
   try {

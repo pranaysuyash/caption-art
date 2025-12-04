@@ -119,7 +119,10 @@ router.post(
       }
 
       // Print placements for debugging to stdout for easier debugging
-      console.log('Create campaign payload placements:', JSON.stringify(validatedData.placements))
+      console.log(
+        'Create campaign payload placements:',
+        JSON.stringify(validatedData.placements)
+      )
       log.info(
         { workspaceId, brandKitId, validatedData, briefData },
         'Campaign creation debug'
@@ -130,13 +133,28 @@ router.post(
           brandKitId: brandKitId || undefined,
           name: validatedData.name,
           description: validatedData.description,
-          callToAction:
-            validatedData.primaryCTA || validatedData.primaryCTA || null,
+          callToAction: validatedData.primaryCTA || null,
+          secondaryCTA: validatedData.secondaryCTA || null,
           primaryOffer: validatedData.primaryOffer || null,
           targetAudience: validatedData.targetAudience || null,
+          placements: JSON.stringify(validatedData.placements || ['ig-feed']),
+          mustIncludePhrases: validatedData.mustIncludePhrases
+            ? JSON.stringify(validatedData.mustIncludePhrases)
+            : null,
+          mustExcludePhrases: validatedData.mustExcludePhrases
+            ? JSON.stringify(validatedData.mustExcludePhrases)
+            : null,
+          headlineMaxLength: validatedData.headlineMaxLength || null,
+          bodyMaxLength: validatedData.bodyMaxLength || null,
+          referenceCaptions: validatedData.referenceCaptions
+            ? JSON.stringify(validatedData.referenceCaptions)
+            : null,
+          keywords: validatedData.keywords
+            ? JSON.stringify(validatedData.keywords)
+            : null,
           // pack additional fields into briefData JSON column
           briefData,
-          status: 'draft',
+          status: validatedData.status || 'draft',
         },
       })
 
@@ -164,6 +182,7 @@ router.get('/', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const workspaceId = req.query.workspaceId as string
+    const statusQuery = req.query.status as string | undefined
 
     if (workspaceId) {
       // Verify workspace belongs to agency
@@ -174,10 +193,27 @@ router.get('/', requireAuth, async (req, res) => {
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const campaigns = await prisma.campaign.findMany({
-        where: { workspaceId },
-      })
-      res.json({ campaigns })
+      const where: any = { workspaceId }
+      if (statusQuery) {
+        const statuses = statusQuery.split(',').map((s) => s.trim())
+        where.status = { in: statuses }
+      }
+      const campaigns = await prisma.campaign.findMany({ where })
+      const parsed = campaigns.map((c) => ({
+        ...c,
+        placements: c.placements ? JSON.parse(c.placements) : undefined,
+        mustIncludePhrases: c.mustIncludePhrases
+          ? JSON.parse(c.mustIncludePhrases)
+          : undefined,
+        mustExcludePhrases: c.mustExcludePhrases
+          ? JSON.parse(c.mustExcludePhrases)
+          : undefined,
+        referenceCaptions: c.referenceCaptions
+          ? JSON.parse(c.referenceCaptions)
+          : undefined,
+        keywords: c.keywords ? JSON.parse(c.keywords) : undefined,
+      }))
+      res.json({ campaigns: parsed })
     } else {
       // Get all campaigns for agency by finding workspaces first
       const workspaces = await prisma.workspace.findMany({
@@ -186,10 +222,27 @@ router.get('/', requireAuth, async (req, res) => {
       })
       const workspaceIds = workspaces.map((w) => w.id)
 
-      const campaigns = await prisma.campaign.findMany({
-        where: { workspaceId: { in: workspaceIds } },
-      })
-      res.json({ campaigns })
+      const where: any = { workspaceId: { in: workspaceIds } }
+      if (statusQuery) {
+        const statuses = statusQuery.split(',').map((s) => s.trim())
+        where.status = { in: statuses }
+      }
+      const campaigns = await prisma.campaign.findMany({ where })
+      const parsed = campaigns.map((c) => ({
+        ...c,
+        placements: c.placements ? JSON.parse(c.placements) : undefined,
+        mustIncludePhrases: c.mustIncludePhrases
+          ? JSON.parse(c.mustIncludePhrases)
+          : undefined,
+        mustExcludePhrases: c.mustExcludePhrases
+          ? JSON.parse(c.mustExcludePhrases)
+          : undefined,
+        referenceCaptions: c.referenceCaptions
+          ? JSON.parse(c.referenceCaptions)
+          : undefined,
+        keywords: c.keywords ? JSON.parse(c.keywords) : undefined,
+      }))
+      res.json({ campaigns: parsed })
     }
   } catch (error) {
     log.error({ error }, 'List campaigns error')
@@ -203,7 +256,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
 
-    const campaign = await prisma.campaign.findUnique({
+  const campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
         brandKit: true,
@@ -227,8 +280,26 @@ router.get('/:id', requireAuth, async (req, res) => {
       take: 5, // Limit to first 5 as references
     })
 
+    // Parse JSON string fields for consumer friendliness
+    const parsedCampaign = {
+      ...campaign,
+      placements: campaign.placements
+        ? JSON.parse(campaign.placements)
+        : undefined,
+      mustIncludePhrases: campaign.mustIncludePhrases
+        ? JSON.parse(campaign.mustIncludePhrases)
+        : undefined,
+      mustExcludePhrases: campaign.mustExcludePhrases
+        ? JSON.parse(campaign.mustExcludePhrases)
+        : undefined,
+      referenceCaptions: campaign.referenceCaptions
+        ? JSON.parse(campaign.referenceCaptions)
+        : undefined,
+      keywords: campaign.keywords ? JSON.parse(campaign.keywords) : undefined,
+    }
+
     res.json({
-      campaign,
+      campaign: parsedCampaign,
       brandKit: campaign.brandKit,
       referenceCreatives,
     })
@@ -284,22 +355,17 @@ router.put(
       if (validatedData.name) updateData.name = validatedData.name
       if (validatedData.description)
         updateData.description = validatedData.description
-      if (validatedData.objective)
-        updateData.objective = validatedData.objective
-      if (validatedData.launchType)
-        updateData.launchType = validatedData.launchType
-      if (validatedData.funnelStage)
-        updateData.funnelStage = validatedData.funnelStage
       if (validatedData.primaryOffer)
         updateData.primaryOffer = validatedData.primaryOffer
       if (validatedData.primaryCTA)
-        updateData.primaryCTA = validatedData.primaryCTA
+        updateData.callToAction = validatedData.primaryCTA
       if (validatedData.secondaryCTA)
         updateData.secondaryCTA = validatedData.secondaryCTA
       if (validatedData.targetAudience)
         updateData.targetAudience = validatedData.targetAudience
       if (validatedData.placements)
-        updateData.placements = validatedData.placements.join(',')
+        updateData.placements = JSON.stringify(validatedData.placements)
+      if (validatedData.status) updateData.status = validatedData.status
       if (validatedData.headlineMaxLength)
         updateData.headlineMaxLength = validatedData.headlineMaxLength
       if (validatedData.bodyMaxLength)
@@ -312,6 +378,36 @@ router.put(
         updateData.mustExcludePhrases = JSON.stringify(
           validatedData.mustExcludePhrases
         )
+      if (validatedData.referenceCaptions)
+        updateData.referenceCaptions = JSON.stringify(
+          validatedData.referenceCaptions
+        )
+      if (validatedData.keywords)
+        updateData.keywords = JSON.stringify(validatedData.keywords)
+      if (validatedData.objective || validatedData.launchType || validatedData.funnelStage) {
+        updateData.briefData = {
+          ...(campaign.briefData as any),
+          objective: validatedData.objective || (campaign as any).briefData?.objective,
+          launchType: validatedData.launchType || (campaign as any).briefData?.launchType,
+          funnelStage: validatedData.funnelStage || (campaign as any).briefData?.funnelStage,
+          placements: validatedData.placements || (campaign as any).briefData?.placements,
+          headlineMaxLength:
+            validatedData.headlineMaxLength ??
+            (campaign as any).briefData?.headlineMaxLength,
+          bodyMaxLength:
+            validatedData.bodyMaxLength ??
+            (campaign as any).briefData?.bodyMaxLength,
+          mustIncludePhrases:
+            validatedData.mustIncludePhrases ??
+            (campaign as any).briefData?.mustIncludePhrases,
+          mustExcludePhrases:
+            validatedData.mustExcludePhrases ??
+            (campaign as any).briefData?.mustExcludePhrases,
+          referenceCaptions:
+            validatedData.referenceCaptions ??
+            (campaign as any).briefData?.referenceCaptions,
+        }
+      }
 
       const updatedCampaign = await prisma.campaign.update({
         where: { id },
@@ -413,6 +509,66 @@ router.post('/:id/pause', requireAuth, async (req, res) => {
     res.json({ campaign: pausedCampaign })
   } catch (error) {
     log.error({ error }, 'Pause campaign error')
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/campaigns/:id/archive - Archive campaign (soft delete)
+router.post('/:id/archive', requireAuth, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { id } = req.params
+
+    const campaign = await prisma.campaign.findUnique({ where: { id } })
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' })
+    }
+
+    // Verify campaign belongs to agency via workspace
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: campaign.workspaceId },
+    })
+    if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const archivedCampaign = await prisma.campaign.update({
+      where: { id },
+      data: { status: 'archived' },
+    })
+    res.json({ campaign: archivedCampaign })
+  } catch (error) {
+    log.error({ error }, 'Archive campaign error')
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// POST /api/campaigns/:id/unarchive - Unarchive campaign (restore to draft)
+router.post('/:id/unarchive', requireAuth, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { id } = req.params
+
+    const campaign = await prisma.campaign.findUnique({ where: { id } })
+    if (!campaign) {
+      return res.status(404).json({ error: 'Campaign not found' })
+    }
+
+    // Verify campaign belongs to agency via workspace
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: campaign.workspaceId },
+    })
+    if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const unarchivedCampaign = await prisma.campaign.update({
+      where: { id },
+      data: { status: 'draft' },
+    })
+    res.json({ campaign: unarchivedCampaign })
+  } catch (error) {
+    log.error({ error }, 'Unarchive campaign error')
     res.status(500).json({ error: 'Internal server error' })
   }
 })

@@ -19,9 +19,9 @@ async function run() {
           objective: 'awareness',
           launchType: 'evergreen',
           funnelStage: 'cold',
-          placements: ['ig-feed','ig-story']
-        }
-      }
+          placements: ['ig-feed', 'ig-story'],
+        },
+      },
     })
     console.log('Created campaign', campaign.id, campaign.briefData)
   } catch (err) {

@@ -16,6 +16,7 @@ interface Campaign {
 export function CampaignList() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -39,7 +40,13 @@ export function CampaignList() {
       }
 
       const data = await response.json();
-      setCampaigns(data.campaigns || []);
+      const items: Campaign[] = data.campaigns || [];
+      // By default do not show archived campaigns unless user toggles it on
+      if (!showArchived) {
+        setCampaigns(items.filter((c) => c.status !== 'archived'));
+      } else {
+        setCampaigns(items);
+      }
     } catch (error) {
       console.error('Error loading campaigns:', error);
     } finally {
@@ -50,6 +57,19 @@ export function CampaignList() {
   const handleCreateCampaign = async () => {
     loadCampaigns(); // Reload campaigns after successful creation
     setShowCreateModal(false);
+  };
+
+  const toggleArchive = async (campaignId: string, archived: boolean) => {
+    try {
+      const endpoint = archived
+        ? `/api/campaigns/${campaignId}/unarchive`
+        : `/api/campaigns/${campaignId}/archive`;
+      const res = await apiFetch(endpoint, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to toggle archive status');
+      loadCampaigns();
+    } catch (err) {
+      console.error('Error toggling archive:', err);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -187,6 +207,29 @@ export function CampaignList() {
             gap: '1.5rem',
           }}
         >
+          <div
+            style={{
+              gridColumn: '1 / -1',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div />
+            <label
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <input
+                type='checkbox'
+                checked={showArchived}
+                onChange={(e) => {
+                  setShowArchived(e.target.checked);
+                  loadCampaigns();
+                }}
+              />
+              Show archived
+            </label>
+          </div>
           {campaigns.map((campaign) => {
             const qualityStatus = getQualityStatus(campaign.qualityScore);
             return (
@@ -347,6 +390,33 @@ export function CampaignList() {
                       }}
                     >
                       📋
+                    </div>
+                    <div style={{ marginLeft: '0.5rem' }}>
+                      {campaign.status !== 'archived' ? (
+                        <button
+                          className='btn btn-ghost'
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleArchive(campaign.id, false);
+                          }}
+                          aria-label='Archive campaign'
+                        >
+                          Archive
+                        </button>
+                      ) : (
+                        <button
+                          className='btn btn-ghost'
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleArchive(campaign.id, true);
+                          }}
+                          aria-label='Unarchive campaign'
+                        >
+                          Unarchive
+                        </button>
+                      )}
                     </div>
                   </div>
 

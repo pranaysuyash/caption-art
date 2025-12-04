@@ -55,15 +55,18 @@ export class CampaignAwareService {
 
     // Build messaging strategy from campaign and brand data
     const messagingStrategy = {
-      primaryValueProp: brief?.keyMessage || brandKit.valueProposition || 'High quality products and services',
+      primaryValueProp:
+        brief?.keyMessage ||
+        brandKit.valueProposition ||
+        'High quality products and services',
       emotionalAppeal: brief?.emotionalAppeal || 'Trust and reliability',
       differentiators: [
         brandKit.uniqueValue || 'Quality and innovation',
-        ...(brief?.differentiators || [])
+        ...(brief?.differentiators || []),
       ],
       trustSignals: [
         brandKit.brandPersonality || 'Professional and trustworthy',
-        ...(brief?.socialProof || [])
+        ...(brief?.socialProof || []),
       ],
     }
 
@@ -94,7 +97,13 @@ export class CampaignAwareService {
     platforms: string[],
     contentType: 'caption' | 'adcopy' | 'video-script'
   ): string {
-    const { campaign, brandKit, targetAudience, messagingStrategy, contentGuidelines } = campaignContext
+    const {
+      campaign,
+      brandKit,
+      targetAudience,
+      messagingStrategy,
+      contentGuidelines,
+    } = campaignContext
 
     const audienceSection = this.buildAudienceSection(targetAudience)
     const brandSection = this.buildBrandSection(brandKit)
@@ -165,7 +174,10 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
   /**
    * Extract tone guidelines from campaign and brand
    */
-  private extractToneGuidelines(campaign: Campaign, brandKit: BrandKit): string[] {
+  private extractToneGuidelines(
+    campaign: Campaign,
+    brandKit: BrandKit
+  ): string[] {
     const tones = new Set<string>()
 
     // Brand personality tones
@@ -183,7 +195,7 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
     // Campaign-specific tones
     const brief = (campaign.briefData as any) || campaign.brief
     if (brief?.tone) {
-      brief.tone.forEach(tone => tones.add(tone))
+      brief.tone.forEach((tone) => tones.add(tone))
     }
 
     // Default tones based on campaign objective
@@ -194,9 +206,10 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
       retention: ['appreciative', 'valuable', 'community-focused'],
     }
 
-    objectiveTones[(campaign.briefData as any)?.objective as keyof typeof objectiveTones || (campaign.objective as keyof typeof objectiveTones)]?.forEach(tone =>
-      tones.add(tone)
-    )
+    objectiveTones[
+      ((campaign.briefData as any)?.objective as keyof typeof objectiveTones) ||
+        (campaign.objective as keyof typeof objectiveTones)
+    ]?.forEach((tone) => tones.add(tone))
 
     return Array.from(tones).slice(0, 5) // Limit to 5 most relevant tones
   }
@@ -204,7 +217,10 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
   /**
    * Extract style guidelines from campaign and brand
    */
-  private extractStyleGuidelines(campaign: Campaign, brandKit: BrandKit): string[] {
+  private extractStyleGuidelines(
+    campaign: Campaign,
+    brandKit: BrandKit
+  ): string[] {
     const styles = []
 
     // Brand colors and visual style
@@ -218,7 +234,7 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
     // Campaign style preferences
     const brief = (campaign.briefData as any) || campaign.brief
     if (brief?.style) {
-      brief.style.forEach(style => styles.push(style))
+      brief.style.forEach((style) => styles.push(style))
     }
 
     // Default style guidelines
@@ -237,24 +253,24 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
 
     // Brand keywords
     if (brandKit.keywords) {
-      brandKit.keywords.forEach(keyword => keywords.add(keyword))
+      brandKit.keywords.forEach((keyword) => keywords.add(keyword))
     }
 
     // Campaign keywords
     const brief = (campaign.briefData as any) || campaign.brief
     if (brief?.keywords) {
-      brief.keywords.forEach(keyword => keywords.add(keyword))
+      brief.keywords.forEach((keyword) => keywords.add(keyword))
     }
 
     // Extract keywords from campaign name and key message
     if (campaign.name) {
-      campaign.name.split(/\s+/).forEach(word => {
+      campaign.name.split(/\s+/).forEach((word) => {
         if (word.length > 3) keywords.add(word.toLowerCase())
       })
     }
 
     if (brief?.keyMessage) {
-      brief.keyMessage.split(/\s+/).forEach(word => {
+      brief.keyMessage.split(/\s+/).forEach((word) => {
         if (word.length > 3) keywords.add(word.toLowerCase())
       })
     }
@@ -265,7 +281,9 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
   /**
    * Build audience section of prompt
    */
-  private buildAudienceSection(targetAudience: CampaignContext['targetAudience']): string {
+  private buildAudienceSection(
+    targetAudience: CampaignContext['targetAudience']
+  ): string {
     return `
 TARGET AUDIENCE:
 Demographics: ${targetAudience.demographics || 'General audience'}
@@ -314,7 +332,9 @@ Campaign Stage: ${campaign.objective} (funnel stage: ${campaign.funnelStage || '
   /**
    * Build messaging section of prompt
    */
-  private buildMessagingSection(messagingStrategy: CampaignContext['messagingStrategy']): string {
+  private buildMessagingSection(
+    messagingStrategy: CampaignContext['messagingStrategy']
+  ): string {
     return `
 MESSAGING STRATEGY:
 Primary Value Proposition: ${messagingStrategy.primaryValueProp}
@@ -327,7 +347,9 @@ Trust Signals: ${messagingStrategy.trustSignals.join(', ')}
   /**
    * Build guidelines section of prompt
    */
-  private buildGuidelinesSection(contentGuidelines: CampaignContext['contentGuidelines']): string {
+  private buildGuidelinesSection(
+    contentGuidelines: CampaignContext['contentGuidelines']
+  ): string {
     return `
 CONTENT GUIDELINES:
 Tone: ${contentGuidelines.tone.join(', ')}
@@ -357,12 +379,16 @@ Use Cases: ${assetContext.useCases?.join(', ') || 'Not specified'}
   private buildPlatformSection(platforms: string[]): string {
     const platformGuidelines = {
       instagram: 'Visual-first, emojis, hashtags, casual tone, stories format',
-      facebook: 'Community-focused, detailed descriptions, questions, longer posts',
+      facebook:
+        'Community-focused, detailed descriptions, questions, longer posts',
       linkedin: 'Professional, industry terminology, business value, articles',
     }
 
     return platforms
-      .map(platform => `- ${platform.charAt(0).toUpperCase() + platform.slice(1)}: ${platformGuidelines[platform as keyof typeof platformGuidelines]}`)
+      .map(
+        (platform) =>
+          `- ${platform.charAt(0).toUpperCase() + platform.slice(1)}: ${platformGuidelines[platform as keyof typeof platformGuidelines]}`
+      )
       .join('\n')
   }
 
@@ -375,12 +401,19 @@ Use Cases: ${assetContext.useCases?.join(', ') || 'Not specified'}
       alt1: 'Alternative 1: More casual and conversational tone. Uses questions and personal language.',
       alt2: 'Alternative 2: Benefit-focused with strong value propositions. Uses numbers and statistics.',
       alt3: 'Alternative 3: Urgent and direct. Uses scarcity and time-limited language.',
-      punchy: 'Punchy: Short, bold, and attention-grabbing. Uses strong words and minimal text.',
-      short: 'Short: Concise and to-the-point. Focuses on essential information only.',
-      story: 'Story: Narrative-driven with emotional appeal. Uses storytelling techniques.',
+      punchy:
+        'Punchy: Short, bold, and attention-grabbing. Uses strong words and minimal text.',
+      short:
+        'Short: Concise and to-the-point. Focuses on essential information only.',
+      story:
+        'Story: Narrative-driven with emotional appeal. Uses storytelling techniques.',
     }
 
-    return variationInstructions[variationType as keyof typeof variationInstructions] || variationInstructions.main
+    return (
+      variationInstructions[
+        variationType as keyof typeof variationInstructions
+      ] || variationInstructions.main
+    )
   }
 
   /**
@@ -388,12 +421,18 @@ Use Cases: ${assetContext.useCases?.join(', ') || 'Not specified'}
    */
   private getContentTypeInstructions(contentType: string): string {
     const instructions = {
-      caption: 'Generate engaging social media captions that encourage interaction and sharing.',
-      adcopy: 'Generate conversion-focused advertising copy with clear CTAs and value propositions.',
-      'video-script': 'Generate compelling video scripts that tell a story and drive action.',
+      caption:
+        'Generate engaging social media captions that encourage interaction and sharing.',
+      adcopy:
+        'Generate conversion-focused advertising copy with clear CTAs and value propositions.',
+      'video-script':
+        'Generate compelling video scripts that tell a story and drive action.',
     }
 
-    return instructions[contentType as keyof typeof instructions] || instructions.caption
+    return (
+      instructions[contentType as keyof typeof instructions] ||
+      instructions.caption
+    )
   }
 
   /**
@@ -467,10 +506,18 @@ OUTPUT FORMAT:
     if (campaignContext.targetAudience.demographics) score += 8
     else gaps.push('Missing target audience demographics')
 
-    if (campaignContext.targetAudience.painPoints && campaignContext.targetAudience.painPoints.length > 0) score += 9
+    if (
+      campaignContext.targetAudience.painPoints &&
+      campaignContext.targetAudience.painPoints.length > 0
+    )
+      score += 9
     else gaps.push('Missing audience pain points')
 
-    if (campaignContext.targetAudience.motivations && campaignContext.targetAudience.motivations.length > 0) score += 8
+    if (
+      campaignContext.targetAudience.motivations &&
+      campaignContext.targetAudience.motivations.length > 0
+    )
+      score += 8
     else gaps.push('Missing audience motivations')
 
     // Check messaging strategy (25 points)
@@ -505,16 +552,24 @@ OUTPUT FORMAT:
 
     // Generate recommendations based on gaps
     if (gaps.includes('Missing audience pain points')) {
-      recommendations.push('Add specific audience pain points to improve resonance')
+      recommendations.push(
+        'Add specific audience pain points to improve resonance'
+      )
     }
     if (gaps.includes('Missing brand differentiators')) {
-      recommendations.push('Define what makes your brand unique compared to competitors')
+      recommendations.push(
+        'Define what makes your brand unique compared to competitors'
+      )
     }
     if (gaps.includes('Missing keywords')) {
-      recommendations.push('Add campaign-specific keywords for better SEO and relevance')
+      recommendations.push(
+        'Add campaign-specific keywords for better SEO and relevance'
+      )
     }
     if (gaps.includes('Missing tone guidelines')) {
-      recommendations.push('Define specific tone guidelines for consistent brand voice')
+      recommendations.push(
+        'Define specific tone guidelines for consistent brand voice'
+      )
     }
 
     return {

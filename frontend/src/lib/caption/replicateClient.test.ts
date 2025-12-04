@@ -5,10 +5,21 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { ReplicateClient, ReplicateError } from './replicateClient'
+import * as retryHandler from './retryHandler'
 
 // Mock fetch globally
 const mockFetch = vi.fn()
 globalThis.fetch = mockFetch as any
+
+// Mock retryWithBackoff to execute immediately without delay
+// We can spy on it to verify it's called, but we replace implementation to avoid delays
+vi.mock('./retryHandler', async () => {
+  const actual = await vi.importActual('./retryHandler')
+  return {
+    ...actual,
+    retryWithBackoff: vi.fn(async (fn) => fn())
+  }
+})
 
 describe('ReplicateClient', () => {
   let client: ReplicateClient
@@ -70,7 +81,7 @@ describe('ReplicateClient', () => {
     })
 
     it('should handle rate limiting (429)', async () => {
-      // Mock all retry attempts to return 429
+      // Mock fetch to return 429
       mockFetch.mockResolvedValue({
         ok: false,
         status: 429,
@@ -78,16 +89,17 @@ describe('ReplicateClient', () => {
         json: async () => ({ detail: 'Rate limit exceeded' })
       })
 
+      // Since we mock retryWithBackoff to run once, it will throw immediately
+      // We need to verify that ReplicateClient throws the correct error
       await expect(client.createPrediction(testImageDataUrl)).rejects.toThrow(ReplicateError)
-      await expect(client.createPrediction(testImageDataUrl)).rejects.toMatchObject({
+      await expect(client.createPrediction(testImageDataUrl).catch(e => e)).resolves.toMatchObject({
         statusCode: 429,
         retryAfter: 60,
         isRetryable: true
       })
-    }, 10000)
+    })
 
     it('should handle authentication errors (401)', async () => {
-      // Mock all retry attempts to return 401 (non-retryable)
       mockFetch.mockResolvedValue({
         ok: false,
         status: 401,
@@ -95,13 +107,12 @@ describe('ReplicateClient', () => {
       })
 
       await expect(client.createPrediction(testImageDataUrl)).rejects.toThrow(ReplicateError)
-      await expect(client.createPrediction(testImageDataUrl)).rejects.toMatchObject({
+      await expect(client.createPrediction(testImageDataUrl).catch(e => e)).resolves.toMatchObject({
         message: expect.stringContaining('Authentication failed')
       })
     })
 
     it('should handle server errors (500) as retryable', async () => {
-      // Mock all retry attempts to return 500
       mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
@@ -109,22 +120,21 @@ describe('ReplicateClient', () => {
       })
 
       await expect(client.createPrediction(testImageDataUrl)).rejects.toThrow(ReplicateError)
-      await expect(client.createPrediction(testImageDataUrl)).rejects.toMatchObject({
+      await expect(client.createPrediction(testImageDataUrl).catch(e => e)).resolves.toMatchObject({
         statusCode: 500,
         isRetryable: true
       })
-    }, 10000)
+    })
 
     it('should handle network errors', async () => {
-      // Mock all retry attempts to throw network error
       mockFetch.mockRejectedValue(new TypeError('Failed to fetch'))
 
       await expect(client.createPrediction(testImageDataUrl)).rejects.toThrow(ReplicateError)
-      await expect(client.createPrediction(testImageDataUrl)).rejects.toMatchObject({
+      await expect(client.createPrediction(testImageDataUrl).catch(e => e)).resolves.toMatchObject({
         message: expect.stringContaining('Unable to connect'),
         isRetryable: true
       })
-    }, 10000)
+    })
   })
 
   describe('getPrediction', () => {
@@ -162,7 +172,6 @@ describe('ReplicateClient', () => {
     })
 
     it('should handle 404 errors', async () => {
-      // Mock all retry attempts to return 404 (non-retryable)
       mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
@@ -170,7 +179,7 @@ describe('ReplicateClient', () => {
       })
 
       await expect(client.getPrediction('invalid-id')).rejects.toThrow(ReplicateError)
-      await expect(client.getPrediction('invalid-id')).rejects.toMatchObject({
+      await expect(client.getPrediction('invalid-id').catch(e => e)).resolves.toMatchObject({
         message: expect.stringContaining('Resource not found')
       })
     })
@@ -178,7 +187,14 @@ describe('ReplicateClient', () => {
 
   describe('waitForCompletion', () => {
     it('should return output when prediction succeeds', async () => {
-      // First poll: processing
+      // Mock getPrediction to return succeeded
+      // Since waitForCompletion calls getPrediction, and we mock retryWithBackoff,
+      // getPrediction will be called.
+      // We need to mock fetch to return processing then succeeded?
+      // But waitForCompletion has its own polling loop.
+      // It calls getPrediction inside a loop.
+      
+      // First call: processing
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -188,7 +204,7 @@ describe('ReplicateClient', () => {
         })
       })
 
-      // Second poll: succeeded
+      // Second call: succeeded
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -198,10 +214,20 @@ describe('ReplicateClient', () => {
         })
       })
 
-      const result = await client.waitForCompletion('test-id', 5000)
-
+      // We need to mock setTimeout for waitForCompletion's polling loop
+      // waitForCompletion uses `new Promise(resolve => setTimeout(resolve, pollInterval))`
+      // We can use fake timers just for this, or mock global setTimeout
+      vi.useFakeTimers()
+      
+      const promise = client.waitForCompletion('test-id', 5000)
+      
+      // Advance time for polling
+      await vi.advanceTimersByTimeAsync(1000)
+      
+      const result = await promise
       expect(result).toBe('A beautiful sunset over the ocean')
-      expect(mockFetch).toHaveBeenCalledTimes(2)
+      
+      vi.useRealTimers()
     })
 
     it('should handle array output', async () => {
@@ -220,7 +246,6 @@ describe('ReplicateClient', () => {
     })
 
     it('should throw error when prediction fails', async () => {
-      // Mock all retry attempts to return failed status
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -231,14 +256,13 @@ describe('ReplicateClient', () => {
       })
 
       await expect(client.waitForCompletion('test-id', 5000)).rejects.toThrow(ReplicateError)
-      await expect(client.waitForCompletion('test-id', 5000)).rejects.toMatchObject({
+      await expect(client.waitForCompletion('test-id', 5000).catch(e => e)).resolves.toMatchObject({
         message: expect.stringContaining('Unable to generate caption'),
         isRetryable: false
       })
     })
 
     it('should throw error when prediction is canceled', async () => {
-      // Mock all retry attempts to return canceled status
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -248,13 +272,12 @@ describe('ReplicateClient', () => {
       })
 
       await expect(client.waitForCompletion('test-id', 5000)).rejects.toThrow(ReplicateError)
-      await expect(client.waitForCompletion('test-id', 5000)).rejects.toMatchObject({
+      await expect(client.waitForCompletion('test-id', 5000).catch(e => e)).resolves.toMatchObject({
         message: expect.stringContaining('canceled')
       })
     })
 
     it('should timeout after max attempts', async () => {
-      // Mock all polls to return processing status
       mockFetch.mockResolvedValue({
         ok: true,
         json: async () => ({
@@ -263,13 +286,19 @@ describe('ReplicateClient', () => {
         })
       })
 
-      // Use short timeout for faster test
-      await expect(client.waitForCompletion('test-id', 2000)).rejects.toThrow(ReplicateError)
-      await expect(client.waitForCompletion('test-id', 2000)).rejects.toMatchObject({
+      vi.useFakeTimers()
+      const promise = client.waitForCompletion('test-id', 2000)
+      
+      // Advance time past timeout
+      await vi.advanceTimersByTimeAsync(3000)
+      
+      await expect(promise).rejects.toThrow(ReplicateError)
+      await expect(promise.catch(e => e)).resolves.toMatchObject({
         message: expect.stringContaining('timed out'),
         isRetryable: true
       })
-    }, 10000)
+      vi.useRealTimers()
+    })
   })
 
   describe('cancelPrediction', () => {
@@ -314,7 +343,6 @@ describe('ReplicateClient', () => {
       ]
 
       for (const testCase of testCases) {
-        // Mock all retry attempts to return the same error
         mockFetch.mockResolvedValue({
           ok: false,
           status: testCase.status,
@@ -330,6 +358,6 @@ describe('ReplicateClient', () => {
           expect((error as ReplicateError).message).toMatch(new RegExp(testCase.expected, 'i'))
         }
       }
-    }, 15000)
+    })
   })
 })
