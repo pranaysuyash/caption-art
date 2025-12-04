@@ -19,7 +19,7 @@ export interface Template {
   name: string
   workspaceId: string
   campaignId?: string
-  brandKitId: string
+  brandKitId?: string
   // Template components
   captionStructure: {
     toneStyle: string

@@ -78,7 +78,7 @@ router.get('/jobs/:jobId', requireAuth, async (req, res) => {
     }
 
     // Get captions for this job
-    const assetIds = job.assetIds.split(',')
+    const assetIds = (job.result as any)?.assetIds || []
     const jobCaptions = []
     for (const assetId of assetIds) {
       const captions = await prisma.caption.findMany({
@@ -241,10 +241,8 @@ router.put('/captions/:captionId', requireAuth, async (req, res) => {
       data: {
         captionId,
         text: (safeText || text || '').trim(),
-        label: 'main',
-        status: 'completed',
+        tone: 'default',
         approvalStatus: 'pending',
-        approved: false,
       },
     })
 

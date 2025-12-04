@@ -1626,7 +1626,7 @@ Make adaptations specific to each platform's unique characteristics and audience
     const platforms = adaptations.map((a) => a.platform).join(', ')
     const campaignInfo = {
       name: campaign.name,
-      objectives: campaign.objective, // Single objective, not array
+      objectives: (campaign.briefData as any)?.objective || campaign.objective, // Single objective, not array
       targetAudience: campaign.targetAudience,
       platforms: platforms,
     }

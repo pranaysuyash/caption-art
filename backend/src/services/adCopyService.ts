@@ -53,8 +53,8 @@ export class AdCopyService {
    */
   async generateAdCopy(
     request: AdCopyGenerationRequest,
-    campaign?: Campaign,
-    brandKit?: BrandKit
+    campaign?: any,
+    brandKit?: any
   ): Promise<AdCopyGenerationResult> {
     try {
       log.info(
@@ -144,7 +144,7 @@ export class AdCopyService {
         category: 'ad-copy',
         features: request.targetAudience?.painPoints,
         benefits: [
-          campaign.brief?.keyMessage ||
+          (campaign.briefData as any)?.keyMessage || campaign.brief?.keyMessage ||
             brandKit.valueProposition ||
             'High quality products',
         ],
@@ -188,8 +188,8 @@ ${
     ? `
 - Campaign Name: ${campaign.name}
 - Objective: ${request.objective}
-- Key Message: ${campaign.brief?.keyMessage || 'Not specified'}
-- Primary Audience: ${campaign.brief?.primaryAudience?.demographics || 'Not specified'}
+- Key Message: ${(campaign.briefData as any)?.keyMessage || campaign.brief?.keyMessage || 'Not specified'}
+- Primary Audience: ${(campaign.briefData as any)?.primaryAudience?.demographics || campaign.brief?.primaryAudience?.demographics || 'Not specified'}
 `
     : 'No specific campaign context provided'
 }

@@ -119,9 +119,12 @@ router.post(
       const job = await prisma.batchJob.create({
         data: {
           workspaceId,
-          assetIds: assetIds.join(','),
-          template,
+          jobType: 'caption',
           status: 'pending',
+          result: {
+            assetIds,
+            template,
+          },
         },
       })
 

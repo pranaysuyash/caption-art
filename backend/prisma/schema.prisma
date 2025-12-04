@@ -110,6 +110,7 @@ model BrandKit {
   // Relations
   workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   agency              Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  campaigns           Campaign[]
 
   @@index([workspaceId])
   @@index([agencyId])
@@ -120,6 +121,7 @@ model BrandKit {
 model Campaign {
   id                String   @id @default(cuid())
   workspaceId       String
+  brandKitId        String?  
   name              String
   description       String?
   status            String   @default("draft") // draft | active | completed | archived
@@ -136,12 +138,14 @@ model Campaign {
 
   // Relations
   workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brandKit          BrandKit? @relation(fields: [brandKitId], references: [id], onDelete: SetNull)
   assets            Asset[]
   captions          Caption[]
   creatives         AdCreative[]
   approvals         Approval[]
 
   @@index([workspaceId])
+  @@index([brandKitId])
   @@map("campaigns")
 }
 

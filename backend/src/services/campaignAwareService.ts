@@ -37,8 +37,8 @@ export class CampaignAwareService {
   /**
    * Build comprehensive campaign context from campaign and brand kit
    */
-  buildCampaignContext(campaign: Campaign, brandKit: BrandKit): CampaignContext {
-    const brief = campaign.brief
+  buildCampaignContext(campaign: any, brandKit: any): CampaignContext {
+    const brief = (campaign.briefData as any) || campaign.brief
 
     // Extract and structure target audience information
     const targetAudience = {
@@ -135,7 +135,7 @@ ${guidelinesSection}
 OUTPUT REQUIREMENTS:
 Generate ${contentType} that deeply integrates the campaign context, brand identity, and audience needs. The content should:
 
-1. Reflect the campaign's primary objective: ${campaign.objective}
+1. Reflect the campaign's primary objective: ${(campaign.briefData as any)?.objective || campaign.objective}
 2. Speak directly to the target audience's pain points and motivations
 3. Use the brand's unique voice and personality
 4. Incorporate the primary value proposition: ${messagingStrategy.primaryValueProp}
@@ -181,7 +181,7 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
     }
 
     // Campaign-specific tones
-    const brief = campaign.brief
+    const brief = (campaign.briefData as any) || campaign.brief
     if (brief?.tone) {
       brief.tone.forEach(tone => tones.add(tone))
     }
@@ -194,7 +194,7 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
       retention: ['appreciative', 'valuable', 'community-focused'],
     }
 
-    objectiveTones[campaign.objective as keyof typeof objectiveTones]?.forEach(tone =>
+    objectiveTones[(campaign.briefData as any)?.objective as keyof typeof objectiveTones || (campaign.objective as keyof typeof objectiveTones)]?.forEach(tone =>
       tones.add(tone)
     )
 
@@ -216,7 +216,7 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
     }
 
     // Campaign style preferences
-    const brief = campaign.brief
+    const brief = (campaign.briefData as any) || campaign.brief
     if (brief?.style) {
       brief.style.forEach(style => styles.push(style))
     }
@@ -241,7 +241,7 @@ Generate compelling, campaign-aware ${contentType} that feels authentic to the b
     }
 
     // Campaign keywords
-    const brief = campaign.brief
+    const brief = (campaign.briefData as any) || campaign.brief
     if (brief?.keywords) {
       brief.keywords.forEach(keyword => keywords.add(keyword))
     }
@@ -296,12 +296,12 @@ Keywords: ${brandKit.keywords?.join(', ') || 'Not specified'}
    * Build campaign section of prompt
    */
   private buildCampaignSection(campaign: Campaign): string {
-    const brief = campaign.brief
+    const brief = (campaign.briefData as any) || campaign.brief
     return `
 CAMPAIGN DETAILS:
-Campaign Name: ${campaign.name}
+  Campaign Name: ${campaign.name}
 Objective: ${campaign.objective}
-Primary CTA: ${campaign.primaryCTA || 'Learn more'}
+Primary CTA: ${(campaign.callToAction as any) || campaign.primaryCTA || 'Learn more'}
 Key Message: ${brief?.keyMessage || 'Not specified'}
 Emotional Appeal: ${brief?.emotionalAppeal || 'Trust and reliability'}
 Primary Audience: ${brief?.primaryAudience?.demographics || 'Not specified'}

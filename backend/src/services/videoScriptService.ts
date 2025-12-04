@@ -61,8 +61,8 @@ export class VideoScriptService {
    */
   async generateVideoScript(
     request: VideoScriptGenerationRequest,
-    campaign?: Campaign,
-    brandKit?: BrandKit
+    campaign?: any,
+    brandKit?: any
   ): Promise<VideoScriptGenerationResult> {
     try {
       log.info(
@@ -131,8 +131,8 @@ export class VideoScriptService {
    */
   private async generateScript(
     request: VideoScriptGenerationRequest,
-    campaign?: Campaign,
-    brandKit?: BrandKit
+    campaign?: any,
+    brandKit?: any
   ): Promise<VideoScript> {
     const prompt = this.buildVideoScriptPrompt(request, campaign, brandKit)
 
@@ -166,8 +166,8 @@ export class VideoScriptService {
    */
   private buildVideoScriptPrompt(
     request: VideoScriptGenerationRequest,
-    campaign?: Campaign,
-    brandKit?: BrandKit
+    campaign?: any,
+    brandKit?: any
   ): string {
     // Use campaign-aware prompting if we have context
     if (campaign && brandKit) {
@@ -304,8 +304,8 @@ ${
   campaign
     ? `
 - Campaign Name: ${campaign.name}
-- Key Message: ${campaign.brief?.keyMessage || 'Not specified'}
-- Primary Audience: ${campaign.brief?.primaryAudience?.demographics || 'Not specified'}
+- Key Message: ${(campaign.briefData as any)?.keyMessage || campaign.brief?.keyMessage || 'Not specified'}
+- Primary Audience: ${(campaign.briefData as any)?.primaryAudience?.demographics || campaign.brief?.primaryAudience?.demographics || 'Not specified'}
 `
     : 'No specific campaign context provided'
 }

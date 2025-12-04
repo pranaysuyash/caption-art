@@ -49,6 +49,7 @@ router.post(
   validateRequest({ body: CreateCampaignSchema }),
   async (req, res) => {
     log.info('Creating campaign')
+    log.debug({ body: req.body }, 'Create campaign payload')
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       let validatedData = req.body
@@ -71,6 +72,14 @@ router.post(
       let workspaceId = validatedData.workspaceId
       let brandKitId = validatedData.brandKitId
 
+      // Defensive defaults and type checks to prevent runtime errors
+      if (!validatedData.placements || !Array.isArray(validatedData.placements)) {
+        log.warn({ placements: validatedData.placements }, 'Missing or invalid placements; defaulting to ig-feed')
+        validatedData.placements = ['ig-feed']
+      }
+      // Ensure brandKitId is undefined when not provided (Prisma prefers null/undefined over empty string)
+      if (!brandKitId) brandKitId = undefined
+
       // Resolve workspace from brand kit if provided
       if (brandKitId) {
         const brandKit = await prisma.brandKit.findUnique({
@@ -89,28 +98,31 @@ router.post(
         return res.status(403).json({ error: 'Access denied' })
       }
 
+      // Build briefData JSON object for schema fields that don't exist on Campaign
+      const briefData: any = {
+        objective: validatedData.objective,
+        launchType: validatedData.launchType,
+        funnelStage: validatedData.funnelStage,
+        placements: validatedData.placements || ['ig-feed'],
+        headlineMaxLength: validatedData.headlineMaxLength || null,
+        bodyMaxLength: validatedData.bodyMaxLength || null,
+        mustIncludePhrases: validatedData.mustIncludePhrases || null,
+        mustExcludePhrases: validatedData.mustExcludePhrases || null,
+        referenceCaptions: validatedData.referenceCaptions || null,
+      }
+
+      log.debug({ briefData }, 'Campaign briefData')
       const campaign = await prisma.campaign.create({
         data: {
           workspaceId,
-          brandKitId: brandKitId || '',
+          brandKitId: brandKitId || undefined,
           name: validatedData.name,
           description: validatedData.description,
-          objective: validatedData.objective,
-          launchType: validatedData.launchType,
-          funnelStage: validatedData.funnelStage,
-          primaryOffer: validatedData.primaryOffer,
-          primaryCTA: validatedData.primaryCTA,
-          secondaryCTA: validatedData.secondaryCTA,
-          targetAudience: validatedData.targetAudience,
-          placements: validatedData.placements.join(','),
-          headlineMaxLength: validatedData.headlineMaxLength,
-          bodyMaxLength: validatedData.bodyMaxLength,
-          mustIncludePhrases: validatedData.mustIncludePhrases
-            ? JSON.stringify(validatedData.mustIncludePhrases)
-            : null,
-          mustExcludePhrases: validatedData.mustExcludePhrases
-            ? JSON.stringify(validatedData.mustExcludePhrases)
-            : null,
+          callToAction: validatedData.primaryCTA || validatedData.primaryCTA || null,
+          primaryOffer: validatedData.primaryOffer || null,
+          targetAudience: validatedData.targetAudience || null,
+          // pack additional fields into briefData JSON column
+          briefData,
           status: 'draft',
         },
       })
@@ -122,7 +134,7 @@ router.post(
           .status(400)
           .json({ error: 'Validation error', details: error.issues })
       }
-      log.error({ error }, 'Create campaign error')
+      log.error({ error: error instanceof Error ? error.message : error, stack: error instanceof Error ? error.stack : undefined }, 'Create campaign error')
       res.status(500).json({ error: 'Internal server error' })
     }
   }
@@ -190,9 +202,10 @@ router.get('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    // Get reference creatives and compute quality
+    // Get reference creatives
     const referenceCreatives = await prisma.adCreative.findMany({
-      where: { campaignId: id, isReference: true },
+      where: { campaignId: id },
+      take: 5, // Limit to first 5 as references
     })
 
     res.json({

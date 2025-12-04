@@ -57,11 +57,11 @@ export class CampaignBriefGenerator {
    * Generate creative requirements from campaign brief
    */
   static async generateCreativeRequirements(
-    campaign: Campaign,
-    brandKit: BrandKit
+    campaign: any,
+    brandKit: any
   ): Promise<CreativeRequirements> {
     try {
-      const brief = campaign.brief
+      const brief = (campaign.briefData as any) || campaign.brief
       const brandContext = {
         brandPersonality: brandKit.brandPersonality,
         targetAudience: brandKit.targetAudience,
@@ -170,14 +170,14 @@ Be specific and strategic in your recommendations. Consider the campaign objecti
     campaign: Campaign,
     brandContext: any
   ): string {
-    const brief = campaign.brief
+    const brief = (campaign.briefData as any) || campaign.brief
 
     return `
 CAMPAIGN BRIEF ANALYSIS
 
 Campaign: ${campaign.name}
-Objective: ${campaign.objective}
-Funnel Stage: ${campaign.funnelStage}
+Objective: ${(campaign.briefData as any)?.objective || campaign.objective}
+Funnel Stage: ${(campaign.briefData as any)?.funnelStage || campaign.funnelStage}
 Launch Type: ${campaign.launchType}
 
 CLIENT CONTEXT:
@@ -226,7 +226,7 @@ Tone Style: ${brandContext.toneStyle || 'Not specified'}
 
 OFFER & CTA:
 Primary Offer: ${campaign.primaryOffer || 'Not specified'}
-Primary CTA: ${campaign.primaryCTA || 'Not specified'}
+Primary CTA: ${(campaign.callToAction as any) || campaign.primaryCTA || 'Not specified'}
 Secondary CTA: ${campaign.secondaryCTA || 'Not specified'}
 
 Based on this comprehensive brief, generate detailed creative requirements that will guide effective creative development.

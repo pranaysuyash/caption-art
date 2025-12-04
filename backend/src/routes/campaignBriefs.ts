@@ -133,8 +133,14 @@ router.post(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      // Get brand kit for context
-      const brandKit = AuthModel.getBrandKitById(campaign.brandKitId)
+      // Get brand kit for context (use brandKitId if set, otherwise find by workspace)
+      let brandKit = undefined
+      if (campaign.brandKitId) {
+        brandKit = AuthModel.getBrandKitById(campaign.brandKitId)
+      }
+      if (!brandKit) {
+        brandKit = AuthModel.getBrandKitByWorkspace(campaign.workspaceId)
+      }
       if (!brandKit) {
         return res.status(404).json({ error: 'Brand kit not found' })
       }
@@ -191,20 +197,21 @@ router.get(
         return res.status(403).json({ error: 'Access denied' })
       }
 
+      const brief = (campaign as any).briefData || null
       res.json({
         success: true,
         campaign: {
           id: campaign.id,
           name: campaign.name,
-          brief: campaign.brief,
-          objective: campaign.objective,
-          launchType: campaign.launchType,
-          funnelStage: campaign.funnelStage,
-          primaryOffer: campaign.primaryOffer,
-          primaryCTA: campaign.primaryCTA,
-          secondaryCTA: campaign.secondaryCTA,
-          targetAudience: campaign.targetAudience,
-          placements: campaign.placements,
+          brief,
+          objective: brief?.objective || null,
+          launchType: brief?.launchType || null,
+          funnelStage: brief?.funnelStage || null,
+          primaryOffer: brief?.primaryOffer || campaign.primaryOffer || null,
+          primaryCTA: brief?.primaryCTA || campaign.callToAction || null,
+          secondaryCTA: brief?.secondaryCTA || null,
+          targetAudience: brief?.targetAudience || campaign.targetAudience || null,
+          placements: brief?.placements || null,
         },
       })
     } catch (error) {
@@ -243,7 +250,7 @@ router.delete(
 
       // Clear the brief
       const updatedCampaign = AuthModel.updateCampaign(campaignId, {
-        brief: undefined,
+        briefData: undefined,
       })
 
       log.info({ campaignId }, 'Campaign brief cleared')
@@ -286,7 +293,7 @@ router.post(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const brief = campaign.brief
+      const brief = (campaign.briefData as any) || campaign.brief
       const validation = {
         isValid: true,
         score: 0,

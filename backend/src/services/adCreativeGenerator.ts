@@ -26,8 +26,8 @@ export class AdCreativeGenerator {
    */
   async generateAdCreative(
     request: AdCreativeGenerationRequest,
-    campaign: Campaign,
-    brandKit: BrandKit
+    campaign: any,
+    brandKit: any
   ): Promise<AdCreativeGenerationResult> {
     try {
       log.info(
@@ -106,8 +106,8 @@ export class AdCreativeGenerator {
    */
   private async generateSlots(
     request: AdCreativeGenerationRequest,
-    campaign: Campaign,
-    brandKit: BrandKit
+    campaign: any,
+    brandKit: any
   ): Promise<AdCreativeSlot[]> {
     const strategy = FUNNEL_STAGE_STRATEGIES[request.funnelStage]
 
@@ -148,11 +148,11 @@ export class AdCreativeGenerator {
    */
   private buildSlotGenerationPrompt(
     request: AdCreativeGenerationRequest,
-    campaign: Campaign,
-    brandKit: BrandKit,
+    campaign: any,
+    brandKit: any,
     strategy: any
   ): string {
-    const brief = campaign.brief
+    const brief = (campaign.briefData as any) || campaign.brief
     const brandPersonality =
       brandKit.brandPersonality || 'Professional and trustworthy'
     const colors = brandKit.colors || { primary: 'Not specified', secondary: 'Not specified' }
@@ -412,7 +412,7 @@ Make sure to:
   private async calculateQualityScore(
     adCreative: AdCreative,
     request: AdCreativeGenerationRequest,
-    brandKit: BrandKit
+    brandKit: any
   ): Promise<number> {
     let score = 0
     const maxScore = 100

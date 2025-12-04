@@ -609,19 +609,19 @@ router.post(
             : [adCreative.primaryPlatform],
         targetAudience: {
           demographics: Array.isArray(
-            campaign.brief?.primaryAudience?.demographics
+            (campaign.briefData as any)?.primaryAudience?.demographics
           )
-            ? campaign.brief.primaryAudience.demographics.join(', ')
-            : campaign.brief?.primaryAudience?.demographics || '',
+            ? (campaign.briefData as any).primaryAudience.demographics.join(', ')
+            : (campaign.briefData as any)?.primaryAudience?.demographics || '',
           psychographics: Array.isArray(
-            campaign.brief?.primaryAudience?.psychographics
+            (campaign.briefData as any)?.primaryAudience?.psychographics
           )
-            ? campaign.brief.primaryAudience.psychographics.join(', ')
-            : campaign.brief?.primaryAudience?.psychographics || '',
-          painPoints: campaign.brief?.primaryAudience?.painPoints || [],
+            ? (campaign.briefData as any).primaryAudience.psychographics.join(', ')
+            : (campaign.briefData as any)?.primaryAudience?.psychographics || '',
+          painPoints: (campaign.briefData as any)?.primaryAudience?.painPoints || [],
         },
-        keyMessage: campaign.brief?.keyMessage || '',
-        cta: campaign.primaryCTA || '',
+        keyMessage: (campaign.briefData as any)?.keyMessage || '',
+        cta: campaign.callToAction || '',
         tone: ['professional'],
         variations: 3,
         includeVisuals: false,
@@ -1086,11 +1086,11 @@ router.post(
         category: contentType || 'ad-copy',
         features: [],
         benefits: [
-          campaign.brief?.keyMessage ||
+          (campaign.briefData as any)?.keyMessage ||
             brandKit.valueProposition ||
             'High quality products',
         ],
-        useCases: [`Drive ${campaign.objective} through compelling content`],
+        useCases: [`Drive ${(campaign.briefData as any)?.objective || 'engagement'} through compelling content`],
       }
 
       const prompt = campaignAwareService.generateCampaignAwarePrompt(
@@ -1117,7 +1117,7 @@ router.post(
           contextSummary: {
             campaignName: campaign.name,
             brandName: brandKit.name,
-            objective: campaign.objective,
+            objective: (campaign.briefData as any)?.objective || 'engagement',
             targetAudience: campaignContext.targetAudience.demographics,
             tone: campaignContext.contentGuidelines.tone,
             keywords: campaignContext.contentGuidelines.keywords,

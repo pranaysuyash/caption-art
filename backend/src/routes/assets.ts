@@ -118,7 +118,6 @@ router.post(
         const asset = await prisma.asset.create({
           data: {
             workspaceId,
-            filename: file.filename,
             originalName: file.originalname,
             mimeType: file.mimetype,
             size: file.size,
@@ -220,9 +219,12 @@ router.delete('/:id', requireAuth, async (req, res) => {
     }
 
     // Delete physical file
-    const filePath = path.join(process.cwd(), 'uploads', asset.filename)
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath)
+    const filename = asset.url.split('/').pop()
+    if (filename) {
+      const filePath = path.join(process.cwd(), 'uploads', filename)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+      }
     }
 
     await prisma.asset.delete({ where: { id } })

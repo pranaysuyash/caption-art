@@ -466,7 +466,7 @@ export interface Template {
   name: string
   workspaceId: string
   campaignId?: string
-  brandKitId: string
+  brandKitId?: string
   // Template components
   captionStructure: {
     toneStyle: string
@@ -545,9 +545,9 @@ export interface Campaign {
   description?: string
 
   // Campaign objective and context
-  objective: 'awareness' | 'traffic' | 'conversion' | 'engagement'
-  launchType: 'new-launch' | 'evergreen' | 'seasonal' | 'sale' | 'event'
-  funnelStage: 'cold' | 'warm' | 'hot'
+  objective?: 'awareness' | 'traffic' | 'conversion' | 'engagement'
+  launchType?: 'new-launch' | 'evergreen' | 'seasonal' | 'sale' | 'event'
+  funnelStage?: 'cold' | 'warm' | 'hot'
 
   // Campaign Brief v2 - Strategic Brief Elements
   brief?: {
@@ -613,11 +613,12 @@ export interface Campaign {
   // Offer and CTA
   primaryOffer?: string // "Flat 20% off", "New summer collection"
   primaryCTA?: string // "Shop now", "Sign up", "Learn more"
+  callToAction?: string // Prisma name for primary CTA field
   secondaryCTA?: string
 
   // Targeting and placement
   targetAudience?: string // More specific TA for this campaign
-  placements: ('ig-feed' | 'ig-story' | 'fb-feed' | 'fb-story' | 'li-feed')[]
+  placements?: ('ig-feed' | 'ig-story' | 'fb-feed' | 'fb-story' | 'li-feed')[]
 
   // Creative constraints
   headlineMaxLength?: number
@@ -636,6 +637,7 @@ export interface Campaign {
   status: 'draft' | 'active' | 'paused' | 'completed'
   createdAt: Date
   updatedAt: Date
+  briefData?: any
 }
 
 export interface ReferenceCreative {

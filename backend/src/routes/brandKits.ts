@@ -335,20 +335,27 @@ router.put('/:id/masking-model', requireAuth, async (req, res) => {
 
     const { maskingModel } = (req as any).validatedData
 
-    const brandKit = AuthModel.getBrandKitById(id)
+    const brandKit = await prisma.brandKit.findUnique({
+      where: { id },
+    })
     if (!brandKit) {
       return res.status(404).json({ error: 'Brand kit not found' })
     }
 
     // Verify brand kit belongs to current agency via workspace
-    const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: brandKit.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
 
     // Update brand kit with masking model
-    const updatedBrandKit = AuthModel.updateBrandKit(id, {
-      maskingModel,
+    const updatedBrandKit = await prisma.brandKit.update({
+      where: { id },
+      data: {
+        maskingModel,
+      },
     })
 
     if (!updatedBrandKit) {
