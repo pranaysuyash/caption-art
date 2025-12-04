@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { AuthModel } from '../models/auth'
+import { getPrismaClient } from '../lib/prisma'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
 import { validateRequest } from '../middleware/validation'
@@ -8,22 +8,33 @@ import { AuthenticatedRequest } from '../types/auth'
 
 const router = Router()
 const requireAuth = createAuthMiddleware()
+const prisma = getPrismaClient()
 
 // Validation schemas
 const createWorkspaceSchema = z.object({
   clientName: z.string().min(1).max(100),
+  industry: z.string().max(100).optional(),
 })
 
 const updateWorkspaceSchema = z.object({
   clientName: z.string().min(1).max(100).optional(),
+  industry: z.string().max(100).optional(),
   brandKitId: z.string().optional(),
 })
 
 // GET /api/workspaces - List all workspaces for the authenticated agency
-router.get('/', requireAuth as any, (req, res) => {
-  const authenticatedReq = req as unknown as AuthenticatedRequest
-  const workspaces = AuthModel.getWorkspacesByAgency(authenticatedReq.agency.id)
-  res.json({ workspaces })
+router.get('/', requireAuth as any, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const workspaces = await prisma.workspace.findMany({
+      where: { agencyId: authenticatedReq.agency.id },
+      include: { brandKit: true },
+    })
+    res.json({ workspaces })
+  } catch (error) {
+    log.error({ err: error }, 'Failed to fetch workspaces')
+    res.status(500).json({ error: 'Internal server error' })
+  }
 })
 
 // POST /api/workspaces - Create new workspace
@@ -34,17 +45,46 @@ router.post(
   async (req, res) => {
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
-      const { clientName } = req.body
+      const { clientName, industry } = req.body
 
-      const workspace = await AuthModel.createWorkspace(
-        authenticatedReq.agency.id,
-        clientName
-      )
-      // DEV DEBUG: log the created workspace object to check serialization issues
+      // Create workspace
+      const workspace = await prisma.workspace.create({
+        data: {
+          agencyId: authenticatedReq.agency.id,
+          clientName,
+          industry,
+        },
+      })
+
+      // Seed a default brand kit so downstream flows have a real kit
+      const defaultBrandKit = await prisma.brandKit
+        .create({
+          data: {
+            workspaceId: workspace.id,
+            agencyId: authenticatedReq.agency.id,
+            primaryColor: '#FF6B6B',
+            secondaryColor: '#4ECDC4',
+            tertiaryColor: '#FFE66D',
+            headingFont: 'Space Grotesk',
+            bodyFont: 'JetBrains Mono',
+            voicePrompt:
+              'Bold, friendly, and clear. Keep copy concise, action-oriented, and on-brand.',
+            brandPersonality: 'Creative, confident, collaborative',
+            targetAudience: 'Modern creative teams and marketers',
+            valueProposition: 'Faster, better on-brand captions and creatives',
+            forbiddenPhrases: JSON.stringify([]),
+            preferredPhrases: JSON.stringify([]),
+          },
+        })
+        .catch((err: any) => {
+          log.warn({ err }, 'Failed to create default brand kit for workspace')
+          return null
+        })
+
       if (process.env.NODE_ENV !== 'production') {
-        log.info({ workspace }, 'Created workspace (debug)')
+        log.info({ workspace, defaultBrandKit }, 'Created workspace (debug)')
       }
-      res.status(201).json({ workspace })
+      res.status(201).json({ workspace, brandKit: defaultBrandKit })
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res
@@ -58,20 +98,29 @@ router.post(
 )
 
 // GET /api/workspaces/:id - Get specific workspace
-router.get('/:id', requireAuth as any, (req, res) => {
-  const authenticatedReq = req as unknown as AuthenticatedRequest
-  const { id } = req.params
-  const workspace = AuthModel.getWorkspaceById(id)
+router.get('/:id', requireAuth as any, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { id } = req.params
 
-  if (!workspace) {
-    return res.status(404).json({ error: 'Workspace not found' })
+    const workspace = await prisma.workspace.findUnique({
+      where: { id },
+      include: { brandKit: true },
+    })
+
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' })
+    }
+
+    if (workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    res.json({ workspace })
+  } catch (error) {
+    log.error({ err: error }, 'Failed to fetch workspace')
+    res.status(500).json({ error: 'Internal server error' })
   }
-
-  if (workspace.agencyId !== authenticatedReq.agency.id) {
-    return res.status(403).json({ error: 'Access denied' })
-  }
-
-  res.json({ workspace })
 })
 
 // PUT /api/workspaces/:id - Update workspace
@@ -80,15 +129,15 @@ router.put(
   requireAuth as any,
   validateRequest({
     params: z.object({ id: z.string().min(1) }),
-    body: updateWorkspaceSchema
+    body: updateWorkspaceSchema,
   }),
-  (req, res) => {
+  async (req, res) => {
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { id } = req.params
       const updates = req.body
 
-      const workspace = AuthModel.getWorkspaceById(id)
+      const workspace = await prisma.workspace.findUnique({ where: { id } })
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' })
       }
@@ -97,8 +146,11 @@ router.put(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      AuthModel.updateWorkspace(id, updates)
-      const updatedWorkspace = AuthModel.getWorkspaceById(id)
+      const updatedWorkspace = await prisma.workspace.update({
+        where: { id },
+        data: updates,
+        include: { brandKit: true },
+      })
 
       res.json({ workspace: updatedWorkspace })
     } catch (error) {
@@ -114,27 +166,34 @@ router.put(
 )
 
 // DELETE /api/workspaces/:id - Archive workspace (soft delete)
-router.delete('/:id', requireAuth as any, (req, res) => {
-  const authenticatedReq = req as unknown as AuthenticatedRequest
-  const { id } = req.params
-  const workspace = AuthModel.getWorkspaceById(id)
+router.delete('/:id', requireAuth as any, async (req, res) => {
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { id } = req.params
 
-  if (!workspace) {
-    return res.status(404).json({ error: 'Workspace not found' })
+    const workspace = await prisma.workspace.findUnique({ where: { id } })
+
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' })
+    }
+
+    if (workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    // Soft delete: mark as archived by prefixing the name
+    await prisma.workspace.update({
+      where: { id },
+      data: {
+        clientName: `[ARCHIVED] ${workspace.clientName}`,
+      },
+    })
+
+    res.json({ message: 'Workspace archived successfully' })
+  } catch (error) {
+    log.error({ err: error }, 'Archive workspace error')
+    res.status(500).json({ error: 'Internal server error' })
   }
-
-  if (workspace.agencyId !== authenticatedReq.agency.id) {
-    return res.status(403).json({ error: 'Access denied' })
-  }
-
-  // For v1, we'll just mark it as archived in memory
-  // In a real database, you'd do a soft delete
-  AuthModel.updateWorkspace(id, {
-    clientName: `[ARCHIVED] ${workspace.clientName}`,
-    brandKitId: '',
-  })
-
-  res.json({ message: 'Workspace archived successfully' })
 })
 
 export default router

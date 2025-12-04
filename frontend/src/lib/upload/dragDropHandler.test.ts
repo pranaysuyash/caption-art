@@ -31,15 +31,11 @@ function createMockDataTransfer(files: File[]): DataTransfer {
     dropEffect: 'none',
     effectAllowed: 'all',
     files: fileList,
-    items: {
-      length: items.length,
-      [Symbol.iterator]: function* () {
-        for (const item of items) {
-          yield item;
-        }
-      },
-      ...items,
-    } as unknown as DataTransferItemList,
+    items: Object.assign(items, {
+      add: vi.fn(),
+      clear: vi.fn(),
+      remove: vi.fn(),
+    }) as unknown as DataTransferItemList,
     types: ['Files'],
     clearData: vi.fn(),
     getData: vi.fn(),

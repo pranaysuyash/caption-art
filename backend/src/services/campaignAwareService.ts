@@ -42,8 +42,12 @@ export class CampaignAwareService {
 
     // Extract and structure target audience information
     const targetAudience = {
-      demographics: brief?.primaryAudience?.demographics || brandKit.targetAudience || '',
-      psychographics: brief?.primaryAudience?.psychographics || '',
+      demographics: Array.isArray(brief?.primaryAudience?.demographics)
+        ? brief.primaryAudience.demographics.join(', ')
+        : brief?.primaryAudience?.demographics || brandKit.targetAudience || '',
+      psychographics: Array.isArray(brief?.primaryAudience?.psychographics)
+        ? brief.primaryAudience.psychographics.join(', ')
+        : brief?.primaryAudience?.psychographics || '',
       painPoints: brief?.primaryAudience?.painPoints || [],
       motivations: brief?.primaryAudience?.motivations || [],
       challenges: brief?.primaryAudience?.painPoints || [],

@@ -61,7 +61,7 @@ export function createCostWeightedRateLimiter(options?: CostWeightedRateLimitOpt
   const windowMs = options?.windowMs || 15 * 60 * 1000; // 15 minutes default
   const defaultCost = options?.defaultCost || 1;
   
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     // Get agency from request (assuming auth middleware runs first)
     const agencyId = (req as any).agency?.id;
     
@@ -90,7 +90,7 @@ export function createCostWeightedRateLimiter(options?: CostWeightedRateLimitOpt
     }
     
     // Get agency info to determine rate limit
-    const agency = AuthModel.getAgencyById(agencyId);
+    const agency = await AuthModel.getAgencyById(agencyId);
     const planType = agency?.planType || 'free';
     const maxPoints = options?.maxPoints || TIER_LIMITS[planType] || TIER_LIMITS.free;
     
@@ -191,13 +191,13 @@ export function getEndpointCost(method: string, path: string): number {
 /**
  * Gets current rate limit status for an agency
  */
-export function getRateLimitStatus(agencyId: string, ip: string): {
+export async function getRateLimitStatus(agencyId: string, ip: string): Promise<{
   currentPoints: number;
   maxPoints: number;
   resetTime: Date;
   windowMs: number;
   remainingPoints: number;
-} {
+}> {
   const key = `${ip}:${agencyId}`;
   const limitInfo = store[key];
   
@@ -211,7 +211,7 @@ export function getRateLimitStatus(agencyId: string, ip: string): {
     };
   }
   
-  const agency = AuthModel.getAgencyById(agencyId);
+  const agency = await AuthModel.getAgencyById(agencyId);
   const planType = agency?.planType || 'free';
   const maxPoints = TIER_LIMITS[planType] || TIER_LIMITS.free;
   

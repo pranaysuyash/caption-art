@@ -1,4 +1,7 @@
 import { useLocation, Link } from 'react-router-dom'
+import { getThemeManager } from '../../lib/themes/themeManager'
+import { useEffect, useState } from 'react'
+import { Sun, Moon, LogOut } from 'lucide-react'
 
 interface AgencyHeaderProps {
   onLogout: () => void
@@ -6,6 +9,19 @@ interface AgencyHeaderProps {
 
 export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
   const location = useLocation()
+  const themeManager = getThemeManager()
+  const [mode, setMode] = useState(themeManager.getState().mode)
+
+  useEffect(() => {
+    const unsubscribe = themeManager.subscribeToChanges((state) => {
+      setMode(state.mode)
+    })
+    return unsubscribe
+  }, [])
+
+  const toggleTheme = () => {
+    themeManager.toggleMode()
+  }
 
   // Extract breadcrumb from current path
   const getBreadcrumb = () => {
@@ -30,36 +46,18 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
   const breadcrumb = getBreadcrumb()
 
   return (
-    <header style={{
-      backgroundColor: 'var(--color-surface, white)',
-      borderBottom: '1px solid var(--color-border, #e5e7eb)',
-      padding: '0 2rem',
-      height: '64px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between'
-    }}>
+    <header className="h-16 px-8 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] transition-colors duration-200">
       {/* Left: Logo and Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <Link to="/agency/workspaces" style={{
-          textDecoration: 'none',
-          fontSize: '1.5rem',
-          fontWeight: 'bold',
-          fontFamily: 'var(--font-heading, sans-serif)',
-          color: 'var(--color-primary, #2563eb)'
-        }}>
+      <div className="flex items-center gap-4">
+        <Link 
+          to="/agency/workspaces" 
+          className="text-2xl font-bold font-[var(--font-heading)] text-[var(--color-primary)] no-underline"
+        >
           Caption Art
         </Link>
 
         {/* Context Breadcrumb */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          fontSize: '0.875rem',
-          color: 'var(--color-text-secondary, #6b7280)',
-          fontFamily: 'var(--font-body, sans-serif)'
-        }}>
+        <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)] font-[var(--font-body)]">
           <span>Agency</span>
           {breadcrumb.workspace && (
             <>
@@ -76,11 +74,7 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
           {breadcrumb.section && breadcrumb.section !== 'workspaces' && (
             <>
               <span>/</span>
-              <span style={{
-                textTransform: 'capitalize',
-                color: 'var(--color-text, #1f2937)',
-                fontWeight: '500'
-              }}>
+              <span className="capitalize text-[var(--color-text)] font-medium">
                 {breadcrumb.section.replace('-', ' ')}
               </span>
             </>
@@ -89,53 +83,32 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
       </div>
 
       {/* Right: User Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <div className="flex items-center gap-4">
         <Link
           to="/playground"
-          style={{
-            padding: '0.5rem 1rem',
-            textDecoration: 'none',
-            color: 'var(--color-text-secondary, #6b7280)',
-            fontSize: '0.875rem',
-            borderRadius: '6px',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-background, #f8fafc)'
-            e.currentTarget.style.color = 'var(--color-text, #1f2937)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent'
-            e.currentTarget.style.color = 'var(--color-text-secondary, #6b7280)'
-          }}
+          className="px-4 py-2 text-sm rounded-md text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] hover:text-[var(--color-text)] transition-all duration-200"
         >
           Playground
         </Link>
 
         <button
-          onClick={onLogout}
-          style={{
-            padding: '0.5rem 1rem',
-            border: '1px solid var(--color-border, #d1d5db)',
-            backgroundColor: 'transparent',
-            color: 'var(--color-text, #1f2937)',
-            fontSize: '0.875rem',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-error-bg, #fef2f2)'
-            e.currentTarget.style.borderColor = 'var(--color-error, #dc2626)'
-            e.currentTarget.style.color = 'var(--color-error, #dc2626)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent'
-            e.currentTarget.style.borderColor = 'var(--color-border, #d1d5db)'
-            e.currentTarget.style.color = 'var(--color-text, #1f2937)'
-          }}
+          onClick={toggleTheme}
+          className="p-2 rounded-md border border-[var(--color-border)] text-[var(--color-text)] hover:bg-transparent transition-all duration-200 flex items-center justify-center w-9 h-9"
+          title={`Switch to ${mode === 'light' ? 'Dark' : 'Light'} Mode`}
         >
-          Sign Out
+          {mode === 'light' ? (
+            <Moon size={20} />
+          ) : (
+            <Sun size={20} />
+          )}
+        </button>
+
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-2 px-4 py-2 text-sm rounded-md border border-[var(--color-border)] text-[var(--color-text)] hover:bg-red-50 hover:border-red-600 hover:text-red-600 transition-all duration-200"
+        >
+          <LogOut size={16} />
+          <span>Sign Out</span>
         </button>
       </div>
     </header>

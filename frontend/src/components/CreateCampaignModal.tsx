@@ -123,8 +123,9 @@ export function CreateCampaignModal({
 
           <div className='form-row'>
             <div className='form-group'>
-              <label>Objective *</label>
+              <label htmlFor='objective-select'>Objective *</label>
               <select
+                id='objective-select'
                 value={formData.objective}
                 onChange={(e) =>
                   setFormData({
@@ -142,8 +143,9 @@ export function CreateCampaignModal({
             </div>
 
             <div className='form-group'>
-              <label>Launch Type *</label>
+              <label htmlFor='launchtype-select'>Launch Type *</label>
               <select
+                id='launchtype-select'
                 value={formData.launchType}
                 onChange={(e) =>
                   setFormData({

@@ -110,6 +110,12 @@ export class CaptionModel {
     )
   }
 
+  static getCaptionsByCampaign(campaignId: string): Caption[] {
+    return Array.from(captions.values()).filter(
+      (c) => c.campaignId === campaignId
+    )
+  }
+
   static getCaptionsByAsset(assetId: string): Caption[] {
     return Array.from(captions.values()).filter((c) => c.assetId === assetId)
   }

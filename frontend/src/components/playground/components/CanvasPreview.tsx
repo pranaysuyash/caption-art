@@ -1,4 +1,5 @@
 import { RefObject } from 'react';
+import { Image as ImageIcon, CheckCircle2, FileText } from 'lucide-react';
 import { usePlaygroundContext } from '../../../contexts/PlaygroundContext';
 import styles from './CanvasPreview.module.css';
 
@@ -20,10 +21,20 @@ export function CanvasPreview({
   return (
     <div className={styles.canvasPreview}>
       <div className={styles.header}>
-        <h3 className={styles.title}>🖼️ Live Preview</h3>
+        <h3 className={styles.title}>
+          <ImageIcon size={20} className={styles.icon} /> Live Preview
+        </h3>
         {imageObjUrl && (
           <span className={licenseOk ? styles.licensePremium : styles.licenseFree}>
-            {licenseOk ? '✅ Premium' : '📄 Free (Watermarked)'}
+            {licenseOk ? (
+              <>
+                <CheckCircle2 size={16} /> Premium
+              </>
+            ) : (
+              <>
+                <FileText size={16} /> Free (Watermarked)
+              </>
+            )}
           </span>
         )}
       </div>

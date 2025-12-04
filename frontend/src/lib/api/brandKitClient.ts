@@ -2,8 +2,7 @@
  * Brand Kit API Client
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
-const API_URL = `${API_BASE}/api`;
+import apiFetch from './httpClient';
 
 export interface BrandKit {
   id: string;
@@ -24,7 +23,12 @@ export interface BrandKit {
 
   // Original fields
   voicePrompt: string;
-  maskingModel?: 'rembg-replicate' | 'sam3' | 'rf-detr' | 'roboflow' | 'hf-model-id';
+  maskingModel?:
+    | 'rembg-replicate'
+    | 'sam3'
+    | 'rf-detr'
+    | 'roboflow'
+    | 'hf-model-id';
 
   // BrandKit v2 - Campaign Brain fields
   brandPersonality?: string; // "Bold, witty, slightly irreverent"
@@ -32,7 +36,13 @@ export interface BrandKit {
   valueProposition?: string; // "Saves 2 hours a day on X"
   forbiddenPhrases?: string[]; // "Do not say 'cheap', 'discount'"
   preferredPhrases?: string[]; // "Always call our users 'creators'"
-  toneStyle?: 'professional' | 'playful' | 'bold' | 'minimal' | 'luxury' | 'edgy';
+  toneStyle?:
+    | 'professional'
+    | 'playful'
+    | 'bold'
+    | 'minimal'
+    | 'luxury'
+    | 'edgy';
 
   createdAt: string;
   updatedAt: string;
@@ -61,8 +71,19 @@ export interface CreateBrandKitData {
   valueProposition?: string;
   forbiddenPhrases?: string[];
   preferredPhrases?: string[];
-  toneStyle?: 'professional' | 'playful' | 'bold' | 'minimal' | 'luxury' | 'edgy';
-  maskingModel?: 'rembg-replicate' | 'sam3' | 'rf-detr' | 'roboflow' | 'hf-model-id';
+  toneStyle?:
+    | 'professional'
+    | 'playful'
+    | 'bold'
+    | 'minimal'
+    | 'luxury'
+    | 'edgy';
+  maskingModel?:
+    | 'rembg-replicate'
+    | 'sam3'
+    | 'rf-detr'
+    | 'roboflow'
+    | 'hf-model-id';
 }
 
 export interface UpdateBrandKitData {
@@ -87,22 +108,24 @@ export interface UpdateBrandKitData {
   valueProposition?: string;
   forbiddenPhrases?: string[];
   preferredPhrases?: string[];
-  toneStyle?: 'professional' | 'playful' | 'bold' | 'minimal' | 'luxury' | 'edgy';
-  maskingModel?: 'rembg-replicate' | 'sam3' | 'rf-detr' | 'roboflow' | 'hf-model-id';
-}
-
-function getHeaders(): HeadersInit {
-  const token = localStorage.getItem('authToken');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+  toneStyle?:
+    | 'professional'
+    | 'playful'
+    | 'bold'
+    | 'minimal'
+    | 'luxury'
+    | 'edgy';
+  maskingModel?:
+    | 'rembg-replicate'
+    | 'sam3'
+    | 'rf-detr'
+    | 'roboflow'
+    | 'hf-model-id';
 }
 
 export async function getBrandKit(id: string): Promise<BrandKit> {
-  const response = await fetch(`${API_URL}/brand-kits/${id}`, {
+  const response = await apiFetch(`/api/brand-kits/${id}`, {
     method: 'GET',
-    headers: getHeaders(),
   });
 
   if (!response.ok) {
@@ -116,9 +139,8 @@ export async function getBrandKit(id: string): Promise<BrandKit> {
 export async function createBrandKit(
   brandKitData: CreateBrandKitData
 ): Promise<BrandKit> {
-  const response = await fetch(`${API_URL}/brand-kits`, {
+  const response = await apiFetch(`/api/brand-kits`, {
     method: 'POST',
-    headers: getHeaders(),
     body: JSON.stringify(brandKitData),
   });
 
@@ -137,9 +159,8 @@ export async function updateBrandKit(
   id: string,
   updates: UpdateBrandKitData
 ): Promise<BrandKit> {
-  const response = await fetch(`${API_URL}/brand-kits/${id}`, {
+  const response = await apiFetch(`/api/brand-kits/${id}`, {
     method: 'PUT',
-    headers: getHeaders(),
     body: JSON.stringify(updates),
   });
 

@@ -1,3 +1,4 @@
+import { Bot } from 'lucide-react';
 import { usePlaygroundContext } from '../../../contexts/PlaygroundContext';
 import styles from './CaptionList.module.css';
 
@@ -8,7 +9,9 @@ export function CaptionList() {
 
   return (
     <div className={styles.captionList}>
-      <h3 className={styles.title}>🤖 AI Generated Captions</h3>
+      <h3 className={styles.title}>
+        <Bot size={20} className={styles.icon} /> AI Generated Captions
+      </h3>
       <div className={styles.grid}>
         {captions.map((c, i) => (
           <button

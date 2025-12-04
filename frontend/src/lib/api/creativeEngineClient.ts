@@ -2,8 +2,7 @@
  * Creative Engine API Client
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
-const API_URL = `${API_BASE}/api`;
+import apiFetch from './httpClient';
 
 export interface GenerateCreativesRequest {
   workspaceId: string;
@@ -51,20 +50,11 @@ export interface GenerationResult {
   };
 }
 
-function getHeaders(): HeadersInit {
-  const token = localStorage.getItem('authToken');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
 export async function startGeneration(
   request: GenerateCreativesRequest
 ): Promise<GenerationResult> {
-  const response = await fetch(`${API_URL}/creative-engine/generate`, {
+  const response = await apiFetch(`/api/creative-engine/generate`, {
     method: 'POST',
-    headers: getHeaders(),
     body: JSON.stringify(request),
   });
 

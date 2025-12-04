@@ -1,18 +1,26 @@
 .captionList {
   max-width: 1200px;
   margin: 0 auto 2rem;
-  background-color: rgba(255, 255, 255, 0.95);
+  background-color: var(--color-bg-secondary);
   padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-lg);
+  border: var(--border-width-md) solid var(--color-border);
+  box-shadow: var(--shadow-md);
 }
 
 .title {
   font-family: var(--font-heading);
   font-size: 1.25rem;
   margin: 0 0 1rem 0;
-  color: #1f2937;
+  color: var(--color-text);
   font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.icon {
+  color: var(--color-primary);
 }
 
 .grid {
@@ -23,18 +31,21 @@
 
 .captionButton {
   padding: 1rem;
-  background-color: #f8fafc;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
+  background-color: var(--color-bg);
+  border: var(--border-width-md) solid var(--color-border);
+  border-radius: var(--radius-md);
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--color-text);
   cursor: pointer;
   text-align: left;
   transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
 }
 
 .captionButton:hover {
-  background-color: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
+  background-color: var(--color-primary-light);
+  color: var(--color-text);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }

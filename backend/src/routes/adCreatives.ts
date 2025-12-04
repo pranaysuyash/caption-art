@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express'
 import { z } from 'zod'
-import { AuthModel, Campaign, BrandKit } from '../models/auth'
+import { getPrismaClient } from '../lib/prisma'
+import { Campaign, BrandKit, Workspace } from '@prisma/client'
 import { createAuthMiddleware } from '../routes/auth'
 import validateRequest from '../middleware/validateRequest'
 import { AdCreativeGenerator } from '../services/adCreativeGenerator'
@@ -14,6 +15,7 @@ import { log } from '../middleware/logger'
 import { AuthenticatedRequest } from '../types/auth'
 
 const router = Router()
+const prisma = getPrismaClient()
 const requireAuth = createAuthMiddleware() as any
 
 // Validation schemas
@@ -152,18 +154,24 @@ router.post(
         .validatedData as AdCreativeGenerationRequest
 
       // Validate campaign exists and user has access
-      const campaign = AuthModel.getCampaignById(requestData.campaignId)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: requestData.campaignId },
+      })
       if (!campaign) {
         return res.status(404).json({ error: 'Campaign not found' })
       }
 
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: campaign.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
 
       // Validate brand kit exists and user has access
-      const brandKit = AuthModel.getBrandKitById(requestData.brandKitId)
+      const brandKit = await prisma.brandKit.findUnique({
+        where: { id: requestData.brandKitId },
+      })
       if (!brandKit) {
         return res.status(404).json({ error: 'Brand kit not found' })
       }
@@ -234,9 +242,13 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: any) => {
     const { campaignId, status, platform, page = 1, limit = 20 } = req.query
 
     // Get all campaigns for this agency
-    const agencyCampaigns = AuthModel.getAllCampaigns().filter((campaign) => {
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
-      return workspace?.agencyId === req.agency.id
+    const workspaces = await prisma.workspace.findMany({
+      where: { agencyId: req.agency.id },
+      select: { id: true },
+    })
+    const workspaceIds = workspaces.map((w) => w.id)
+    const agencyCampaigns = await prisma.campaign.findMany({
+      where: { workspaceId: { in: workspaceIds } },
     })
 
     const campaignIds = agencyCampaigns.map((c) => c.id)
@@ -312,12 +324,16 @@ router.get(
       }
 
       // Verify user has access to the campaign
-      const campaign = AuthModel.getCampaignById(adCreative.campaignId)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: adCreative.campaignId },
+      })
       if (!campaign) {
         return res.status(404).json({ error: 'Associated campaign not found' })
       }
 
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: campaign.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -355,12 +371,16 @@ router.put(
       }
 
       // Verify user has access to the campaign
-      const campaign = AuthModel.getCampaignById(existingCreative.campaignId)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: existingCreative.campaignId },
+      })
       if (!campaign) {
         return res.status(404).json({ error: 'Associated campaign not found' })
       }
 
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: campaign.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -438,12 +458,16 @@ router.delete(
       }
 
       // Verify user has access to the campaign
-      const campaign = AuthModel.getCampaignById(existingCreative.campaignId)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: existingCreative.campaignId },
+      })
       if (!campaign) {
         return res.status(404).json({ error: 'Associated campaign not found' })
       }
 
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: campaign.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -487,12 +511,16 @@ router.post(
       }
 
       // Verify user has access to the campaign
-      const campaign = AuthModel.getCampaignById(existingCreative.campaignId)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: existingCreative.campaignId },
+      })
       if (!campaign) {
         return res.status(404).json({ error: 'Associated campaign not found' })
       }
 
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: campaign.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -552,12 +580,16 @@ router.post(
       }
 
       // Verify user has access to the campaign
-      const campaign = AuthModel.getCampaignById(adCreative.campaignId)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: adCreative.campaignId },
+      })
       if (!campaign) {
         return res.status(404).json({ error: 'Associated campaign not found' })
       }
 
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: campaign.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
@@ -576,8 +608,16 @@ router.post(
             ? ['instagram', 'facebook', 'linkedin']
             : [adCreative.primaryPlatform],
         targetAudience: {
-          demographics: campaign.brief?.primaryAudience?.demographics || '',
-          psychographics: campaign.brief?.primaryAudience?.psychographics || '',
+          demographics: Array.isArray(
+            campaign.brief?.primaryAudience?.demographics
+          )
+            ? campaign.brief.primaryAudience.demographics.join(', ')
+            : campaign.brief?.primaryAudience?.demographics || '',
+          psychographics: Array.isArray(
+            campaign.brief?.primaryAudience?.psychographics
+          )
+            ? campaign.brief.primaryAudience.psychographics.join(', ')
+            : campaign.brief?.primaryAudience?.psychographics || '',
           painPoints: campaign.brief?.primaryAudience?.painPoints || [],
         },
         keyMessage: campaign.brief?.keyMessage || '',
@@ -587,7 +627,9 @@ router.post(
         includeVisuals: false,
       }
 
-      const brandKit = AuthModel.getBrandKitById(adCreative.brandKitId)
+      const brandKit = await prisma.brandKit.findUnique({
+        where: { id: adCreative.brandKitId },
+      })
 
       if (!brandKit) {
         return res.status(404).json({ error: 'Brand kit not found' })
@@ -648,12 +690,17 @@ router.post(
       // Validate campaign access if provided
       let campaign: Campaign | undefined
       if (requestData.campaignId) {
-        campaign = AuthModel.getCampaignById(requestData.campaignId)
+        campaign =
+          (await prisma.campaign.findUnique({
+            where: { id: requestData.campaignId },
+          })) || undefined
         if (!campaign) {
           return res.status(404).json({ error: 'Campaign not found' })
         }
 
-        const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: campaign.workspaceId },
+        })
         if (!workspace || workspace.agencyId !== req.agency.id) {
           return res.status(403).json({ error: 'Access denied' })
         }
@@ -662,12 +709,17 @@ router.post(
       // Validate brand kit access if provided
       let brandKit: BrandKit | undefined
       if (requestData.brandKitId) {
-        brandKit = AuthModel.getBrandKitById(requestData.brandKitId)
+        brandKit =
+          (await prisma.brandKit.findUnique({
+            where: { id: requestData.brandKitId },
+          })) || undefined
         if (!brandKit) {
           return res.status(404).json({ error: 'Brand kit not found' })
         }
 
-        const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: brandKit.workspaceId },
+        })
         if (!workspace || workspace.agencyId !== req.agency.id) {
           return res.status(403).json({ error: 'Access denied' })
         }
@@ -737,12 +789,17 @@ router.post(
       // Validate campaign access if provided
       let campaign: Campaign | undefined
       if (requestData.campaignId) {
-        campaign = AuthModel.getCampaignById(requestData.campaignId)
+        campaign =
+          (await prisma.campaign.findUnique({
+            where: { id: requestData.campaignId },
+          })) || undefined
         if (!campaign) {
           return res.status(404).json({ error: 'Campaign not found' })
         }
 
-        const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: campaign.workspaceId },
+        })
         if (!workspace || workspace.agencyId !== req.agency.id) {
           return res.status(403).json({ error: 'Access denied' })
         }
@@ -751,12 +808,17 @@ router.post(
       // Validate brand kit access if provided
       let brandKit: BrandKit | undefined
       if (requestData.brandKitId) {
-        brandKit = AuthModel.getBrandKitById(requestData.brandKitId)
+        brandKit =
+          (await prisma.brandKit.findUnique({
+            where: { id: requestData.brandKitId },
+          })) || undefined
         if (!brandKit) {
           return res.status(404).json({ error: 'Brand kit not found' })
         }
 
-        const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: brandKit.workspaceId },
+        })
         if (!workspace || workspace.agencyId !== req.agency.id) {
           return res.status(403).json({ error: 'Access denied' })
         }
@@ -869,23 +931,31 @@ router.post(
       const { campaignId, brandKitId } = (req as any).validatedData
 
       // Validate campaign exists and user has access
-      const campaign = AuthModel.getCampaignById(campaignId)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: campaignId },
+      })
       if (!campaign) {
         return res.status(404).json({ error: 'Campaign not found' })
       }
 
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: campaign.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
 
       // Validate brand kit exists and user has access
-      const brandKit = AuthModel.getBrandKitById(brandKitId)
+      const brandKit = await prisma.brandKit.findUnique({
+        where: { id: brandKitId },
+      })
       if (!brandKit) {
         return res.status(404).json({ error: 'Brand kit not found' })
       }
 
-      const brandWorkspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+      const brandWorkspace = await prisma.workspace.findUnique({
+        where: { id: brandKit.workspaceId },
+      })
       if (!brandWorkspace || brandWorkspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied to brand kit' })
       }
@@ -964,23 +1034,31 @@ router.post(
         req.body
 
       // Validate campaign exists and user has access
-      const campaign = AuthModel.getCampaignById(campaignId)
+      const campaign = await prisma.campaign.findUnique({
+        where: { id: campaignId },
+      })
       if (!campaign) {
         return res.status(404).json({ error: 'Campaign not found' })
       }
 
-      const workspace = AuthModel.getWorkspaceById(campaign.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: campaign.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
 
       // Validate brand kit exists and user has access
-      const brandKit = AuthModel.getBrandKitById(brandKitId)
+      const brandKit = await prisma.brandKit.findUnique({
+        where: { id: brandKitId },
+      })
       if (!brandKit) {
         return res.status(404).json({ error: 'Brand kit not found' })
       }
 
-      const brandWorkspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+      const brandWorkspace = await prisma.workspace.findUnique({
+        where: { id: brandKit.workspaceId },
+      })
       if (!brandWorkspace || brandWorkspace.agencyId !== req.agency.id) {
         return res.status(403).json({ error: 'Access denied to brand kit' })
       }

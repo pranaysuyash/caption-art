@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CampaignBriefEditor } from '../CampaignBriefEditor';
 import '../CampaignBriefEditor.css';
+import apiFetch from '../../lib/api/httpClient';
 
 export function CampaignDetail() {
   const { workspaceId, campaignId } = useParams<{
@@ -25,15 +26,12 @@ export function CampaignDetail() {
     try {
       setLoading(true);
 
-      const token = localStorage.getItem('auth_token');
-      const headers = { Authorization: `Bearer ${token}` };
-
       // Fetch Campaign
-      const campaignRes = await fetch(
+      const campaignRes = await apiFetch(
         `${
           import.meta.env.VITE_API_BASE || 'http://localhost:3001'
         }/api/campaigns/${campaignId}`,
-        { headers }
+        { method: 'GET' }
       );
       if (campaignRes.ok) {
         const data = await campaignRes.json();
@@ -41,11 +39,11 @@ export function CampaignDetail() {
 
         // Fetch Brand Kit (if campaign has one)
         if (data.campaign.brandKitId) {
-          const brandKitRes = await fetch(
+          const brandKitRes = await apiFetch(
             `${
               import.meta.env.VITE_API_BASE || 'http://localhost:3001'
             }/api/brand-kits/${data.campaign.brandKitId}`,
-            { headers }
+            { method: 'GET' }
           );
           if (brandKitRes.ok) {
             const bkData = await brandKitRes.json();
@@ -55,11 +53,11 @@ export function CampaignDetail() {
       }
 
       // Fetch Assets
-      const assetsRes = await fetch(
+      const assetsRes = await apiFetch(
         `${
           import.meta.env.VITE_API_BASE || 'http://localhost:3001'
         }/api/assets?workspaceId=${workspaceId}`,
-        { headers }
+        { method: 'GET' }
       );
       if (assetsRes.ok) {
         const data = await assetsRes.json();
@@ -76,33 +74,27 @@ export function CampaignDetail() {
     if (!campaignId || !brandKit) return;
 
     try {
-      const token = localStorage.getItem('auth_token');
-      const headers = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      };
-
       // Update Campaign
-      await fetch(
+      await apiFetch(
         `${
           import.meta.env.VITE_API_BASE || 'http://localhost:3001'
         }/api/campaigns/${campaignId}`,
         {
           method: 'PUT',
-          headers,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(campaign),
         }
       );
 
       // Update Brand Kit
       if (brandKit.id) {
-        await fetch(
+        await apiFetch(
           `${
             import.meta.env.VITE_API_BASE || 'http://localhost:3001'
           }/api/brand-kits/${brandKit.id}`,
           {
             method: 'PUT',
-            headers,
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(brandKit),
           }
         );
@@ -115,6 +107,25 @@ export function CampaignDetail() {
     }
   };
 
+  const qualityStatus = (score?: number) => {
+    if (typeof score !== 'number') {
+      return { label: 'Not scored', color: '#94a3b8' };
+    }
+    if (score >= 85) return { label: 'Excellent', color: '#22c55e' };
+    if (score >= 70) return { label: 'Good', color: '#84cc16' };
+    if (score >= 50) return { label: 'Review', color: '#f97316' };
+    return { label: 'Needs attention', color: '#dc2626' };
+  };
+
+  const qualityBreakdown = campaign?.scoreBreakdown
+    ? Object.entries(campaign.scoreBreakdown)
+        .sort(([, a], [, b]) => Number(b) - Number(a))
+        .slice(0, 4)
+    : [];
+
+  const hasQualityInsights =
+    typeof campaign?.qualityScore === 'number' || qualityBreakdown.length > 0;
+
   if (loading) {
     return <div style={{ padding: '2rem' }}>Loading...</div>;
   }
@@ -123,6 +134,122 @@ export function CampaignDetail() {
     <div
       style={{ padding: '2rem', fontFamily: 'var(--font-body, sans-serif)' }}
     >
+      {hasQualityInsights && (
+        <section
+          style={{
+            marginBottom: '2rem',
+            padding: '1.5rem',
+            borderRadius: '16px',
+            border: '1px solid var(--color-border, #e5e7eb)',
+            background:
+              'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(37,99,235,0.05))',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
+            <div>
+              <p
+                style={{
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
+                  fontSize: '0.75rem',
+                  color: 'var(--color-text-secondary, #6b7280)',
+                  margin: 0,
+                }}
+              >
+                Campaign Quality
+              </p>
+              <h2
+                style={{
+                  fontFamily: 'var(--font-heading, sans-serif)',
+                  fontSize: '1.5rem',
+                  color: 'var(--color-text, #0f172a)',
+                  margin: '0.25rem 0 0',
+                }}
+              >
+                {campaign?.name}
+              </h2>
+            </div>
+            <div
+              style={{
+                textAlign: 'right',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '2.5rem',
+                  fontWeight: 700,
+                  color: 'var(--color-text, #0f172a)',
+                  lineHeight: 1,
+                }}
+              >
+                {typeof campaign?.qualityScore === 'number'
+                  ? Math.round(campaign.qualityScore)
+                  : '—'}
+              </div>
+              <div
+                style={{
+                  fontSize: '0.875rem',
+                  color: qualityStatus(campaign?.qualityScore).color,
+                  fontWeight: 600,
+                }}
+              >
+                {qualityStatus(campaign?.qualityScore).label}
+              </div>
+            </div>
+          </div>
+          {qualityBreakdown.length > 0 && (
+            <div
+              style={{
+                marginTop: '1rem',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '0.75rem',
+              }}
+            >
+              {qualityBreakdown.map(([metric, value]) => (
+                <div
+                  key={metric}
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.65)',
+                    borderRadius: '12px',
+                    padding: '0.75rem',
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: 0,
+                      textTransform: 'capitalize',
+                      fontSize: '0.85rem',
+                      color: 'var(--color-text-secondary, #6b7280)',
+                    }}
+                  >
+                    {metric.replace(/([A-Z])/g, ' $1').trim()}
+                  </p>
+                  <strong
+                    style={{
+                      display: 'block',
+                      marginTop: '0.25rem',
+                      fontSize: '1.1rem',
+                      color: 'var(--color-text, #0f172a)',
+                    }}
+                  >
+                    {Math.round(value)}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       {/* Content */}
       {activeTab === 'brand-kit' && (
         <div
@@ -135,7 +262,7 @@ export function CampaignDetail() {
           {/* Brand Kit Editor */}
           <div
             style={{
-              backgroundColor: 'var(--color-surface, white)',
+              backgroundColor: 'var(--color-bg-secondary, white)',
               border: '1px solid var(--color-border, #e5e7eb)',
               borderRadius: '12px',
               padding: '1.5rem',
@@ -160,19 +287,7 @@ export function CampaignDetail() {
               >
                 Brand Configuration
               </h3>
-              <button
-                onClick={handleSave}
-                className='button button-primary'
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: 'var(--color-primary, #2563eb)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
-                }}
-              >
+              <button onClick={handleSave} className='btn btn-primary'>
                 Save Changes
               </button>
             </div>
@@ -342,7 +457,7 @@ export function CampaignDetail() {
           {/* Campaign Settings */}
           <div
             style={{
-              backgroundColor: 'var(--color-surface, white)',
+              backgroundColor: 'var(--color-bg-secondary, white)',
               border: '1px solid var(--color-border, #e5e7eb)',
               borderRadius: '12px',
               padding: '1.5rem',
@@ -426,7 +541,7 @@ export function CampaignDetail() {
       {activeTab === 'assets' && (
         <div
           style={{
-            backgroundColor: 'var(--color-surface, white)',
+            backgroundColor: 'var(--color-bg-secondary, white)',
             border: '1px solid var(--color-border, #e5e7eb)',
             borderRadius: '12px',
             padding: '1.5rem',
@@ -452,21 +567,7 @@ export function CampaignDetail() {
               Campaign Assets
             </h3>
 
-            <button
-              className='button button-primary'
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: 'var(--color-primary, #2563eb)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-              }}
-            >
-              + Upload Assets
-            </button>
+            <button className='btn btn-primary'>+ Upload Assets</button>
           </div>
 
           {assets.length === 0 ? (
@@ -563,7 +664,7 @@ export function CampaignDetail() {
       {activeTab === 'campaign-brief' && (
         <div
           style={{
-            backgroundColor: 'var(--color-surface, white)',
+            backgroundColor: 'var(--color-bg-secondary, white)',
             border: '1px solid var(--color-border, #e5e7eb)',
             borderRadius: '12px',
             padding: '1.5rem',
@@ -602,17 +703,7 @@ export function CampaignDetail() {
 
             <button
               onClick={() => setShowBriefEditor(!showBriefEditor)}
-              className='button button-primary'
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: 'var(--color-primary, #2563eb)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-                fontWeight: '500',
-                cursor: 'pointer',
-              }}
+              className='btn btn-primary'
             >
               {showBriefEditor ? 'Cancel' : 'Edit Brief'}
             </button>
@@ -624,7 +715,7 @@ export function CampaignDetail() {
               onSave={async (briefData) => {
                 try {
                   // Save brief data via API
-                  const response = await fetch(
+                  const response = await apiFetch(
                     `/api/campaign-briefs/${campaignId}`,
                     {
                       method: 'PUT',

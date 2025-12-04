@@ -5,6 +5,7 @@
  */
 
 import type { ShareablePlatform, PreparedImage } from './types';
+import { safeLocalStorage } from '../storage/safeLocalStorage';
 
 export interface ScheduledPost {
   id: string;
@@ -40,7 +41,7 @@ export class PostScheduler {
    */
   validateScheduledTime(scheduledTime: Date): ScheduleValidationResult {
     const now = new Date();
-    
+
     if (!(scheduledTime instanceof Date) || isNaN(scheduledTime.getTime())) {
       return {
         isValid: false,
@@ -205,7 +206,9 @@ export class PostScheduler {
   /**
    * Retry a failed scheduled post
    */
-  async retryFailedPost(postId: string): Promise<{ success: boolean; error?: string }> {
+  async retryFailedPost(
+    postId: string
+  ): Promise<{ success: boolean; error?: string }> {
     const post = this.scheduledPosts.get(postId);
     if (!post) {
       return {
@@ -253,9 +256,9 @@ export class PostScheduler {
     // 1. Check authentication status
     // 2. Call the platform API
     // 3. Handle platform-specific errors
-    
+
     // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Simulate random failures for testing
     if (Math.random() < 0.1) {
@@ -284,10 +287,10 @@ export class PostScheduler {
    */
   private loadScheduledPosts(): void {
     try {
-      const stored = localStorage.getItem(this.storageKey);
+      const stored = safeLocalStorage.getItem(this.storageKey);
       if (stored) {
         const posts: ScheduledPost[] = JSON.parse(stored);
-        posts.forEach(post => {
+        posts.forEach((post) => {
           // Convert date strings back to Date objects
           post.scheduledTime = new Date(post.scheduledTime);
           post.createdAt = new Date(post.createdAt);
@@ -308,7 +311,7 @@ export class PostScheduler {
   private saveScheduledPosts(): void {
     try {
       const posts = Array.from(this.scheduledPosts.values());
-      localStorage.setItem(this.storageKey, JSON.stringify(posts));
+      safeLocalStorage.setItem(this.storageKey, JSON.stringify(posts));
     } catch (error) {
       console.error('Failed to save scheduled posts:', error);
     }
@@ -336,7 +339,7 @@ export class PostScheduler {
    * Clean up timers (call when component unmounts)
    */
   cleanup(): void {
-    this.timers.forEach(timer => clearTimeout(timer));
+    this.timers.forEach((timer) => clearTimeout(timer));
     this.timers.clear();
   }
 }

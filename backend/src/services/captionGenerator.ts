@@ -677,7 +677,7 @@ CTA: [your call-to-action here]`
       // Get workspace agency for watermark logic
       const workspace = AuthModel.getWorkspaceById(job.workspaceId)
       const agency = workspace
-        ? AuthModel.getAgencyById(workspace.agencyId)
+        ? await AuthModel.getAgencyById(workspace.agencyId)
         : null
 
       let processedCount = 0

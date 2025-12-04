@@ -3,9 +3,7 @@
  * Handles all export-related API calls for the approval workflow
  */
 
-// Get base URL for API calls
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
-const API_URL = `${API_BASE}/api`;
+import apiFetch from './httpClient';
 
 // Export job statuses
 export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed';
@@ -49,27 +47,15 @@ export interface ExportStatistics {
 }
 
 /**
- * Get authentication headers with JWT token
- */
-function getHeaders(): HeadersInit {
-  const token = localStorage.getItem('authToken');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
-/**
  * Start a new export job for a workspace
  * @param workspaceId - ID of the workspace to export
  * @returns Promise resolving to the created export job
  */
 export async function startExport(workspaceId: string): Promise<ExportJob> {
-  const response = await fetch(
-    `${API_URL}/export/workspace/${workspaceId}/start`,
+  const response = await apiFetch(
+    `/api/export/workspace/${workspaceId}/start`,
     {
       method: 'POST',
-      headers: getHeaders(),
     }
   );
 
@@ -90,9 +76,8 @@ export async function startExport(workspaceId: string): Promise<ExportJob> {
  * @returns Promise resolving to the export job
  */
 export async function getJobStatus(jobId: string): Promise<ExportJob> {
-  const response = await fetch(`${API_URL}/export/jobs/${jobId}`, {
+  const response = await apiFetch(`/api/export/jobs/${jobId}`, {
     method: 'GET',
-    headers: getHeaders(),
   });
 
   if (!response.ok) {
@@ -156,16 +141,29 @@ export async function pollJobStatus(
  * @returns Promise resolving when download starts
  */
 export async function downloadExport(jobId: string): Promise<void> {
-  const token = localStorage.getItem('authToken');
-  const url = `${API_URL}/export/jobs/${jobId}/download`;
+  // Use apiFetch to ensure credentials are included (cookies)
+  const response = await apiFetch(`/api/export/jobs/${jobId}/download`, {
+    method: 'GET',
+  });
 
-  // Create a temporary link and trigger download
+  if (!response.ok) {
+    throw new Error('Failed to download export');
+  }
+
+  const blob = await response.blob();
+  const contentDisposition = response.headers.get('Content-Disposition') || '';
+  let filename = '';
+  const match = /filename="?([^\";]+)"?/.exec(contentDisposition);
+  if (match) filename = match[1];
+
+  const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.href = token ? `${url}?token=${encodeURIComponent(token)}` : url;
-  link.download = ''; // Let browser determine filename from Content-Disposition header
+  link.href = url;
+  link.setAttribute('download', filename || 'export.zip');
   document.body.appendChild(link);
   link.click();
-  document.body.removeChild(link);
+  link.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 /**
@@ -176,11 +174,10 @@ export async function downloadExport(jobId: string): Promise<void> {
 export async function getExportSummary(
   workspaceId: string
 ): Promise<ExportSummary> {
-  const response = await fetch(
-    `${API_URL}/export/workspace/${workspaceId}/summary`,
+  const response = await apiFetch(
+    `/api/export/workspace/${workspaceId}/summary`,
     {
       method: 'GET',
-      headers: getHeaders(),
     }
   );
 
@@ -208,11 +205,10 @@ export async function getWorkspaceJobs(
   if (options?.status) params.set('status', options.status);
   if (options?.limit) params.set('limit', options.limit.toString());
 
-  const response = await fetch(
-    `${API_URL}/export/workspace/${workspaceId}/jobs?${params}`,
+  const response = await apiFetch(
+    `/api/export/workspace/${workspaceId}/jobs?${params}`,
     {
       method: 'GET',
-      headers: getHeaders(),
     }
   );
 
@@ -235,11 +231,10 @@ export async function getWorkspaceJobs(
 export async function getExportStatistics(
   workspaceId: string
 ): Promise<ExportStatistics> {
-  const response = await fetch(
-    `${API_URL}/export/workspace/${workspaceId}/statistics`,
+  const response = await apiFetch(
+    `/api/export/workspace/${workspaceId}/statistics`,
     {
       method: 'GET',
-      headers: getHeaders(),
     }
   );
 
@@ -259,9 +254,8 @@ export async function getExportStatistics(
  * @returns Promise resolving when job is deleted
  */
 export async function deleteJob(jobId: string): Promise<void> {
-  const response = await fetch(`${API_URL}/export/jobs/${jobId}`, {
+  const response = await apiFetch(`/api/export/jobs/${jobId}`, {
     method: 'DELETE',
-    headers: getHeaders(),
   });
 
   if (!response.ok) {

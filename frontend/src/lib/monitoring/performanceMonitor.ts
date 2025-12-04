@@ -1,3 +1,4 @@
+import apiFetch from '../api/httpClient';
 import {
   WebVitalsTracker,
   APIMonitor,
@@ -64,7 +65,7 @@ class UnifiedMonitoringService
 
   constructor(endpoint?: string) {
     this.endpoint = endpoint || null;
-    
+
     if (this.endpoint) {
       this.startAutoFlush();
     }
@@ -119,7 +120,7 @@ class UnifiedMonitoringService
     this.metricsQueue = [];
 
     try {
-      await fetch(this.endpoint, {
+      await apiFetch(this.endpoint!, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,7 +134,10 @@ class UnifiedMonitoringService
     } catch (error) {
       console.error('Failed to send metrics to monitoring service:', error);
       // Re-queue metrics on failure (up to max size)
-      this.metricsQueue = [...metricsToSend.slice(-this.MAX_QUEUE_SIZE), ...this.metricsQueue];
+      this.metricsQueue = [
+        ...metricsToSend.slice(-this.MAX_QUEUE_SIZE),
+        ...this.metricsQueue,
+      ];
     }
   }
 
@@ -219,7 +223,11 @@ class UnifiedMonitoringService
     this.queueMetric('memory-leak-alert', {
       ...indicator,
       severity: 'high',
-      message: `Potential memory leak detected: ${(indicator.growthRate / 1024 / 1024).toFixed(2)} MB/s growth`,
+      message: `Potential memory leak detected: ${(
+        indicator.growthRate /
+        1024 /
+        1024
+      ).toFixed(2)} MB/s growth`,
     });
   }
 
@@ -242,7 +250,9 @@ class UnifiedMonitoringService
  * Main PerformanceMonitor class that orchestrates all monitoring modules
  */
 export class PerformanceMonitor {
-  private config: Omit<Required<PerformanceMonitorConfig>, 'endpoint'> & { endpoint?: string };
+  private config: Omit<Required<PerformanceMonitorConfig>, 'endpoint'> & {
+    endpoint?: string;
+  };
   private monitoringService: UnifiedMonitoringService;
   private webVitalsTracker: WebVitalsTracker | null = null;
   private apiMonitor: APIMonitor | null = null;
@@ -398,7 +408,11 @@ export class PerformanceMonitor {
     return {
       webVitals: this.webVitalsTracker?.getMetrics() || [],
       apiMetrics: this.apiMonitor?.getMetrics() || [],
-      apiPercentiles: this.apiMonitor?.calculatePercentiles() || { p50: 0, p95: 0, p99: 0 },
+      apiPercentiles: this.apiMonitor?.calculatePercentiles() || {
+        p50: 0,
+        p95: 0,
+        p99: 0,
+      },
       errorRate: this.errorRateTracker?.calculateErrorRate() || {
         totalRequests: 0,
         totalErrors: 0,
@@ -420,7 +434,9 @@ let performanceMonitorInstance: PerformanceMonitor | null = null;
 /**
  * Initialize the global performance monitor
  */
-export function initPerformanceMonitor(config?: PerformanceMonitorConfig): PerformanceMonitor {
+export function initPerformanceMonitor(
+  config?: PerformanceMonitorConfig
+): PerformanceMonitor {
   if (!performanceMonitorInstance) {
     performanceMonitorInstance = new PerformanceMonitor(config);
     performanceMonitorInstance.initialize();

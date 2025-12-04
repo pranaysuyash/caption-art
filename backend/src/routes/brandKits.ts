@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { AuthModel } from '../models/auth'
+import { getPrismaClient } from '../lib/prisma'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
 import { validateRequest } from '../middleware/validation'
@@ -9,6 +9,7 @@ import { MaskingService } from '../services/maskingService'
 
 const router = Router()
 const requireAuth = createAuthMiddleware() as any
+const prisma = getPrismaClient()
 
 // Validation schemas
 const createBrandKitSchema = z.object({
@@ -93,7 +94,9 @@ router.post(
       }
 
       // Verify workspace belongs to current agency
-      const workspace = AuthModel.getWorkspaceById(brandKitData.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: brandKitData.workspaceId },
+      })
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' })
       }
@@ -102,12 +105,19 @@ router.post(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const brandKit = await AuthModel.createBrandKit({
-        workspaceId: brandKitData.workspaceId,
-        colors: brandKitData.colors,
-        fonts: brandKitData.fonts,
-        logo: brandKitData.logo,
-        voicePrompt: brandKitData.voicePrompt,
+      const brandKit = await prisma.brandKit.create({
+        data: {
+          workspaceId: brandKitData.workspaceId,
+          agencyId: authenticatedReq.agency.id,
+          primaryColor: brandKitData.colors.primary,
+          secondaryColor: brandKitData.colors.secondary,
+          tertiaryColor: brandKitData.colors.tertiary,
+          headingFont: brandKitData.fonts.heading,
+          bodyFont: brandKitData.fonts.body,
+          logoUrl: brandKitData.logo?.url,
+          logoPosition: brandKitData.logo?.position,
+          voicePrompt: brandKitData.voicePrompt,
+        },
       })
 
       res.status(201).json({ brandKit })
@@ -131,14 +141,18 @@ router.get('/:id', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
-    const brandKit = AuthModel.getBrandKitById(id)
+    const brandKit = await prisma.brandKit.findUnique({
+      where: { id },
+    })
 
     if (!brandKit) {
       return res.status(404).json({ error: 'Brand kit not found' })
     }
 
     // Verify brand kit belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: brandKit.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
@@ -168,21 +182,44 @@ router.put(
         }
       }
 
-      const brandKit = AuthModel.getBrandKitById(id)
+      const brandKit = await prisma.brandKit.findUnique({ where: { id } })
       if (!brandKit) {
         return res.status(404).json({ error: 'Brand kit not found' })
       }
 
       // Verify brand kit belongs to agency via workspace
-      const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: brandKit.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const updatedBrandKit = AuthModel.updateBrandKit(id, updates)
-      if (!updatedBrandKit) {
-        return res.status(404).json({ error: 'Brand kit not found' })
+      // Build update data, converting colors/fonts objects to flat structure
+      const updateData: any = {}
+      if (updates.colors) {
+        if (updates.colors.primary)
+          updateData.primaryColor = updates.colors.primary
+        if (updates.colors.secondary)
+          updateData.secondaryColor = updates.colors.secondary
+        if (updates.colors.tertiary)
+          updateData.tertiaryColor = updates.colors.tertiary
       }
+      if (updates.fonts) {
+        if (updates.fonts.heading)
+          updateData.headingFont = updates.fonts.heading
+        if (updates.fonts.body) updateData.bodyFont = updates.fonts.body
+      }
+      if (updates.logo) {
+        updateData.logoUrl = updates.logo.url
+        updateData.logoPosition = updates.logo.position
+      }
+      if (updates.voicePrompt) updateData.voicePrompt = updates.voicePrompt
+
+      const updatedBrandKit = await prisma.brandKit.update({
+        where: { id },
+        data: updateData,
+      })
 
       res.json({ brandKit: updatedBrandKit })
     } catch (error) {
@@ -202,24 +239,29 @@ router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
-    const brandKit = AuthModel.getBrandKitById(id)
+
+    const brandKit = await prisma.brandKit.findUnique({ where: { id } })
 
     if (!brandKit) {
       return res.status(404).json({ error: 'Brand kit not found' })
     }
 
     // Verify brand kit belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(brandKit.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: brandKit.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const deleted = AuthModel.deleteBrandKit(id)
-    if (!deleted) {
-      return res.status(404).json({ error: 'Brand kit not found' })
+    // Check if brand kit is in use before deletion
+    const isInUse = await prisma.campaign.count({ where: { brandKitId: id } })
+    if (isInUse > 0) {
+      return res.status(400).json({ error: 'Brand kit is in use by campaigns' })
     }
 
-    res.json({ message: 'Brand kit deleted successfully' })
+    await prisma.brandKit.delete({ where: { id } })
+    res.json({ success: true })
   } catch (error) {
     log.error({ err: error }, 'Delete brand kit error')
     res.status(500).json({ error: 'Internal server error' })
@@ -233,7 +275,9 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
     const { workspaceId } = req.params
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -242,7 +286,9 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const brandKit = AuthModel.getBrandKitByWorkspace(workspaceId)
+    const brandKit = await prisma.brandKit.findUnique({
+      where: { workspaceId },
+    })
     if (!brandKit) {
       return res.status(404).json({ error: 'Brand kit not found' })
     }

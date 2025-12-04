@@ -1,6 +1,8 @@
 ## Caption Art — AI-Powered Agency Creative Engine
 
-Last updated: 2025-12-03
+Last updated: 2025-12-04
+
+> **🎉 Latest Update (Dec 4, 2025)**: Critical fixes implemented! Caption generation now works, API keys secured, error boundaries added. See [SUMMARY.md](./SUMMARY.md) for details.
 
 **🚀 Phase 2 Complete**: Multi-format creative generation, video rendering, campaign management, and advanced AI capabilities are now live!
 
@@ -10,18 +12,31 @@ Upload images, get AI-powered caption suggestions, place styled text behind subj
 
 ---
 
+## 📚 Documentation
+
+- **[SUMMARY.md](./SUMMARY.md)** - Executive summary of recent fixes and improvements
+- **[IMPLEMENTATION_FIXES.md](./IMPLEMENTATION_FIXES.md)** - Detailed technical documentation of all fixes
+- **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** - Quick reference guide for implemented fixes
+- **[TESTING_GUIDE.md](./TESTING_GUIDE.md)** - Comprehensive testing procedures
+- **[USER_FLOW_GUIDE.md](./USER_FLOW_GUIDE.md)** - User journey documentation
+
+---
+
 ## 🧪 **Quick Testing (Ready Now)**
 
 ### **Access the Application**
+
 - **Frontend**: http://localhost:5174/
 - **Backend**: http://localhost:3001
 
 ### **Test Credentials**
+
 - **Email**: `test@example.com`
 - **Password**: `testpassword123`
 - **Agency**: Test Creative Agency
 
 ### **Start Testing in 2 Minutes**
+
 ```bash
 # Clone and install
 git clone <your-repo>
@@ -50,6 +65,7 @@ npm run dev
 ### Core Features
 
 #### Image Processing
+
 - **Upload & Validation**: JPG/PNG support with file size and format validation
 - **Image Preprocessing**: Automatic optimization and format conversion
 - **Segmentation**: AI-powered subject masking for "text behind subject" effect using Replicate rembg
@@ -58,6 +74,7 @@ npm run dev
 - **Before/After Slider**: Interactive comparison of original vs. final output
 
 #### AI Caption Generation
+
 - **Smart Captions**: 3-5 suggestions using BLIP captioning + OpenAI LLM rewrites
 - **Multiple Styles**: Creative, funny, poetic, minimal, and dramatic caption variants
 - **Caption Caching**: Avoid redundant API calls for the same images
@@ -66,6 +83,7 @@ npm run dev
 - **Retry Logic**: Automatic retry with exponential backoff for failed API calls
 
 #### Text Styling & Composition
+
 - **Style Presets**: Neon, Magazine, Paint/Brush, Emboss with custom styling
 - **Multi-line Text**: Advanced text rendering with line breaks and alignment
 - **Transform Controls**: Manual drag/scale/rotate with precise positioning
@@ -75,6 +93,7 @@ npm run dev
 - **Font Loading**: Custom web fonts with fallback handling
 
 #### History & Editing
+
 - **Undo/Redo**: Full history stack with keyboard shortcuts (Ctrl+Z/Cmd+Z)
 - **State Persistence**: History saved across browser sessions
 - **Smart Debouncing**: Automatic state saving after user inactivity
@@ -82,12 +101,14 @@ npm run dev
 - **State Serialization**: Efficient storage of canvas states
 
 #### Export & Download
+
 - **Multiple Formats**: PNG/JPG export with quality control
 - **Watermarking**: Optional watermark for free tier
 - **Max Resolution**: 1080px maximum dimension
 - **Batch Export**: Process and download multiple images as ZIP
 
 #### Batch Processing
+
 - **Multi-Upload**: Process up to 50 images simultaneously
 - **Batch Apply**: Apply same caption and style to all images
 - **Progress Tracking**: Real-time progress for batch operations
@@ -96,6 +117,7 @@ npm run dev
 - **Batch Styling**: Apply consistent styling across all images
 
 #### Analytics & Monitoring
+
 - **Usage Tracking**: Feature usage, user flows, and conversion metrics
 - **Error Tracking**: Automatic error capture with context and stack traces
 - **Performance Monitoring**: Core Web Vitals (LCP, FID, CLS) tracking
@@ -105,6 +127,7 @@ npm run dev
 - **Custom Events**: Track specific user behaviors and interactions
 
 #### User Experience
+
 - **Neo-Brutalism UI**: Bold, modern design system with custom styling
 - **User Preferences**: Persistent settings and preferences
 - **Responsive Design**: Works across desktop and mobile devices
@@ -113,6 +136,7 @@ npm run dev
 - **Animations**: Smooth transitions and micro-interactions
 
 #### Payments & Licensing
+
 - **Gumroad Integration**: License key verification
 - **Dodo Payments**: Alternative payment provider support
 - **Free Tier**: 2 watermarked exports per day (local enforcement)
@@ -120,11 +144,13 @@ npm run dev
 - **License Validation**: Server-side verification of purchase status
 
 #### Social Media Integration
+
 - **Platform Optimization**: Export presets for Instagram, Twitter, Facebook
 - **Aspect Ratios**: Pre-configured sizes for different platforms
 - **Direct Sharing**: Share to social platforms (planned)
 
 #### 🚀 **Phase 2: Agency Creative Engine (NEW!)**
+
 - **Multi-Format Generation**: Instagram posts, Facebook ads, LinkedIn content, video scripts
 - **Campaign Management**: Create and manage client campaigns with briefs and objectives
 - **Video Rendering**: Generate video ads with FFmpeg integration
@@ -142,6 +168,7 @@ npm run dev
 ### Tech Stack
 
 #### Frontend
+
 - **Framework**: React 18 with TypeScript
 - **Build Tool**: Vite for fast development and optimized builds
 - **Canvas**: HTML5 Canvas API for image compositing
@@ -150,6 +177,7 @@ npm run dev
 - **Styling**: CSS modules with design system
 
 #### Backend (Platform-Agnostic)
+
 - **Runtime**: Node.js 18+ with Express.js
 - **Architecture**: Standard HTTP server (no platform lock-in)
 - **Deployment**: Docker containers, PaaS, VPS, or any cloud provider
@@ -161,14 +189,16 @@ npm run dev
 - **Error Handling**: Comprehensive error responses with user-friendly messages
 
 #### External Services
+
 - **Replicate API**: BLIP captioning and rembg segmentation
 - **OpenAI API**: GPT-3.5/GPT-4 for caption rewrites
 - **Gumroad API**: License verification
 - **Dodo Payments**: Alternative payment processing
 
 #### Infrastructure (Flexible)
+
 - **Frontend Hosting**: Any static hosting (S3, Netlify, Vercel, etc.)
-- **Backend Hosting**: 
+- **Backend Hosting**:
   - Local development (npm run dev)
   - Docker containers (any orchestration platform)
   - PaaS platforms (Railway, Render, Heroku, Fly.io)
@@ -183,6 +213,7 @@ npm run dev
 ### Architecture
 
 #### Current Setup
+
 - **Frontend**: React SPA (can be hosted anywhere)
 - **Backend**: Platform-agnostic Express.js server
   - Runs locally for development
@@ -197,6 +228,7 @@ npm run dev
 - **Caching**: Client-side caching for captions and masks
 
 #### Data Flow
+
 1. User uploads image → Frontend validates → Stores in memory
 2. Frontend calls `/api/mask` with image URL → Backend calls Replicate rembg → Returns mask URL
 3. Frontend calls `/api/caption` with image URL → Backend calls BLIP → Calls OpenAI → Returns variants
@@ -256,6 +288,7 @@ caption-art/
 ### Environment Variables
 
 #### Frontend (.env.local)
+
 ```
 VITE_REPLICATE_API_TOKEN=...
 VITE_OPENAI_API_KEY=...
@@ -263,6 +296,7 @@ VITE_BACKEND_URL=http://localhost:3001
 ```
 
 #### Backend (.env)
+
 ```
 # Server Configuration
 NODE_ENV=development
@@ -293,6 +327,7 @@ See `backend/.env.example` for a complete template with documentation.
 ### Development
 
 #### Local Setup
+
 ```bash
 # Install dependencies
 cd frontend && npm install
@@ -308,6 +343,7 @@ npm run dev  # Runs on http://localhost:5173
 ```
 
 #### Running Tests
+
 ```bash
 # Frontend tests
 cd frontend
@@ -322,6 +358,7 @@ npm test -- path/to/test.ts
 ```
 
 #### Docker Development
+
 ```bash
 # Build and run backend in Docker
 cd backend
@@ -337,7 +374,9 @@ docker-compose up
 ### Deployment
 
 #### Frontend Deployment
+
 The frontend is a static React app that can be deployed to any static hosting:
+
 ```bash
 cd frontend
 npm run build
@@ -345,6 +384,7 @@ npm run build
 ```
 
 Options:
+
 - **Netlify**: Drag and drop `dist/` folder or connect Git repo
 - **Vercel**: `vercel deploy` or connect Git repo
 - **AWS S3 + CloudFront**: `aws s3 sync dist/ s3://bucket-name/`
@@ -356,6 +396,7 @@ Options:
 The backend is a platform-agnostic Express.js server. Choose any deployment option:
 
 **Option 1: Docker (Recommended)**
+
 ```bash
 cd backend
 docker build -t caption-art-backend .
@@ -363,12 +404,14 @@ docker run -p 3001:3001 --env-file .env caption-art-backend
 ```
 
 **Option 2: PaaS Platforms**
+
 - **Railway**: `railway up` (auto-detects Dockerfile)
 - **Render**: Connect Git repo, set environment variables
 - **Heroku**: `git push heroku main`
 - **Fly.io**: `fly deploy`
 
 **Option 3: Cloud VMs**
+
 ```bash
 # SSH into your server
 git clone your-repo
@@ -380,6 +423,7 @@ npm start
 ```
 
 **Option 4: Container Platforms**
+
 - **AWS ECS/Fargate**: Push to ECR, create service
 - **Google Cloud Run**: `gcloud run deploy`
 - **Azure Container Instances**: Deploy from container registry
@@ -392,11 +436,13 @@ See `backend/DEPLOYMENT.md` for detailed deployment guides for each platform.
 ### Feature Specifications
 
 All features are documented in `.kiro/specs/` with:
+
 - **requirements.md**: User stories and acceptance criteria
 - **design.md**: Technical design and architecture
 - **tasks.md**: Implementation checklist
 
 Current specs:
+
 - ai-caption-generation
 - analytics-usage-tracking
 - batch-processing
@@ -429,12 +475,14 @@ Current specs:
 ### Current Status (December 2025)
 
 **✅ Phase 2 Complete - Production Ready**
+
 - All Phase 2 features are implemented and tested
 - Backend running with 27 API endpoints including creative engine, campaigns, video rendering
 - Frontend with complete agency workflow and signup functionality
 - Test user available for immediate testing (see Quick Testing section)
 
 **🚀 Live Features Ready:**
+
 - Multi-format AI creative generation (Instagram, Facebook, LinkedIn, Video)
 - Campaign management with approval workflows
 - Advanced brand kit management and style synthesis
@@ -443,6 +491,7 @@ Current specs:
 - Reference creative library and batch processing
 
 **🔧 Technical Status:**
+
 - ✅ Backend: Express.js server with TypeScript compilation
 - ✅ Frontend: React SPA with agency-first design
 - ✅ Authentication: User signup/login with agency management
@@ -450,6 +499,7 @@ Current specs:
 - ✅ Testing: Complete test suite and manual verification
 
 **📋 Testing Information:**
+
 - Test credentials: test@example.com / testpassword123
 - Quick start: Clone repo → npm install → npm run dev → http://localhost:5174
 - All features working and ready for review
@@ -468,6 +518,7 @@ Current specs:
 ### Migration from AWS Lambda
 
 The backend was originally built on AWS Lambda but has been migrated to a platform-agnostic Express.js architecture. The new backend:
+
 - ✅ Maintains all existing functionality
 - ✅ Uses the same external APIs (Replicate, OpenAI, Gumroad)
 - ✅ Provides identical API responses

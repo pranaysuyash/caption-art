@@ -3,7 +3,7 @@
  * Handles caption approval workflow with the backend
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
+import apiFetch from './httpClient';
 
 export interface CaptionItem {
   id: string;
@@ -56,34 +56,18 @@ export interface BulkApprovalResponse {
  */
 export class ApprovalClient {
   private baseUrl: string;
-  private token: string | null = null;
 
-  constructor(baseUrl: string = API_BASE) {
+  constructor(baseUrl: string = '') {
     this.baseUrl = baseUrl;
-    this.token = localStorage.getItem('auth_token');
-  }
-
-  /**
-   * Set authentication token
-   */
-  setToken(token: string) {
-    this.token = token;
-    localStorage.setItem('auth_token', token);
   }
 
   /**
    * Get authorization headers
    */
   private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
+    return {
       'Content-Type': 'application/json',
     };
-
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    }
-
-    return headers;
   }
 
   /**
@@ -92,7 +76,7 @@ export class ApprovalClient {
   async getWorkspaceCaptions(
     workspaceId: string
   ): Promise<CaptionsListResponse> {
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/api/batch/workspace/${workspaceId}/captions`,
       {
         method: 'GET',
@@ -115,7 +99,7 @@ export class ApprovalClient {
     workspaceId: string,
     campaignId: string
   ): Promise<CaptionsListResponse> {
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/api/batch/workspace/${workspaceId}/captions?campaignId=${campaignId}`,
       {
         method: 'GET',
@@ -135,7 +119,7 @@ export class ApprovalClient {
    * Approve a single caption
    */
   async approveCaption(captionId: string): Promise<ApprovalResponse> {
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/api/approval/captions/${captionId}/approve`,
       {
         method: 'PUT',
@@ -155,7 +139,7 @@ export class ApprovalClient {
    * Reject a single caption
    */
   async rejectCaption(captionId: string): Promise<ApprovalResponse> {
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/api/approval/captions/${captionId}/reject`,
       {
         method: 'PUT',
@@ -233,7 +217,7 @@ export class ApprovalClient {
     captionId: string,
     text: string
   ): Promise<{ caption: CaptionItem }> {
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/api/batch/workspace/${workspaceId}/captions/${captionId}`,
       {
         method: 'PUT',
@@ -260,7 +244,7 @@ export class ApprovalClient {
       status?: 'pending' | 'approved' | 'rejected';
     }
   ): Promise<{ items: CaptionItem[] }> {
-    const response = await fetch(
+    const response = await apiFetch(
       `${this.baseUrl}/api/approval/workspace/${workspaceId}/grid`,
       {
         method: 'GET',

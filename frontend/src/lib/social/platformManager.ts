@@ -11,7 +11,11 @@ import {
   type ErrorHandlingResult,
 } from './errorHandler';
 
-export type ShareablePlatform = 'instagram' | 'twitter' | 'facebook' | 'pinterest';
+export type ShareablePlatform =
+  | 'instagram'
+  | 'twitter'
+  | 'facebook'
+  | 'pinterest';
 
 export interface PlatformConfig {
   name: string;
@@ -89,6 +93,8 @@ const PLATFORM_CONFIGS: Record<ShareablePlatform, PlatformConfig> = {
 /**
  * Platform Manager class for handling social media operations
  */
+import { safeLocalStorage } from '../storage/safeLocalStorage';
+
 export class PlatformManager {
   private authStatuses: Map<ShareablePlatform, AuthStatus> = new Map();
 
@@ -123,10 +129,12 @@ export class PlatformManager {
     // In a real implementation, this would check with the OAuth handler
     // For now, we'll check localStorage for stored tokens
     const tokenKey = `${platform}_auth_token`;
-    const token = localStorage.getItem(tokenKey);
-    const username = localStorage.getItem(`${platform}_username`);
-    const profilePicture = localStorage.getItem(`${platform}_profile_picture`);
-    const tokenExpiry = localStorage.getItem(`${platform}_token_expiry`);
+    const token = safeLocalStorage.getItem(tokenKey);
+    const username = safeLocalStorage.getItem(`${platform}_username`);
+    const profilePicture = safeLocalStorage.getItem(
+      `${platform}_profile_picture`
+    );
+    const tokenExpiry = safeLocalStorage.getItem(`${platform}_token_expiry`);
 
     const authStatus: AuthStatus = {
       platform,
@@ -174,7 +182,9 @@ export class PlatformManager {
     // Check if image size exceeds platform limit
     if (blob.size > config.maxImageSize) {
       throw new Error(
-        `Image size (${(blob.size / 1024 / 1024).toFixed(2)}MB) exceeds ${config.displayName} limit of ${(config.maxImageSize / 1024 / 1024).toFixed(0)}MB`
+        `Image size (${(blob.size / 1024 / 1024).toFixed(2)}MB) exceeds ${
+          config.displayName
+        } limit of ${(config.maxImageSize / 1024 / 1024).toFixed(0)}MB`
       );
     }
 
@@ -224,7 +234,11 @@ export class PlatformManager {
       // Validate image size
       const config = this.getPlatformConfig(platform);
       if (image.blob.size > config.maxImageSize) {
-        const sizeError = new ImageSizeError(platform, image.blob.size, config.maxImageSize);
+        const sizeError = new ImageSizeError(
+          platform,
+          image.blob.size,
+          config.maxImageSize
+        );
         const errorDetails = errorHandler.handleError(sizeError, platform);
         return {
           success: false,
@@ -311,7 +325,7 @@ export class PlatformManager {
         history.splice(50);
       }
 
-      localStorage.setItem('post_history', JSON.stringify(history));
+      safeLocalStorage.setItem('post_history', JSON.stringify(history));
     }
   }
 
@@ -323,7 +337,7 @@ export class PlatformManager {
     postUrl: string;
     timestamp: string;
   }> {
-    const historyJson = localStorage.getItem('post_history');
+    const historyJson = safeLocalStorage.getItem('post_history');
     if (!historyJson) {
       return [];
     }
@@ -339,10 +353,10 @@ export class PlatformManager {
    * Clear authentication for a platform
    */
   clearAuth(platform: ShareablePlatform): void {
-    localStorage.removeItem(`${platform}_auth_token`);
-    localStorage.removeItem(`${platform}_username`);
-    localStorage.removeItem(`${platform}_profile_picture`);
-    localStorage.removeItem(`${platform}_token_expiry`);
+    safeLocalStorage.removeItem(`${platform}_auth_token`);
+    safeLocalStorage.removeItem(`${platform}_username`);
+    safeLocalStorage.removeItem(`${platform}_profile_picture`);
+    safeLocalStorage.removeItem(`${platform}_token_expiry`);
     this.authStatuses.delete(platform);
   }
 
@@ -364,13 +378,23 @@ export class PlatformManager {
 
       // Check image size
       if (image.blob.size > config.maxImageSize) {
-        errors[platform] = `Image size (${(image.blob.size / 1024 / 1024).toFixed(2)}MB) exceeds ${config.displayName} limit of ${(config.maxImageSize / 1024 / 1024).toFixed(0)}MB`;
+        errors[platform] = `Image size (${(
+          image.blob.size /
+          1024 /
+          1024
+        ).toFixed(2)}MB) exceeds ${config.displayName} limit of ${(
+          config.maxImageSize /
+          1024 /
+          1024
+        ).toFixed(0)}MB`;
         continue;
       }
 
       // Check format
       if (!config.supportedFormats.includes(image.format)) {
-        errors[platform] = `Format ${image.format} not supported by ${config.displayName}`;
+        errors[
+          platform
+        ] = `Format ${image.format} not supported by ${config.displayName}`;
         continue;
       }
     }
@@ -396,7 +420,12 @@ export class PlatformManager {
     // Post to each platform sequentially
     for (const platform of platforms) {
       try {
-        const result = await this.postToPlatform(platform, image, caption, hashtags);
+        const result = await this.postToPlatform(
+          platform,
+          image,
+          caption,
+          hashtags
+        );
         results.push(result);
 
         // Handle post completion for successful posts
@@ -410,7 +439,8 @@ export class PlatformManager {
         results.push({
           success: false,
           platform,
-          error: error instanceof Error ? error.message : 'Unknown error occurred',
+          error:
+            error instanceof Error ? error.message : 'Unknown error occurred',
         });
       }
     }

@@ -13,8 +13,7 @@
 
 .card:hover {
   transform: translate(-2px, -2px);
-  box-shadow: calc(var(--shadow-offset-md) + 2px)
-    calc(var(--shadow-offset-md) + 2px) 0px var(--color-border);
+  box-shadow: calc(var(--shadow-offset-md) + 2px) calc(var(--shadow-offset-md) + 2px) 0px var(--color-border);
 }
 
 /* Button Styles */
@@ -33,8 +32,7 @@
 
 .btn:hover:not(:disabled) {
   transform: translate(-2px, -2px);
-  box-shadow: calc(var(--shadow-offset-md) + 2px)
-    calc(var(--shadow-offset-md) + 2px) 0px var(--color-border);
+  box-shadow: calc(var(--shadow-offset-md) + 2px) calc(var(--shadow-offset-md) + 2px) 0px var(--color-border);
 }
 
 .btn:active:not(:disabled) {
@@ -93,12 +91,14 @@
   height: var(--space-lg);
   background: transparent;
 }
+
 .range::-webkit-slider-runnable-track {
   width: 100%;
   height: var(--border-width-md);
   cursor: pointer;
   background: var(--color-border);
 }
+
 .range::-webkit-slider-thumb {
   -webkit-appearance: none;
   height: var(--space-xl);
@@ -109,12 +109,14 @@
   margin-top: calc((var(--border-width-md) - var(--space-xl)) / 2);
   border: var(--border-width-md) solid var(--color-border);
 }
+
 .range::-moz-range-track {
   width: 100%;
   height: var(--border-width-md);
   cursor: pointer;
   background: var(--color-border);
 }
+
 .range::-moz-range-thumb {
   height: var(--space-xl);
   width: var(--space-xl);
@@ -122,4 +124,10 @@
   background: var(--color-primary);
   cursor: pointer;
   border: var(--border-width-md) solid var(--color-border);
+}
+
+/* Theme-specific overrides */
+[data-theme-id="neobrutalism"] .btn-primary,
+[data-theme-id="neobrutalism"] .btn-secondary {
+  color: #111111;
 }

@@ -29,6 +29,9 @@ export class ThemeEngine {
     // Set theme mode attribute for CSS selectors
     this.root.setAttribute('data-theme-mode', mode)
     
+    // Set theme ID for theme-specific overrides
+    this.root.setAttribute('data-theme-id', theme.id)
+    
     // Also set legacy data-theme attribute for backward compatibility
     this.root.setAttribute('data-theme', mode)
     
@@ -57,7 +60,9 @@ export class ThemeEngine {
   applyColors(colors: ColorPalette): void {
     // Background colors
     this.setCSSVariable('--color-bg', colors.bg)
+    this.setCSSVariable('--color-background', colors.bg) // Alias for compatibility
     this.setCSSVariable('--color-bg-secondary', colors.bgSecondary)
+    this.setCSSVariable('--color-surface', colors.bgSecondary) // Alias for compatibility
     this.setCSSVariable('--color-bg-tertiary', colors.bgTertiary)
     
     // Text colors

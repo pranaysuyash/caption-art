@@ -1,0 +1,357 @@
+// Caption Art - Prisma ORM Schema
+// Defines the database schema for Caption Art platform
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./app.sqlite"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Agency - Billing and license management
+model Agency {
+  id              String   @id @default(cuid())
+  licenseKey      String?
+  billingActive   Boolean  @default(true)
+  planType        String   @default("free") // free | paid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  users           User[]
+  workspaces      Workspace[]
+  brandKits       BrandKit[]
+
+  @@map("agencies")
+}
+
+// User - Individual user accounts
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String? // Hashed password (null for OAuth)
+  agencyId        String
+  createdAt       DateTime @default(now())
+  lastLoginAt     DateTime @updatedAt
+
+  // Relations
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@map("users")
+}
+
+// Workspace - Client project workspace
+model Workspace {
+  id              String   @id @default(cuid())
+  agencyId        String
+  clientName      String
+  industry        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  brandKit        BrandKit?
+  campaigns       Campaign[]
+  assets          Asset[]
+  captions        Caption[]
+  approvals       Approval[]
+  batchJobs       BatchJob[]
+
+  @@index([agencyId])
+  @@map("workspaces")
+}
+
+// Brand Kit - Brand guidelines and voice
+model BrandKit {
+  id                  String   @id @default(cuid())
+  workspaceId         String   @unique
+  agencyId            String
+  name                String?
+  
+  // Colors
+  primaryColor        String?
+  secondaryColor      String?
+  tertiaryColor       String?
+  
+  // Fonts
+  headingFont         String?
+  bodyFont            String?
+  
+  // Logo
+  logoUrl             String?
+  logoPosition        String? // top-left | top-right | bottom-left | bottom-right
+  
+  // Voice & Tone
+  voicePrompt         String?
+  brandPersonality    String?
+  targetAudience      String?
+  valueProposition    String?
+  toneStyle           String? // professional | playful | bold | minimal | luxury | edgy
+  toneOfVoice         String?
+  
+  // Content Guidelines
+  forbiddenPhrases    String?   // Stored as JSON string
+  preferredPhrases    String?   // Stored as JSON string
+  keywords            String?   // Stored as JSON string
+  values              String?   // Stored as JSON string
+  keyDifferentiators  String?   // Stored as JSON string
+  imageryStyle        String?
+  
+  // Masking Model Selection
+  maskingModel        String? // rembg-replicate | sam3 | rf-detr | roboflow | hf-model-id
+  
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  agency              Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([agencyId])
+  @@map("brand_kits")
+}
+
+// Campaign - Marketing campaign
+model Campaign {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  name              String
+  description       String?
+  status            String   @default("draft") // draft | active | completed | archived
+  primaryOffer      String?
+  targetAudience    String?
+  callToAction      String?
+  keywords          String?   // Stored as JSON string
+  
+  // Campaign brief data
+  briefData         Json?   // Stores campaign brief as JSON
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assets            Asset[]
+  captions          Caption[]
+  creatives         AdCreative[]
+  approvals         Approval[]
+
+  @@index([workspaceId])
+  @@map("campaigns")
+}
+
+// Asset - Image or media file
+model Asset {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  campaignId        String?
+  originalName      String
+  mimeType          String   // e.g., image/jpeg
+  url               String   // S3 URL
+  thumbnailUrl      String?
+  size              Int      // File size in bytes
+  width             Int?     // Image width
+  height            Int?     // Image height
+  uploadedAt        DateTime @default(now())
+
+  // Relations
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign          Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  captions          Caption[]
+  masks             Mask[]
+
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@map("assets")
+}
+
+// Caption - Generated caption for an asset
+model Caption {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  campaignId        String?
+  assetId           String
+  status            String   @default("pending") // pending | processing | completed | failed
+  approvalStatus    String   @default("pending") // pending | approved | rejected
+  
+  // Primary caption text
+  baseCaption       String?
+  primaryText       String?
+  
+  // Quality metrics
+  qualityScore      Float?   // 1-10 quality score
+  scoreBreakdown    Json?    // Stores breakdown as JSON
+  
+  // Captions variations
+  variations        CaptionVariation[]
+  primaryVariationId String?
+  
+  // Error handling
+  errorMessage      String?
+  
+  // Timestamps
+  generatedAt       DateTime @default(now())
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign          Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  asset             Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  approvals         Approval[]
+
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@index([assetId])
+  @@index([approvalStatus])
+  @@map("captions")
+}
+
+// Caption Variation - Alternative caption option
+model CaptionVariation {
+  id                String   @id @default(cuid())
+  captionId         String
+  text              String
+  tone              String?  // default | witty | inspirational | formal
+  format            String?  // social media format (ig-feed, tiktok, linkedin, etc.)
+  approvalStatus    String   @default("pending") // pending | approved | rejected
+  createdAt         DateTime @default(now())
+
+  // Relations
+  caption           Caption  @relation(fields: [captionId], references: [id], onDelete: Cascade)
+
+  @@index([captionId])
+  @@map("caption_variations")
+}
+
+// Mask - Background mask for text overlay effect
+model Mask {
+  id                String   @id @default(cuid())
+  assetId           String
+  url               String   // S3 URL to mask image
+  modelUsed         String?  // Which model generated this
+  createdAt         DateTime @default(now())
+
+  // Relations
+  asset             Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([assetId])
+  @@map("masks")
+}
+
+// Ad Creative - Multi-format advertising creative
+model AdCreative {
+  id                String   @id @default(cuid())
+  campaignId        String
+  headline          String
+  bodyText          String
+  ctaText           String?
+  placement         String   // ig-feed | facebook | tiktok | etc
+  format            String   // instagram-square | linkedin-post | etc
+  imageUrl          String?
+  approvalStatus    String   @default("pending")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  campaign          Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  approvals         Approval[]
+
+  @@index([campaignId])
+  @@map("ad_creatives")
+}
+
+// Approval - Approval workflow records
+model Approval {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  campaignId        String?
+  captionId         String?
+  creativeId        String?
+  status            String   @default("pending") // pending | approved | rejected | needs-revision
+  feedback          String?
+  reviewedBy        String?
+  reviewedAt        DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign          Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  caption           Caption?  @relation(fields: [captionId], references: [id], onDelete: SetNull)
+  creative          AdCreative? @relation(fields: [creativeId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@index([captionId])
+  @@index([status])
+  @@map("approvals")
+}
+
+// Batch Job - Background job for batch operations
+model BatchJob {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  jobType           String   // caption | mask | export | render | etc
+  status            String   @default("pending") // pending | processing | completed | failed
+  progress          Int      @default(0) // 0-100%
+  itemsTotal        Int      @default(0)
+  itemsProcessed    Int      @default(0)
+  itemsFailed       Int      @default(0)
+  result            Json?    // Stores result data as JSON
+  errorMessage      String?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([status])
+  @@map("batch_jobs")
+}
+
+// Export Job - Track export operations
+model ExportJob {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  campaignId        String?
+  format            String   // zip | csv | json | etc
+  status            String   @default("pending") // pending | processing | completed | failed
+  downloadUrl       String?
+  expiresAt         DateTime?
+  errorMessage      String?
+  itemsTotal        Int      @default(0)
+  itemsExported     Int      @default(0)
+  startedAt         DateTime?
+  completedAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([status])
+  @@map("export_jobs")
+}
+
+// Performance Metrics - Analytics and performance tracking
+model PerformanceMetric {
+  id                String   @id @default(cuid())
+  workspaceId       String?
+  entityType        String   // caption | creative | campaign | etc
+  entityId          String
+  metricType        String   // click_rate | engagement | conversion | etc
+  value             Float
+  recordedAt        DateTime @default(now())
+
+  @@index([workspaceId])
+  @@index([entityType])
+  @@index([recordedAt])
+  @@map("performance_metrics")
+}

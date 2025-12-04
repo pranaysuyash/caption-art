@@ -1,17 +1,18 @@
 /**
  * Performance Tracker
- * 
+ *
  * Tracks performance metrics:
  * - Page load times
  * - API response times
  * - Processing times
  * - Identifies slow operations
  * - Aggregates metrics
- * 
+ *
  * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
  */
 
 import { getAnalyticsManager } from './analyticsManager';
+import { safeLocalStorage } from '../storage/safeLocalStorage';
 
 export interface PerformanceMetric {
   name: string;
@@ -49,7 +50,7 @@ class PerformanceTracker {
    */
   private loadMetrics(): void {
     try {
-      const stored = localStorage.getItem(METRICS_STORAGE_KEY);
+      const stored = safeLocalStorage.getItem(METRICS_STORAGE_KEY);
       if (stored) {
         const data = JSON.parse(stored);
         this.metrics = new Map(Object.entries(data));
@@ -65,7 +66,7 @@ class PerformanceTracker {
   private saveMetrics(): void {
     try {
       const data = Object.fromEntries(this.metrics);
-      localStorage.setItem(METRICS_STORAGE_KEY, JSON.stringify(data));
+      safeLocalStorage.setItem(METRICS_STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Failed to save performance metrics:', error);
     }
@@ -102,12 +103,23 @@ class PerformanceTracker {
 
     // Also use Navigation Timing API if available
     if (performance.getEntriesByType) {
-      const navEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+      const navEntries = performance.getEntriesByType(
+        'navigation'
+      ) as PerformanceNavigationTiming[];
       if (navEntries.length > 0) {
         const nav = navEntries[0];
-        this.recordMetric('page_load_navigation', nav.loadEventEnd - nav.fetchStart);
-        this.recordMetric('dom_content_loaded', nav.domContentLoadedEventEnd - nav.fetchStart);
-        this.recordMetric('dom_interactive', nav.domInteractive - nav.fetchStart);
+        this.recordMetric(
+          'page_load_navigation',
+          nav.loadEventEnd - nav.fetchStart
+        );
+        this.recordMetric(
+          'dom_content_loaded',
+          nav.domContentLoadedEventEnd - nav.fetchStart
+        );
+        this.recordMetric(
+          'dom_interactive',
+          nav.domInteractive - nav.fetchStart
+        );
       }
     }
   }
@@ -115,7 +127,11 @@ class PerformanceTracker {
   /**
    * Record a performance metric
    */
-  private recordMetric(name: string, value: number, metadata?: Record<string, unknown>): void {
+  private recordMetric(
+    name: string,
+    value: number,
+    metadata?: Record<string, unknown>
+  ): void {
     // Store in local metrics map
     if (!this.metrics.has(name)) {
       this.metrics.set(name, []);
@@ -155,7 +171,11 @@ class PerformanceTracker {
    * Track API response time
    * Requirement 5.2: Record API response time
    */
-  public trackApiCall(endpoint: string, startTime: number, metadata?: Record<string, unknown>): void {
+  public trackApiCall(
+    endpoint: string,
+    startTime: number,
+    metadata?: Record<string, unknown>
+  ): void {
     const duration = performance.now() - startTime;
     this.recordMetric(`api_${endpoint}`, duration, {
       endpoint,
@@ -167,7 +187,11 @@ class PerformanceTracker {
    * Track processing time
    * Requirement 5.3: Record processing time
    */
-  public trackProcessing(operation: string, startTime: number, metadata?: Record<string, unknown>): void {
+  public trackProcessing(
+    operation: string,
+    startTime: number,
+    metadata?: Record<string, unknown>
+  ): void {
     const duration = performance.now() - startTime;
     this.recordMetric(`processing_${operation}`, duration, {
       operation,
@@ -240,7 +264,7 @@ class PerformanceTracker {
    */
   public getAllAggregatedMetrics(): Record<string, AggregatedMetrics> {
     const result: Record<string, AggregatedMetrics> = {};
-    
+
     for (const name of this.getMetricNames()) {
       const aggregated = this.getAggregatedMetrics(name);
       if (aggregated) {
@@ -257,7 +281,7 @@ class PerformanceTracker {
   public clearMetrics(): void {
     this.metrics.clear();
     try {
-      localStorage.removeItem(METRICS_STORAGE_KEY);
+      safeLocalStorage.removeItem(METRICS_STORAGE_KEY);
     } catch (error) {
       console.error('Failed to clear performance metrics:', error);
     }
@@ -266,7 +290,10 @@ class PerformanceTracker {
   /**
    * Get slow operations (operations exceeding threshold)
    */
-  public getSlowOperations(): Array<{ name: string; metrics: AggregatedMetrics }> {
+  public getSlowOperations(): Array<{
+    name: string;
+    metrics: AggregatedMetrics;
+  }> {
     const slowOps: Array<{ name: string; metrics: AggregatedMetrics }> = [];
 
     for (const name of this.getMetricNames()) {
@@ -306,7 +333,11 @@ export function getPerformanceTracker(): PerformanceTracker {
 /**
  * Helper function to track API calls
  */
-export function trackApiCall(endpoint: string, startTime: number, metadata?: Record<string, unknown>): void {
+export function trackApiCall(
+  endpoint: string,
+  startTime: number,
+  metadata?: Record<string, unknown>
+): void {
   const tracker = getPerformanceTracker();
   tracker.trackApiCall(endpoint, startTime, metadata);
 }
@@ -314,7 +345,11 @@ export function trackApiCall(endpoint: string, startTime: number, metadata?: Rec
 /**
  * Helper function to track processing operations
  */
-export function trackProcessing(operation: string, startTime: number, metadata?: Record<string, unknown>): void {
+export function trackProcessing(
+  operation: string,
+  startTime: number,
+  metadata?: Record<string, unknown>
+): void {
   const tracker = getPerformanceTracker();
   tracker.trackProcessing(operation, startTime, metadata);
 }

@@ -1,14 +1,15 @@
 /**
  * ThemeStorage
- * 
+ *
  * Handles persistence of theme preferences to localStorage.
  * Manages saving/loading theme state and custom themes.
  */
 
-import { ThemeConfig, StoredThemeData } from './types'
+import { ThemeConfig, StoredThemeData } from './types';
+import { safeLocalStorage } from '../storage/safeLocalStorage';
 
-const STORAGE_KEY = 'caption-art-theme'
-const CUSTOM_THEMES_KEY = 'caption-art-custom-themes'
+const STORAGE_KEY = 'caption-art-theme';
+const CUSTOM_THEMES_KEY = 'caption-art-custom-themes';
 
 export class ThemeStorage {
   /**
@@ -16,20 +17,22 @@ export class ThemeStorage {
    */
   save(data: StoredThemeData): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       if (this.isQuotaExceededError(error)) {
         // Storage full - try to clear old data and retry
-        this.clearOldCustomThemes(data)
+        this.clearOldCustomThemes(data);
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+          safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         } catch (retryError) {
-          throw new Error('Storage full. Please delete some custom themes.')
+          throw new Error('Storage full. Please delete some custom themes.');
         }
       } else if (this.isStorageUnavailable(error)) {
-        throw new Error('Theme preferences cannot be saved. Storage unavailable.')
+        throw new Error(
+          'Theme preferences cannot be saved. Storage unavailable.'
+        );
       } else {
-        throw error
+        throw error;
       }
     }
   }
@@ -39,26 +42,26 @@ export class ThemeStorage {
    */
   load(): StoredThemeData | null {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const stored = safeLocalStorage.getItem(STORAGE_KEY);
       if (!stored) {
-        return null
+        return null;
       }
 
-      const data = JSON.parse(stored)
+      const data = JSON.parse(stored);
 
       // Validate data structure
       if (!this.isValidStoredData(data)) {
-        console.warn('Corrupted theme data detected, clearing...')
-        this.clear()
-        return null
+        console.warn('Corrupted theme data detected, clearing...');
+        this.clear();
+        return null;
       }
 
-      return data
+      return data;
     } catch (error) {
-      console.warn('Failed to load theme data:', error)
+      console.warn('Failed to load theme data:', error);
       // Clear corrupted data
-      this.clear()
-      return null
+      this.clear();
+      return null;
     }
   }
 
@@ -67,27 +70,27 @@ export class ThemeStorage {
    */
   saveCustomTheme(theme: ThemeConfig): void {
     try {
-      const customThemes = this.loadCustomThemes()
-      
+      const customThemes = this.loadCustomThemes();
+
       // Check if theme already exists
-      const existingIndex = customThemes.findIndex(t => t.id === theme.id)
-      
+      const existingIndex = customThemes.findIndex((t) => t.id === theme.id);
+
       if (existingIndex >= 0) {
         // Update existing theme
-        customThemes[existingIndex] = theme
+        customThemes[existingIndex] = theme;
       } else {
         // Add new theme
-        customThemes.push(theme)
+        customThemes.push(theme);
       }
 
-      localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(customThemes))
+      safeLocalStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(customThemes));
     } catch (error) {
       if (this.isQuotaExceededError(error)) {
-        throw new Error('Storage full. Cannot save custom theme.')
+        throw new Error('Storage full. Cannot save custom theme.');
       } else if (this.isStorageUnavailable(error)) {
-        throw new Error('Storage unavailable. Cannot save custom theme.')
+        throw new Error('Storage unavailable. Cannot save custom theme.');
       } else {
-        throw error
+        throw error;
       }
     }
   }
@@ -97,26 +100,26 @@ export class ThemeStorage {
    */
   loadCustomThemes(): ThemeConfig[] {
     try {
-      const stored = localStorage.getItem(CUSTOM_THEMES_KEY)
+      const stored = safeLocalStorage.getItem(CUSTOM_THEMES_KEY);
       if (!stored) {
-        return []
+        return [];
       }
 
-      const themes = JSON.parse(stored)
+      const themes = JSON.parse(stored);
 
       // Validate that it's an array
       if (!Array.isArray(themes)) {
-        console.warn('Invalid custom themes data, clearing...')
-        localStorage.removeItem(CUSTOM_THEMES_KEY)
-        return []
+        console.warn('Invalid custom themes data, clearing...');
+        safeLocalStorage.removeItem(CUSTOM_THEMES_KEY);
+        return [];
       }
 
       // Filter out invalid themes
-      return themes.filter(theme => this.isValidTheme(theme))
+      return themes.filter((theme) => this.isValidTheme(theme));
     } catch (error) {
-      console.warn('Failed to load custom themes:', error)
-      localStorage.removeItem(CUSTOM_THEMES_KEY)
-      return []
+      console.warn('Failed to load custom themes:', error);
+      safeLocalStorage.removeItem(CUSTOM_THEMES_KEY);
+      return [];
     }
   }
 
@@ -125,18 +128,18 @@ export class ThemeStorage {
    */
   deleteCustomTheme(themeId: string): void {
     try {
-      const customThemes = this.loadCustomThemes()
-      const filtered = customThemes.filter(t => t.id !== themeId)
-      
+      const customThemes = this.loadCustomThemes();
+      const filtered = customThemes.filter((t) => t.id !== themeId);
+
       if (filtered.length === customThemes.length) {
         // Theme not found
-        return
+        return;
       }
 
-      localStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(filtered))
+      safeLocalStorage.setItem(CUSTOM_THEMES_KEY, JSON.stringify(filtered));
     } catch (error) {
-      console.warn('Failed to delete custom theme:', error)
-      throw error
+      console.warn('Failed to delete custom theme:', error);
+      throw error;
     }
   }
 
@@ -145,10 +148,10 @@ export class ThemeStorage {
    */
   clear(): void {
     try {
-      localStorage.removeItem(STORAGE_KEY)
-      localStorage.removeItem(CUSTOM_THEMES_KEY)
+      safeLocalStorage.removeItem(STORAGE_KEY);
+      safeLocalStorage.removeItem(CUSTOM_THEMES_KEY);
     } catch (error) {
-      console.warn('Failed to clear theme data:', error)
+      console.warn('Failed to clear theme data:', error);
     }
   }
 
@@ -160,7 +163,7 @@ export class ThemeStorage {
       error instanceof DOMException &&
       (error.name === 'QuotaExceededError' ||
         error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
-    )
+    );
   }
 
   /**
@@ -169,9 +172,8 @@ export class ThemeStorage {
   private isStorageUnavailable(error: unknown): boolean {
     return (
       error instanceof DOMException &&
-      (error.name === 'SecurityError' ||
-        error.name === 'InvalidAccessError')
-    )
+      (error.name === 'SecurityError' || error.name === 'InvalidAccessError')
+    );
   }
 
   /**
@@ -186,7 +188,7 @@ export class ThemeStorage {
       Array.isArray(data.customThemes) &&
       typeof data.respectSystemPreference === 'boolean' &&
       typeof data.lastUpdated === 'number'
-    )
+    );
   }
 
   /**
@@ -208,7 +210,7 @@ export class ThemeStorage {
       theme.borders &&
       theme.animations &&
       theme.accessibility
-    )
+    );
   }
 
   /**
@@ -217,7 +219,7 @@ export class ThemeStorage {
   private clearOldCustomThemes(data: StoredThemeData): void {
     // Keep only the most recent 5 custom themes
     if (data.customThemes.length > 5) {
-      data.customThemes = data.customThemes.slice(-5)
+      data.customThemes = data.customThemes.slice(-5);
     }
   }
 }

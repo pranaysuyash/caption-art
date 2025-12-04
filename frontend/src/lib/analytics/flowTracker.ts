@@ -1,6 +1,6 @@
 /**
  * Flow Tracker
- * 
+ *
  * Tracks user flows through the application:
  * - Records action sequences
  * - Tracks abandonment points
@@ -10,6 +10,7 @@
  */
 
 import { getAnalyticsManager } from './analyticsManager';
+import { safeLocalStorage } from '../storage/safeLocalStorage';
 import type { UserFlow, FlowStep, FlowPath } from './types';
 
 const STORAGE_KEY_SESSION = 'analytics_session_id';
@@ -34,7 +35,7 @@ export class FlowTracker {
    */
   private initializeSession(): string {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_SESSION);
+      const stored = safeLocalStorage.getItem(STORAGE_KEY_SESSION);
       if (stored) {
         const { id, timestamp } = JSON.parse(stored);
         // Check if session is still valid
@@ -64,7 +65,7 @@ export class FlowTracker {
    */
   private saveSession(sessionId: string): void {
     try {
-      localStorage.setItem(
+      safeLocalStorage.setItem(
         STORAGE_KEY_SESSION,
         JSON.stringify({ id: sessionId, timestamp: Date.now() })
       );
@@ -78,7 +79,7 @@ export class FlowTracker {
    */
   private loadCurrentFlow(): void {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_CURRENT_FLOW);
+      const stored = safeLocalStorage.getItem(STORAGE_KEY_CURRENT_FLOW);
       if (stored) {
         this.currentFlow = JSON.parse(stored);
       }
@@ -93,9 +94,12 @@ export class FlowTracker {
   private saveCurrentFlow(): void {
     try {
       if (this.currentFlow) {
-        localStorage.setItem(STORAGE_KEY_CURRENT_FLOW, JSON.stringify(this.currentFlow));
+        safeLocalStorage.setItem(
+          STORAGE_KEY_CURRENT_FLOW,
+          JSON.stringify(this.currentFlow)
+        );
       } else {
-        localStorage.removeItem(STORAGE_KEY_CURRENT_FLOW);
+        safeLocalStorage.removeItem(STORAGE_KEY_CURRENT_FLOW);
       }
     } catch (error) {
       console.error('Failed to save current flow:', error);
@@ -159,7 +163,8 @@ export class FlowTracker {
     }
 
     const now = Date.now();
-    const previousStep = this.currentFlow!.steps[this.currentFlow!.steps.length - 1];
+    const previousStep =
+      this.currentFlow!.steps[this.currentFlow!.steps.length - 1];
     const duration = previousStep ? now - previousStep.timestamp : undefined;
 
     const step: FlowStep = {
@@ -201,7 +206,7 @@ export class FlowTracker {
     const manager = getAnalyticsManager();
     manager.track('flow_completed', {
       sessionId: this.sessionId,
-      steps: this.currentFlow.steps.map(s => s.action),
+      steps: this.currentFlow.steps.map((s) => s.action),
       totalSteps: this.currentFlow.steps.length,
       totalDuration,
     });
@@ -230,7 +235,7 @@ export class FlowTracker {
     const manager = getAnalyticsManager();
     manager.track('flow_abandoned', {
       sessionId: this.sessionId,
-      steps: this.currentFlow.steps.map(s => s.action),
+      steps: this.currentFlow.steps.map((s) => s.action),
       abandonedAt: this.currentFlow.abandonedAt,
       stepsCompleted: this.currentFlow.steps.length,
     });
@@ -248,15 +253,18 @@ export class FlowTracker {
    */
   private saveToHistory(flow: UserFlow): void {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_FLOW_HISTORY);
+      const stored = safeLocalStorage.getItem(STORAGE_KEY_FLOW_HISTORY);
       const history: UserFlow[] = stored ? JSON.parse(stored) : [];
-      
+
       history.push(flow);
 
       // Keep only last 100 flows
       const trimmedHistory = history.slice(-100);
 
-      localStorage.setItem(STORAGE_KEY_FLOW_HISTORY, JSON.stringify(trimmedHistory));
+      safeLocalStorage.setItem(
+        STORAGE_KEY_FLOW_HISTORY,
+        JSON.stringify(trimmedHistory)
+      );
     } catch (error) {
       console.error('Failed to save flow to history:', error);
     }
@@ -288,7 +296,7 @@ export class FlowTracker {
    */
   public getFlowHistory(): UserFlow[] {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_FLOW_HISTORY);
+      const stored = safeLocalStorage.getItem(STORAGE_KEY_FLOW_HISTORY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
       console.error('Failed to load flow history:', error);
@@ -304,7 +312,7 @@ export class FlowTracker {
     const pathMap = new Map<string, { count: number; durations: number[] }>();
 
     for (const flow of history) {
-      const path = flow.steps.map(s => s.action);
+      const path = flow.steps.map((s) => s.action);
       const pathKey = path.join(' -> ');
       const duration = flow.endTime ? flow.endTime - flow.startTime : 0;
 
@@ -322,9 +330,10 @@ export class FlowTracker {
     // Convert to FlowPath array
     const paths: FlowPath[] = [];
     for (const [pathKey, data] of pathMap.entries()) {
-      const averageDuration = data.durations.length > 0
-        ? data.durations.reduce((a, b) => a + b, 0) / data.durations.length
-        : 0;
+      const averageDuration =
+        data.durations.length > 0
+          ? data.durations.reduce((a, b) => a + b, 0) / data.durations.length
+          : 0;
 
       paths.push({
         path: pathKey.split(' -> '),
@@ -361,7 +370,7 @@ export class FlowTracker {
    */
   public clearHistory(): void {
     try {
-      localStorage.removeItem(STORAGE_KEY_FLOW_HISTORY);
+      safeLocalStorage.removeItem(STORAGE_KEY_FLOW_HISTORY);
     } catch (error) {
       console.error('Failed to clear flow history:', error);
     }
@@ -404,7 +413,10 @@ export function startFlow(): void {
 /**
  * Record a step in the current flow
  */
-export function recordFlowStep(action: string, metadata?: Record<string, unknown>): void {
+export function recordFlowStep(
+  action: string,
+  metadata?: Record<string, unknown>
+): void {
   const tracker = getFlowTracker();
   tracker.recordStep(action, metadata);
 }

@@ -4,6 +4,7 @@ export interface Workspace {
   agencyId: string
   clientName: string
   brandKitId: string
+  industry?: string
   createdAt: Date
 }
 
@@ -12,7 +13,8 @@ const workspaces = new Map<string, Workspace>()
 export class WorkspaceModel {
   static async createWorkspace(
     agencyId: string,
-    clientName: string
+    clientName: string,
+    industry?: string
   ): Promise<Workspace> {
     const workspaceId = `workspace_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
@@ -21,6 +23,7 @@ export class WorkspaceModel {
       agencyId,
       clientName,
       brandKitId: '', // Will be set when brand kit is created
+      industry,
       createdAt: new Date(),
     }
 
@@ -50,5 +53,9 @@ export class WorkspaceModel {
 
   static getAllWorkspaces(): Workspace[] {
     return Array.from(workspaces.values())
+  }
+
+  static deleteWorkspace(workspaceId: string): boolean {
+    return workspaces.delete(workspaceId)
   }
 }

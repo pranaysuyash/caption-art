@@ -5,6 +5,7 @@
  */
 
 import type { TextEffects } from './textEffects';
+import { safeLocalStorage } from '../storage/safeLocalStorage';
 
 /**
  * Serializable preset data (excludes HTMLImageElement)
@@ -58,7 +59,7 @@ export class PresetManager {
     }
 
     const presets = await this.loadAllPresets();
-    
+
     // Convert effects to serializable format
     const presetData: PresetData = {
       name: name.trim(),
@@ -71,7 +72,7 @@ export class PresetManager {
       gradient: {
         enabled: effects.gradient.enabled,
         type: effects.gradient.type,
-        colorStops: effects.gradient.colorStops.map(stop => ({
+        colorStops: effects.gradient.colorStops.map((stop) => ({
           color: stop.color,
           position: stop.position,
         })),
@@ -79,7 +80,7 @@ export class PresetManager {
       },
       pattern: {
         enabled: effects.pattern.enabled,
-        imageDataUrl: effects.pattern.image 
+        imageDataUrl: effects.pattern.image
           ? await this.imageToDataUrl(effects.pattern.image)
           : null,
         scale: effects.pattern.scale,
@@ -87,7 +88,7 @@ export class PresetManager {
     };
 
     // Replace existing preset with same name or add new
-    const existingIndex = presets.findIndex(p => p.name === presetData.name);
+    const existingIndex = presets.findIndex((p) => p.name === presetData.name);
     if (existingIndex >= 0) {
       presets[existingIndex] = presetData;
     } else {
@@ -95,7 +96,7 @@ export class PresetManager {
     }
 
     // Requirement 8.5: Persist to localStorage
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
+    safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(presets));
   }
 
   /**
@@ -104,8 +105,8 @@ export class PresetManager {
    */
   static async loadPreset(name: string): Promise<TextEffects | null> {
     const presets = await this.loadAllPresets();
-    const preset = presets.find(p => p.name === name);
-    
+    const preset = presets.find((p) => p.name === name);
+
     if (!preset) {
       return null;
     }
@@ -119,11 +120,11 @@ export class PresetManager {
    */
   static async loadAllPresets(): Promise<PresetData[]> {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = safeLocalStorage.getItem(STORAGE_KEY);
       if (!stored) {
         return [];
       }
-      
+
       const presets = JSON.parse(stored);
       return Array.isArray(presets) ? presets : [];
     } catch (error) {
@@ -137,7 +138,7 @@ export class PresetManager {
    */
   static async getPresetNames(): Promise<string[]> {
     const presets = await this.loadAllPresets();
-    return presets.map(p => p.name);
+    return presets.map((p) => p.name);
   }
 
   /**
@@ -146,10 +147,10 @@ export class PresetManager {
    */
   static async deletePreset(name: string): Promise<void> {
     const presets = await this.loadAllPresets();
-    const filtered = presets.filter(p => p.name !== name);
-    
+    const filtered = presets.filter((p) => p.name !== name);
+
     // Requirement 8.5: Persist to localStorage
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    safeLocalStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
   }
 
   /**
@@ -157,29 +158,31 @@ export class PresetManager {
    */
   static async presetExists(name: string): Promise<boolean> {
     const presets = await this.loadAllPresets();
-    return presets.some(p => p.name === name);
+    return presets.some((p) => p.name === name);
   }
 
   /**
    * Clear all presets
    */
   static clearAllPresets(): void {
-    localStorage.removeItem(STORAGE_KEY);
+    safeLocalStorage.removeItem(STORAGE_KEY);
   }
 
   /**
    * Convert HTMLImageElement to data URL for storage
    */
-  private static async imageToDataUrl(image: HTMLImageElement): Promise<string> {
+  private static async imageToDataUrl(
+    image: HTMLImageElement
+  ): Promise<string> {
     const canvas = document.createElement('canvas');
     canvas.width = image.width;
     canvas.height = image.height;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('Failed to get canvas context');
     }
-    
+
     ctx.drawImage(image, 0, 0);
     return canvas.toDataURL('image/png');
   }
@@ -187,11 +190,14 @@ export class PresetManager {
   /**
    * Convert data URL to HTMLImageElement
    */
-  private static async dataUrlToImage(dataUrl: string): Promise<HTMLImageElement> {
+  private static async dataUrlToImage(
+    dataUrl: string
+  ): Promise<HTMLImageElement> {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Failed to load image from data URL'));
+      img.onerror = () =>
+        reject(new Error('Failed to load image from data URL'));
       img.src = dataUrl;
     });
   }
@@ -199,9 +205,11 @@ export class PresetManager {
   /**
    * Convert PresetData to TextEffects
    */
-  private static async presetDataToEffects(preset: PresetData): Promise<TextEffects> {
+  private static async presetDataToEffects(
+    preset: PresetData
+  ): Promise<TextEffects> {
     let patternImage: HTMLImageElement | null = null;
-    
+
     if (preset.pattern.imageDataUrl) {
       try {
         patternImage = await this.dataUrlToImage(preset.pattern.imageDataUrl);
@@ -220,7 +228,7 @@ export class PresetManager {
       gradient: {
         enabled: preset.gradient.enabled,
         type: preset.gradient.type,
-        colorStops: preset.gradient.colorStops.map(stop => ({
+        colorStops: preset.gradient.colorStops.map((stop) => ({
           color: stop.color,
           position: stop.position,
         })),

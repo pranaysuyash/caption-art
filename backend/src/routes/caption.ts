@@ -6,7 +6,7 @@ import {
   CaptionGenerator,
   CAPTION_TEMPLATES,
 } from '../services/captionGenerator'
-import { AuthModel } from '../models/auth'
+import { getPrismaClient } from '../lib/prisma'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from './auth'
 import { CaptionResponse } from '../types/api'
@@ -16,6 +16,7 @@ import { sanitizeKeywords } from '../utils/sanitizers'
 import { ValidationError, ExternalAPIError } from '../errors/AppError'
 
 const router = Router()
+const prisma = getPrismaClient()
 const requireAuth = createAuthMiddleware() as any
 
 /**
@@ -88,7 +89,9 @@ router.post(
       const { workspaceId, assetIds, template } = req.body
 
       // Verify workspace belongs to current agency
-      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' })
       }
@@ -99,7 +102,9 @@ router.post(
 
       // Verify all assets belong to workspace
       for (const assetId of assetIds) {
-        const asset = AuthModel.getAssetById(assetId)
+        const asset = await prisma.asset.findUnique({
+          where: { id: assetId },
+        })
         if (!asset) {
           return res.status(404).json({ error: `Asset ${assetId} not found` })
         }
@@ -111,10 +116,14 @@ router.post(
       }
 
       // Create batch job with template
-      const job = AuthModel.createBatchJob(workspaceId, assetIds)
-
-      // Update job with template
-      AuthModel.updateBatchJob(job.id, { template })
+      const job = await prisma.batchJob.create({
+        data: {
+          workspaceId,
+          assetIds: assetIds.join(','),
+          template,
+          status: 'pending',
+        },
+      })
 
       // Start processing in background
       CaptionGenerator.processBatchJob(job.id).catch((error) => {
@@ -152,13 +161,17 @@ router.get('/batch/:jobId', requireAuth, async (req: Request, res: any) => {
     const authenticatedReq = req as unknown as any
     const { jobId } = req.params
 
-    const job = AuthModel.getBatchJobById(jobId)
+    const job = await prisma.batchJob.findUnique({
+      where: { id: jobId },
+    })
     if (!job) {
       return res.status(404).json({ error: 'Batch job not found' })
     }
 
     // Verify job belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(job.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: job.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }

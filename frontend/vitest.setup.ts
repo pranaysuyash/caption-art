@@ -27,7 +27,7 @@ const canvasMap = new WeakMap<HTMLCanvasElement, Canvas>();
 export { canvasMap };
 
 // Polyfill HTMLCanvasElement for jsdom
-globalThis.HTMLCanvasElement.prototype.getContext = function (contextType: string) {
+globalThis.HTMLCanvasElement.prototype.getContext = function (this: HTMLCanvasElement, contextType: string) {
   if (contextType === '2d') {
     // Reuse the same canvas instance for this element
     let canvas = canvasMap.get(this);
@@ -61,7 +61,7 @@ globalThis.HTMLCanvasElement.prototype.getContext = function (contextType: strin
 } as any;
 
 // Polyfill HTMLCanvasElement.toDataURL
-globalThis.HTMLCanvasElement.prototype.toDataURL = function (type?: string, quality?: number) {
+globalThis.HTMLCanvasElement.prototype.toDataURL = function (this: HTMLCanvasElement, type?: string, quality?: number) {
   let canvas = canvasMap.get(this);
   if (!canvas) {
     canvas = createCanvas(this.width, this.height);
@@ -72,6 +72,7 @@ globalThis.HTMLCanvasElement.prototype.toDataURL = function (type?: string, qual
 
 // Polyfill HTMLCanvasElement.toBlob
 globalThis.HTMLCanvasElement.prototype.toBlob = function (
+  this: HTMLCanvasElement,
   callback: (blob: Blob | null) => void,
   type?: string,
   quality?: number

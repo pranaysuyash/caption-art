@@ -1,3 +1,7 @@
+import { 
+  Upload, Palette, Sparkles, BookOpen, Brush, Mountain, 
+  MoveVertical, MessageSquare, Type, Key, Camera, Video 
+} from 'lucide-react';
 import { usePlaygroundContext } from '../../../contexts/PlaygroundContext';
 import { verifyLicense } from '../../../lib/api';
 import { StylePreset, Tone } from '../../../hooks/usePlayground';
@@ -28,7 +32,9 @@ export function Controls({ exportImg, videoExport }: ControlsProps) {
   return (
     <div className={styles.controls}>
       <div>
-        <label className={styles.label}>📤 Upload Image</label>
+        <label className={styles.label}>
+          <Upload size={16} className={styles.icon} /> Upload Image
+        </label>
         <input
           type="file"
           accept="image/*"
@@ -39,21 +45,25 @@ export function Controls({ exportImg, videoExport }: ControlsProps) {
       </div>
 
       <div>
-        <label className={styles.label}>🎨 Text Style</label>
+        <label className={styles.label}>
+          <Palette size={16} className={styles.icon} /> Text Style
+        </label>
         <select
           className={styles.select}
           value={preset}
           onChange={(e) => setPreset(e.target.value as StylePreset)}
         >
-          <option value="neon">✨ Neon Glow</option>
-          <option value="magazine">📖 Magazine</option>
-          <option value="brush">🖌️ Brush Script</option>
-          <option value="emboss">🏔️ Emboss</option>
+          <option value="neon">Sparkles Neon Glow</option>
+          <option value="magazine">BookOpen Magazine</option>
+          <option value="brush">Brush Brush Script</option>
+          <option value="emboss">Mountain Emboss</option>
         </select>
       </div>
 
       <div>
-        <label className={styles.label}>📏 Font Size: {fontSize}px</label>
+        <label className={styles.label}>
+          <MoveVertical size={16} className={styles.icon} /> Font Size: {fontSize}px
+        </label>
         <input
           className={styles.range}
           type="range"
@@ -65,7 +75,9 @@ export function Controls({ exportImg, videoExport }: ControlsProps) {
       </div>
 
       <div>
-        <label className={styles.label}>🎭 Tone of Voice</label>
+        <label className={styles.label}>
+          <MessageSquare size={16} className={styles.icon} /> Tone of Voice
+        </label>
         <select
           className={styles.select}
           value={tone}
@@ -79,7 +91,9 @@ export function Controls({ exportImg, videoExport }: ControlsProps) {
       </div>
 
       <div>
-        <label className={styles.label}>✏️ Text Overlay</label>
+        <label className={styles.label}>
+          <Type size={16} className={styles.icon} /> Text Overlay
+        </label>
         <input
           className={styles.input}
           placeholder="Enter your text"
@@ -89,7 +103,9 @@ export function Controls({ exportImg, videoExport }: ControlsProps) {
       </div>
 
       <div>
-        <label className={styles.label}>🪪 License Key (Optional)</label>
+        <label className={styles.label}>
+          <Key size={16} className={styles.icon} /> License Key (Optional)
+        </label>
         <input
           className={styles.input}
           placeholder="Premium license key"
@@ -113,14 +129,14 @@ export function Controls({ exportImg, videoExport }: ControlsProps) {
           onClick={exportImg}
           disabled={!imageObjUrl}
         >
-          📷 Export PNG
+          <Camera size={18} /> Export PNG
         </button>
         <button
           className={styles.secondaryButton}
           onClick={videoExport}
           disabled={!imageObjUrl}
         >
-          🎥 Export Video
+          <Video size={18} /> Export Video
         </button>
       </div>
     </div>

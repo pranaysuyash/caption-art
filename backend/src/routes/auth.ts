@@ -7,9 +7,6 @@ import { AuthenticatedRequest } from '../types/auth'
 
 const router = Router()
 
-// In-memory session store for v1
-const sessions = new Map<string, { userId: string; agencyId: string }>()
-
 // POST /api/auth/signup
 router.post(
   '/signup',
@@ -31,17 +28,9 @@ router.post(
         agencyName
       )
 
-      // Create session
-      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      sessions.set(sessionId, { userId: user.id, agencyId: agency.id })
-
-      // Set session cookie
-      res.cookie('sessionId', sessionId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax',
-      })
+      // Set session
+      ;(req.session as any).userId = user.id
+      ;(req.session as any).agencyId = agency.id
 
       res.json({
         user: {
@@ -78,25 +67,17 @@ router.post(
 
       // For v1, we're not storing passwords properly (this would be fixed with a real database)
       // In production, you'd verify against stored hash
-      const agency = AuthModel.getAgencyById(user.agencyId)
+      const agency = await AuthModel.getAgencyById(user.agencyId)
       if (!agency) {
         return res.status(401).json({ error: 'Invalid credentials' })
       }
 
       // Update last login
-      AuthModel.updateUserLastLogin(user.id)
+      await AuthModel.updateUserLastLogin(user.id)
 
-      // Create session
-      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      sessions.set(sessionId, { userId: user.id, agencyId: agency.id })
-
-      // Set session cookie
-      res.cookie('sessionId', sessionId, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        sameSite: 'lax',
-      })
+      // Set session
+      ;(req.session as any).userId = user.id
+      ;(req.session as any).agencyId = agency.id
 
       res.json({
         user: {
@@ -119,30 +100,32 @@ router.post(
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-  const sessionId = req.cookies.sessionId
-  if (sessionId && sessions.has(sessionId)) {
-    sessions.delete(sessionId)
-  }
-
-  res.clearCookie('sessionId')
-  res.json({ message: 'Logged out successfully' })
+  req.session.destroy((err) => {
+    if (err) {
+      log.error({ err }, 'Logout error')
+      return res.status(500).json({ error: 'Could not log out' })
+    }
+    res.clearCookie('connect.sid')
+    res.json({ message: 'Logged out successfully' })
+  })
 })
 
 // GET /api/auth/me
-router.get('/me', (req, res) => {
-  const sessionId = req.cookies.sessionId
-  if (!sessionId || !sessions.has(sessionId)) {
+router.get('/me', async (req, res) => {
+  const userId = (req.session as any).userId
+  const agencyId = (req.session as any).agencyId
+
+  if (!userId || !agencyId) {
     return res.status(401).json({ error: 'Not authenticated' })
   }
 
-  const session = sessions.get(sessionId)!
-  const user = AuthModel.getUserById(session.userId)
-  const agency = AuthModel.getAgencyById(session.agencyId)
+  const user = await AuthModel.getUserById(userId)
+  const agency = await AuthModel.getAgencyById(agencyId)
 
   if (!user || !agency) {
     // Session references invalid user/agency, clean it up
-    sessions.delete(sessionId)
-    res.clearCookie('sessionId')
+    req.session.destroy(() => {})
+    res.clearCookie('connect.sid')
     return res.status(401).json({ error: 'Invalid session' })
   }
 
@@ -162,19 +145,20 @@ router.get('/me', (req, res) => {
 
 // Helper middleware function
 export function createAuthMiddleware() {
-  return (req: AuthenticatedRequest, res: Response, next: any) => {
-    const sessionId = req.cookies.sessionId
-    if (!sessionId || !sessions.has(sessionId)) {
+  return async (req: AuthenticatedRequest, res: Response, next: any) => {
+    const userId = (req.session as any).userId
+    const agencyId = (req.session as any).agencyId
+
+    if (!userId || !agencyId) {
       return res.status(401).json({ error: 'Not authenticated' })
     }
 
-    const session = sessions.get(sessionId)!
-    const user = AuthModel.getUserById(session.userId)
-    const agency = AuthModel.getAgencyById(session.agencyId)
+    const user = await AuthModel.getUserById(userId)
+    const agency = await AuthModel.getAgencyById(agencyId)
 
     if (!user || !agency) {
-      sessions.delete(sessionId)
-      res.clearCookie('sessionId')
+      req.session.destroy(() => {})
+      res.clearCookie('connect.sid')
       return res.status(401).json({ error: 'Invalid session' })
     }
 

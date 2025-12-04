@@ -1,11 +1,13 @@
 import { Router, Request, Response, NextFunction } from 'express'
 import { generateMask } from '../services/replicate'
+import { getPrismaClient } from '../lib/prisma'
 import { MaskResponse } from '../types/api'
 import { MaskRequestSchema } from '../schemas/validation'
 import { validateRequest } from '../middleware/validation'
 import { ValidationError, ExternalAPIError } from '../errors/AppError'
 
 const router = Router()
+const prisma = getPrismaClient()
 
 /**
  * POST /api/mask

@@ -1,6 +1,6 @@
 /**
  * Privacy Manager
- * 
+ *
  * Manages user privacy preferences for analytics tracking:
  * - Display consent banner (Requirement 4.1)
  * - Handle opt-out (Requirement 4.2)
@@ -10,6 +10,7 @@
  */
 
 import { getAnalyticsManager } from './analyticsManager';
+import { safeLocalStorage } from '../storage/safeLocalStorage';
 
 const STORAGE_KEY_CONSENT = 'analytics_consent';
 const STORAGE_KEY_QUEUE = 'analytics_queue';
@@ -47,7 +48,7 @@ export class PrivacyManager {
    */
   public getConsentPreference(): ConsentPreference | null {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_CONSENT);
+      const stored = safeLocalStorage.getItem(STORAGE_KEY_CONSENT);
       if (stored) {
         return JSON.parse(stored);
       }
@@ -63,7 +64,7 @@ export class PrivacyManager {
    */
   public optIn(): void {
     this.analyticsManager.optIn();
-    
+
     // Track the opt-in event itself (now that we have consent)
     this.analyticsManager.track('privacy_opt_in', {
       timestamp: Date.now(),
@@ -77,7 +78,7 @@ export class PrivacyManager {
   public optOut(): void {
     // Delete all collected data before opting out
     this.deleteAllData();
-    
+
     // Set opt-out preference
     this.analyticsManager.optOut();
   }
@@ -89,20 +90,20 @@ export class PrivacyManager {
   public deleteAllData(): void {
     try {
       // Clear event queue
-      localStorage.removeItem(STORAGE_KEY_QUEUE);
-      
+      safeLocalStorage.removeItem(STORAGE_KEY_QUEUE);
+
       // Clear flow tracking data
-      localStorage.removeItem(STORAGE_KEY_FLOW);
-      
+      safeLocalStorage.removeItem(STORAGE_KEY_FLOW);
+
       // Clear conversion tracking data
-      localStorage.removeItem(STORAGE_KEY_CONVERSION);
-      
+      safeLocalStorage.removeItem(STORAGE_KEY_CONVERSION);
+
       // Clear free tier usage data
-      localStorage.removeItem(STORAGE_KEY_FREE_TIER);
-      
+      safeLocalStorage.removeItem(STORAGE_KEY_FREE_TIER);
+
       // Clear any other analytics-related data
       this.clearAnalyticsData();
-      
+
       // Clear the analytics manager's queue
       this.analyticsManager.clearQueue();
     } catch (error) {
@@ -117,18 +118,17 @@ export class PrivacyManager {
   private clearAnalyticsData(): void {
     try {
       const keysToRemove: string[] = [];
-      
-      // Find all keys that start with 'analytics_'
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
+
+      // Find all keys that start with 'analytics_' using the safe storage helper
+      for (const key of safeLocalStorage.keys()) {
         if (key && key.startsWith('analytics_')) {
           keysToRemove.push(key);
         }
       }
-      
+
       // Remove all analytics keys
-      keysToRemove.forEach(key => {
-        localStorage.removeItem(key);
+      keysToRemove.forEach((key) => {
+        safeLocalStorage.removeItem(key);
       });
     } catch (error) {
       console.error('Failed to clear analytics data:', error);
@@ -152,7 +152,7 @@ export class PrivacyManager {
    */
   public resetConsent(): void {
     try {
-      localStorage.removeItem(STORAGE_KEY_CONSENT);
+      safeLocalStorage.removeItem(STORAGE_KEY_CONSENT);
     } catch (error) {
       console.error('Failed to reset consent:', error);
     }
@@ -163,41 +163,41 @@ export class PrivacyManager {
    */
   public exportUserData(): Record<string, unknown> {
     const data: Record<string, unknown> = {};
-    
+
     try {
       // Get consent preference
       const consent = this.getConsentPreference();
       if (consent) {
         data.consent = consent;
       }
-      
+
       // Get queued events
-      const queue = localStorage.getItem(STORAGE_KEY_QUEUE);
+      const queue = safeLocalStorage.getItem(STORAGE_KEY_QUEUE);
       if (queue) {
         data.queuedEvents = JSON.parse(queue);
       }
-      
+
       // Get flow data
-      const flow = localStorage.getItem(STORAGE_KEY_FLOW);
+      const flow = safeLocalStorage.getItem(STORAGE_KEY_FLOW);
       if (flow) {
         data.flowData = JSON.parse(flow);
       }
-      
+
       // Get conversion data
-      const conversion = localStorage.getItem(STORAGE_KEY_CONVERSION);
+      const conversion = safeLocalStorage.getItem(STORAGE_KEY_CONVERSION);
       if (conversion) {
         data.conversionData = JSON.parse(conversion);
       }
-      
+
       // Get free tier data
-      const freeTier = localStorage.getItem(STORAGE_KEY_FREE_TIER);
+      const freeTier = safeLocalStorage.getItem(STORAGE_KEY_FREE_TIER);
       if (freeTier) {
         data.freeTierData = JSON.parse(freeTier);
       }
     } catch (error) {
       console.error('Failed to export user data:', error);
     }
-    
+
     return data;
   }
 

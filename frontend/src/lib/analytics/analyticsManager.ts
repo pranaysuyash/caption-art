@@ -1,6 +1,6 @@
 /**
  * Analytics Manager
- * 
+ *
  * Main analytics orchestrator that handles:
  * - Initialization of analytics service
  * - Opt-in/opt-out management
@@ -8,7 +8,13 @@
  * - Batching and sending events
  */
 
-import type { AnalyticsEvent, AnalyticsConfig, AnalyticsConsent } from './types';
+import type {
+  AnalyticsEvent,
+  AnalyticsConfig,
+  AnalyticsConsent,
+} from './types';
+
+import { safeLocalStorage } from '../storage/safeLocalStorage';
 
 const STORAGE_KEY_CONSENT = 'analytics_consent';
 const STORAGE_KEY_QUEUE = 'analytics_queue';
@@ -38,7 +44,7 @@ export class AnalyticsManager {
    */
   private loadConsent(): void {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_CONSENT);
+      const stored = safeLocalStorage.getItem(STORAGE_KEY_CONSENT);
       if (stored) {
         this.consent = JSON.parse(stored);
       }
@@ -53,7 +59,10 @@ export class AnalyticsManager {
   private saveConsent(): void {
     try {
       if (this.consent) {
-        localStorage.setItem(STORAGE_KEY_CONSENT, JSON.stringify(this.consent));
+        safeLocalStorage.setItem(
+          STORAGE_KEY_CONSENT,
+          JSON.stringify(this.consent)
+        );
       }
     } catch (error) {
       console.error('Failed to save analytics consent:', error);
@@ -65,7 +74,7 @@ export class AnalyticsManager {
    */
   private loadQueue(): void {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY_QUEUE);
+      const stored = safeLocalStorage.getItem(STORAGE_KEY_QUEUE);
       if (stored) {
         this.eventQueue = JSON.parse(stored);
       }
@@ -80,7 +89,10 @@ export class AnalyticsManager {
    */
   private saveQueue(): void {
     try {
-      localStorage.setItem(STORAGE_KEY_QUEUE, JSON.stringify(this.eventQueue));
+      safeLocalStorage.setItem(
+        STORAGE_KEY_QUEUE,
+        JSON.stringify(this.eventQueue)
+      );
     } catch (error) {
       console.error('Failed to save analytics queue:', error);
     }
@@ -220,7 +232,7 @@ export class AnalyticsManager {
   public clearQueue(): void {
     this.eventQueue = [];
     try {
-      localStorage.removeItem(STORAGE_KEY_QUEUE);
+      safeLocalStorage.removeItem(STORAGE_KEY_QUEUE);
     } catch (error) {
       console.error('Failed to clear analytics queue:', error);
     }
@@ -248,7 +260,9 @@ let analyticsManagerInstance: AnalyticsManager | null = null;
 /**
  * Initialize the analytics manager
  */
-export function initAnalyticsManager(config?: Partial<AnalyticsConfig>): AnalyticsManager {
+export function initAnalyticsManager(
+  config?: Partial<AnalyticsConfig>
+): AnalyticsManager {
   if (!analyticsManagerInstance) {
     analyticsManagerInstance = new AnalyticsManager(config);
   }

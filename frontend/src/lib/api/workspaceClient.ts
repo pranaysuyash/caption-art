@@ -2,8 +2,7 @@
  * Workspace API Client
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
-const API_URL = `${API_BASE}/api`;
+import apiFetch from './httpClient';
 
 export interface Workspace {
   id: string;
@@ -14,18 +13,9 @@ export interface Workspace {
   updatedAt: string;
 }
 
-function getHeaders(): HeadersInit {
-  const token = localStorage.getItem('authToken');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
 export async function getWorkspaces(): Promise<Workspace[]> {
-  const response = await fetch(`${API_URL}/workspaces`, {
+  const response = await apiFetch(`/api/workspaces`, {
     method: 'GET',
-    headers: getHeaders(),
   });
 
   if (!response.ok) {
@@ -37,9 +27,8 @@ export async function getWorkspaces(): Promise<Workspace[]> {
 }
 
 export async function getWorkspace(id: string): Promise<Workspace> {
-  const response = await fetch(`${API_URL}/workspaces/${id}`, {
+  const response = await apiFetch(`/api/workspaces/${id}`, {
     method: 'GET',
-    headers: getHeaders(),
   });
 
   if (!response.ok) {
@@ -51,9 +40,8 @@ export async function getWorkspace(id: string): Promise<Workspace> {
 }
 
 export async function createWorkspace(clientName: string): Promise<Workspace> {
-  const response = await fetch(`${API_URL}/workspaces`, {
+  const response = await apiFetch(`/api/workspaces`, {
     method: 'POST',
-    headers: getHeaders(),
     body: JSON.stringify({ clientName }),
   });
 

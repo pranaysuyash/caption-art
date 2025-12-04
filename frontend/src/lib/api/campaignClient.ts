@@ -2,8 +2,7 @@
  * Campaign API Client
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
-const API_URL = `${API_BASE}/api`;
+import apiFetch from './httpClient';
 
 export type CampaignObjective =
   | 'awareness'
@@ -27,7 +26,7 @@ export type Placement =
 export interface Campaign {
   id: string;
   workspaceId: string;
-  brandKitId: string;
+  brandKitId?: string;
   name: string;
   description?: string;
   objective: CampaignObjective;
@@ -48,7 +47,7 @@ export interface Campaign {
 export interface CreateCampaignData {
   name: string;
   description?: string;
-  brandKitId: string;
+  brandKitId?: string;
   objective: CampaignObjective;
   launchType: LaunchType;
   funnelStage: FunnelStage;
@@ -60,22 +59,13 @@ export interface CreateCampaignData {
   referenceCaptions?: string[];
 }
 
-function getHeaders(): HeadersInit {
-  const token = localStorage.getItem('authToken');
-  return {
-    'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
-
 export async function getCampaigns(workspaceId?: string): Promise<Campaign[]> {
   const url = workspaceId
-    ? `${API_URL}/campaigns?workspaceId=${workspaceId}`
-    : `${API_URL}/campaigns`;
+    ? `/api/campaigns?workspaceId=${workspaceId}`
+    : `/api/campaigns`;
 
-  const response = await fetch(url, {
+  const response = await apiFetch(url, {
     method: 'GET',
-    headers: getHeaders(),
   });
 
   if (!response.ok) {
@@ -87,9 +77,8 @@ export async function getCampaigns(workspaceId?: string): Promise<Campaign[]> {
 }
 
 export async function getCampaign(campaignId: string): Promise<Campaign> {
-  const response = await fetch(`${API_URL}/campaigns/${campaignId}`, {
+  const response = await apiFetch(`/api/campaigns/${campaignId}`, {
     method: 'GET',
-    headers: getHeaders(),
   });
 
   if (!response.ok) {
@@ -103,9 +92,8 @@ export async function getCampaign(campaignId: string): Promise<Campaign> {
 export async function createCampaign(
   campaignData: CreateCampaignData
 ): Promise<Campaign> {
-  const response = await fetch(`${API_URL}/campaigns`, {
+  const response = await apiFetch(`/api/campaigns`, {
     method: 'POST',
-    headers: getHeaders(),
     body: JSON.stringify(campaignData),
   });
 

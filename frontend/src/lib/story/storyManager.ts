@@ -12,8 +12,11 @@ export interface NextFrameResponse {
   nextImageUrl: string;
 }
 
+import apiFetch from '../api/httpClient';
+
 export class StoryManager {
-  private static API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api';
+  private static API_BASE =
+    import.meta.env.VITE_API_BASE || 'http://localhost:3001/api';
 
   /**
    * Generates the next frame in the story
@@ -26,7 +29,7 @@ export class StoryManager {
     styleContext: string
   ): Promise<NextFrameResponse> {
     try {
-      const response = await fetch(`${this.API_BASE}/story/next-frame`, {
+      const response = await apiFetch(`${this.API_BASE}/story/next-frame`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

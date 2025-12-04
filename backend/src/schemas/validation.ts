@@ -153,7 +153,7 @@ export const BatchCaptionSchema: SchemaWithMetadata<z.ZodObject<any>> = {
 export const CreateWorkspaceSchema: SchemaWithMetadata<z.ZodObject<any>> = {
   schema: z.object({
     clientName: z.string().min(1, 'Client name is required').max(100, 'Client name too long'),
-    brandKitId: z.string().optional(), // Optional since brand kit might be created separately
+    industry: z.string().max(100).optional(),
   }),
   rateLimit: {
     ...RATE_LIMIT_TIERS.basic,
@@ -168,6 +168,7 @@ export const CreateWorkspaceSchema: SchemaWithMetadata<z.ZodObject<any>> = {
  */
 export const UpdateWorkspaceSchema = z.object({
   clientName: z.string().min(1, 'Client name is required').max(100, 'Client name too long').optional(),
+  industry: z.string().max(100).optional(),
 })
 
 /**
@@ -197,7 +198,7 @@ export const CreateBrandKitSchema = z.object({
  */
 export const CreateCampaignSchema = z.object({
   workspaceId: workspaceIdSchema,
-  brandKitId: z.string().min(1, 'Brand kit ID is required'),
+  brandKitId: z.string().min(1, 'Brand kit ID is required').optional(),
   name: z.string().min(1, 'Campaign name is required').max(100, 'Campaign name too long'),
   description: z.string().optional(),
   objective: z.enum(['awareness', 'traffic', 'conversion', 'engagement']),

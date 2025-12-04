@@ -5,6 +5,8 @@
 import { useState, useEffect } from 'react';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import './ReferenceCreativeManager.css';
+import apiFetch from '../lib/api/httpClient';
+import { safeLocalStorage } from '../lib/storage/safeLocalStorage';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
 const API_URL = `${API_BASE}/api`;
@@ -51,11 +53,12 @@ export function ReferenceCreativeManager() {
     name: '',
     notes: '',
     imageUrl: '',
-    file: null as File | null
+    file: null as File | null,
   });
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedReference, setSelectedReference] = useState<ReferenceCreative | null>(null);
+  const [selectedReference, setSelectedReference] =
+    useState<ReferenceCreative | null>(null);
   const [showStyleModal, setShowStyleModal] = useState(false);
 
   useEffect(() => {
@@ -69,11 +72,10 @@ export function ReferenceCreativeManager() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/reference-creatives?workspaceId=${activeWorkspace.id}`,
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          method: 'GET',
         }
       );
 
@@ -94,7 +96,7 @@ export function ReferenceCreativeManager() {
       setUploadForm({
         ...uploadForm,
         file,
-        name: uploadForm.name || file.name.split('.')[0]
+        name: uploadForm.name || file.name.split('.')[0],
       });
     }
   };
@@ -104,12 +106,10 @@ export function ReferenceCreativeManager() {
     formData.append('image', file);
     formData.append('workspaceId', activeWorkspace!.id);
 
-    const response = await fetch(`${API_URL}/upload`, {
+    const response = await apiFetch(`${API_URL}/upload`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      },
-      body: formData
+      // apiFetch will include credentials; FormData body should not set Content-Type
+      body: formData,
     });
 
     if (!response.ok) {
@@ -133,23 +133,22 @@ export function ReferenceCreativeManager() {
         { progress: 60, status: 'Analyzing text density...' },
         { progress: 80, status: 'Identifying style characteristics...' },
         { progress: 95, status: 'Generating style tags...' },
-        { progress: 100, status: 'Analysis complete!' }
+        { progress: 100, status: 'Analysis complete!' },
       ];
 
       for (const step of steps) {
         setAnalysisProgress(step.progress);
         setAnalysisStatus(step.status);
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
       // Call style analysis API
-      const response = await fetch(`${API_URL}/analyze-style`, {
+      const response = await apiFetch(`${API_URL}/analyze-style`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
-        body: JSON.stringify({ imageUrl })
+        body: JSON.stringify({ imageUrl }),
       });
 
       if (!response.ok) {
@@ -185,19 +184,18 @@ export function ReferenceCreativeManager() {
       const styleAnalysis = await analyzeStyle(imageUrl);
 
       // Create reference creative with analysis
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`${API_URL}/reference-creatives`, {
+      const response = await apiFetch(`${API_URL}/reference-creatives`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          // apiFetch will include credentials
         },
         body: JSON.stringify({
           workspaceId: activeWorkspace.id,
           name: uploadForm.name,
           imageUrl,
           notes: uploadForm.notes,
-          ...styleAnalysis
+          ...styleAnalysis,
         }),
       });
 
@@ -253,7 +251,9 @@ export function ReferenceCreativeManager() {
         <div className='reference-grid-empty'>
           <div className='empty-icon'>🎨</div>
           <h3>No reference creatives</h3>
-          <p>Upload examples to guide AI style learning and caption generation</p>
+          <p>
+            Upload examples to guide AI style learning and caption generation
+          </p>
           <button
             onClick={() => setShowUploadModal(true)}
             className='btn-add-reference'
@@ -291,10 +291,14 @@ export function ReferenceCreativeManager() {
                 {ref.styleTags && ref.styleTags.length > 0 && (
                   <div className='reference-style-tags'>
                     {ref.styleTags.slice(0, 3).map((tag, index) => (
-                      <span key={index} className='style-tag'>{tag}</span>
+                      <span key={index} className='style-tag'>
+                        {tag}
+                      </span>
                     ))}
                     {ref.styleTags.length > 3 && (
-                      <span className='style-tag more'>+{ref.styleTags.length - 3}</span>
+                      <span className='style-tag more'>
+                        +{ref.styleTags.length - 3}
+                      </span>
                     )}
                   </div>
                 )}
@@ -338,11 +342,16 @@ export function ReferenceCreativeManager() {
           className='modal-overlay'
           onClick={() => setShowUploadModal(false)}
         >
-          <div className='modal-content enhanced' onClick={(e) => e.stopPropagation()}>
+          <div
+            className='modal-content enhanced'
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className='modal-header'>
               <div>
                 <h2>🎨 Add Reference Creative</h2>
-                <p>Upload an image to analyze and learn its style characteristics</p>
+                <p>
+                  Upload an image to analyze and learn its style characteristics
+                </p>
               </div>
               <button
                 className='close-button'
@@ -364,7 +373,9 @@ export function ReferenceCreativeManager() {
                   required
                   placeholder='Example: Summer Campaign Ad'
                 />
-                <small>Give this reference a descriptive name for easy identification</small>
+                <small>
+                  Give this reference a descriptive name for easy identification
+                </small>
               </div>
 
               <div className='form-group'>
@@ -377,11 +388,16 @@ export function ReferenceCreativeManager() {
                     id='reference-file-input'
                     className='file-input'
                   />
-                  <label htmlFor='reference-file-input' className='file-upload-label'>
+                  <label
+                    htmlFor='reference-file-input'
+                    className='file-upload-label'
+                  >
                     {uploadForm.file ? (
                       <div className='file-selected'>
                         <span className='file-icon'>📷</span>
-                        <span className='file-name'>{uploadForm.file.name}</span>
+                        <span className='file-name'>
+                          {uploadForm.file.name}
+                        </span>
                       </div>
                     ) : (
                       <div className='file-prompt'>
@@ -417,7 +433,10 @@ export function ReferenceCreativeManager() {
                   placeholder='What makes this creative effective? Any specific elements to learn from?'
                   rows={4}
                 />
-                <small>Describe what elements should be learned from this reference (colors, typography, layout, etc.)</small>
+                <small>
+                  Describe what elements should be learned from this reference
+                  (colors, typography, layout, etc.)
+                </small>
               </div>
 
               {analyzing && (
@@ -446,9 +465,17 @@ export function ReferenceCreativeManager() {
                 <button
                   type='submit'
                   className='btn-primary'
-                  disabled={uploading || analyzing || (!uploadForm.file && !uploadForm.imageUrl)}
+                  disabled={
+                    uploading ||
+                    analyzing ||
+                    (!uploadForm.file && !uploadForm.imageUrl)
+                  }
                 >
-                  {uploading ? 'Uploading...' : analyzing ? 'Analyzing...' : 'Add Reference'}
+                  {uploading
+                    ? 'Uploading...'
+                    : analyzing
+                    ? 'Analyzing...'
+                    : 'Add Reference'}
                 </button>
               </div>
             </form>
@@ -458,11 +485,11 @@ export function ReferenceCreativeManager() {
 
       {/* Style Analysis Modal */}
       {showStyleModal && selectedReference && (
-        <div
-          className='modal-overlay'
-          onClick={() => setShowStyleModal(false)}
-        >
-          <div className='modal-content style-modal' onClick={(e) => e.stopPropagation()}>
+        <div className='modal-overlay' onClick={() => setShowStyleModal(false)}>
+          <div
+            className='modal-content style-modal'
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className='modal-header'>
               <div>
                 <h2>🔍 Style Analysis</h2>
@@ -479,7 +506,9 @@ export function ReferenceCreativeManager() {
             <div className='style-analysis-content'>
               <div className='analysis-preview'>
                 <img
-                  src={selectedReference.thumbnailUrl || selectedReference.imageUrl}
+                  src={
+                    selectedReference.thumbnailUrl || selectedReference.imageUrl
+                  }
                   alt={selectedReference.name}
                   className='analysis-image'
                 />
@@ -500,33 +529,39 @@ export function ReferenceCreativeManager() {
                   </div>
                 )}
 
-                {selectedReference.extractedColors && selectedReference.extractedColors.length > 0 && (
-                  <div className='analysis-section'>
-                    <h3>🎨 Color Palette</h3>
-                    <div className='color-palette'>
-                      {selectedReference.extractedColors.map((color, index) => (
-                        <div key={index} className='color-item'>
-                          <div
-                            className='color-box'
-                            style={{ backgroundColor: color }}
-                          />
-                          <span className='color-code'>{color}</span>
-                        </div>
-                      ))}
+                {selectedReference.extractedColors &&
+                  selectedReference.extractedColors.length > 0 && (
+                    <div className='analysis-section'>
+                      <h3>🎨 Color Palette</h3>
+                      <div className='color-palette'>
+                        {selectedReference.extractedColors.map(
+                          (color, index) => (
+                            <div key={index} className='color-item'>
+                              <div
+                                className='color-box'
+                                style={{ backgroundColor: color }}
+                              />
+                              <span className='color-code'>{color}</span>
+                            </div>
+                          )
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {selectedReference.styleTags && selectedReference.styleTags.length > 0 && (
-                  <div className='analysis-section'>
-                    <h3>🏷️ Style Characteristics</h3>
-                    <div className='style-tags-grid'>
-                      {selectedReference.styleTags.map((tag, index) => (
-                        <span key={index} className='style-tag'>{tag}</span>
-                      ))}
+                {selectedReference.styleTags &&
+                  selectedReference.styleTags.length > 0 && (
+                    <div className='analysis-section'>
+                      <h3>🏷️ Style Characteristics</h3>
+                      <div className='style-tags-grid'>
+                        {selectedReference.styleTags.map((tag, index) => (
+                          <span key={index} className='style-tag'>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {selectedReference.notes && (
                   <div className='analysis-section'>

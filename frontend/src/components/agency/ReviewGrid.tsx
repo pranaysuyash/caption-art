@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import apiFetch from '../../lib/api/httpClient';
+import { safeLocalStorage } from '../../lib/storage/safeLocalStorage';
 import { Link, useParams } from 'react-router-dom';
 
 interface Creative {
@@ -29,7 +31,9 @@ export function ReviewGrid() {
     'all' | 'pending' | 'approved' | 'rejected'
   >('all');
   const [showExportModal, setShowExportModal] = useState(false);
-  const [variationIndices, setVariationIndices] = useState<Record<string, number>>({});
+  const [variationIndices, setVariationIndices] = useState<
+    Record<string, number>
+  >({});
 
   useEffect(() => {
     loadCreatives();
@@ -39,14 +43,12 @@ export function ReviewGrid() {
     try {
       setLoading(true);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${
           import.meta.env.VITE_API_BASE || 'http://localhost:3001'
         }/api/ad-creatives?campaignId=${campaignId}`,
         {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
-          },
+          method: 'GET',
         }
       );
 
@@ -67,8 +69,8 @@ export function ReviewGrid() {
     setGenerating(true);
     try {
       // Load context from localStorage
-      const savedCampaign = localStorage.getItem(`campaign-${campaignId}`);
-      const savedBrandKit = localStorage.getItem(`brandkit-${campaignId}`);
+      const savedCampaign = safeLocalStorage.getItem(`campaign-${campaignId}`);
+      const savedBrandKit = safeLocalStorage.getItem(`brandkit-${campaignId}`);
 
       const campaignContext = savedCampaign ? JSON.parse(savedCampaign) : {};
       const brandContext = savedBrandKit ? JSON.parse(savedBrandKit) : {};
@@ -88,8 +90,12 @@ export function ReviewGrid() {
       const newCreatives: Creative[] = [
         {
           id: `gen-${Date.now()}-1`,
-          headline: `${campaignContext.primaryOffer || 'Special Offer'} - ${brandContext.brandPersonality || 'Bold'} Style`,
-          bodyText: `Experience our ${brandContext.targetAudience || 'premium'} collection. ${brandContext.valueProposition || ''}`,
+          headline: `${campaignContext.primaryOffer || 'Special Offer'} - ${
+            brandContext.brandPersonality || 'Bold'
+          } Style`,
+          bodyText: `Experience our ${
+            brandContext.targetAudience || 'premium'
+          } collection. ${brandContext.valueProposition || ''}`,
           ctaText: 'Shop Now',
           placement: 'ig-feed',
           format: 'instagram-square',
@@ -97,30 +103,35 @@ export function ReviewGrid() {
           variations: [
             {
               headline: `${campaignContext.primaryOffer} - Variant A`,
-              bodyText: `Variant A body text focused on ${brandContext.brandPersonality}`
+              bodyText: `Variant A body text focused on ${brandContext.brandPersonality}`,
             },
             {
               headline: `${campaignContext.primaryOffer} - Variant B`,
-              bodyText: `Variant B body text focused on ${brandContext.valueProposition}`
-            }
-          ]
+              bodyText: `Variant B body text focused on ${brandContext.valueProposition}`,
+            },
+          ],
         },
         {
           id: `gen-${Date.now()}-2`,
           headline: 'Exclusive Summer Deal',
-          bodyText: `Perfect for ${brandContext.targetAudience || 'you'}. Don't miss out!`,
+          bodyText: `Perfect for ${
+            brandContext.targetAudience || 'you'
+          }. Don't miss out!`,
           ctaText: 'Learn More',
           placement: 'fb-feed',
           format: 'facebook-post',
-          approvalStatus: 'pending'
-        }
-      ]
+          approvalStatus: 'pending',
+        },
+      ];
 
-      setCreatives(prev => [...newCreatives, ...prev])
+      setCreatives((prev) => [...newCreatives, ...prev]);
 
       // Initialize indices for new creatives
-      const newIndices = newCreatives.reduce((acc, c) => ({ ...acc, [c.id]: 0 }), {})
-      setVariationIndices(prev => ({ ...prev, ...newIndices }))
+      const newIndices = newCreatives.reduce(
+        (acc, c) => ({ ...acc, [c.id]: 0 }),
+        {}
+      );
+      setVariationIndices((prev) => ({ ...prev, ...newIndices }));
     } catch (error) {
       console.error('Error generating creatives:', error);
     } finally {
@@ -179,23 +190,26 @@ export function ReviewGrid() {
   };
 
   const handleSelectAll = () => {
-    const filteredCreatives = filter === 'all' ? creatives : creatives.filter(c => c.approvalStatus === filter)
-    setSelectedIds(filteredCreatives.map(c => c.id))
-  }
+    const filteredCreatives =
+      filter === 'all'
+        ? creatives
+        : creatives.filter((c) => c.approvalStatus === filter);
+    setSelectedIds(filteredCreatives.map((c) => c.id));
+  };
 
   const handleNextVariation = (id: string, total: number) => {
-    setVariationIndices(prev => ({
+    setVariationIndices((prev) => ({
       ...prev,
-      [id]: ((prev[id] || 0) + 1) % total
-    }))
-  }
+      [id]: ((prev[id] || 0) + 1) % total,
+    }));
+  };
 
   const handlePrevVariation = (id: string, total: number) => {
-    setVariationIndices(prev => ({
+    setVariationIndices((prev) => ({
       ...prev,
-      [id]: ((prev[id] || 0) - 1 + total) % total
-    }))
-  }
+      [id]: ((prev[id] || 0) - 1 + total) % total,
+    }));
+  };
 
   const handleExportCsv = () => {
     const approved = creatives.filter((c) => c.approvalStatus === 'approved');
@@ -284,18 +298,7 @@ export function ReviewGrid() {
           <button
             onClick={handleGenerateCreatives}
             disabled={generating}
-            className='button button-primary'
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: 'var(--color-primary, #2563eb)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '500',
-              cursor: generating ? 'not-allowed' : 'pointer',
-              opacity: generating ? 0.5 : 1,
-            }}
+            className='btn btn-primary'
           >
             {generating ? 'Generating...' : 'Generate Creatives'}
           </button>
@@ -303,16 +306,10 @@ export function ReviewGrid() {
           approvedCount > 0 && (
             <button
               onClick={() => setShowExportModal(true)}
-              className='button button-primary'
+              className='btn btn-primary'
               style={{
-                padding: '0.75rem 1.5rem',
                 backgroundColor: 'var(--color-success, #16a34a)',
                 color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                fontWeight: '500',
-                cursor: 'pointer',
               }}
             >
               Export {approvedCount} Approved →
@@ -358,18 +355,7 @@ export function ReviewGrid() {
           <button
             onClick={handleGenerateCreatives}
             disabled={generating}
-            className='button button-primary'
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: 'var(--color-primary, #2563eb)',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '500',
-              cursor: generating ? 'not-allowed' : 'pointer',
-              opacity: generating ? 0.5 : 1,
-            }}
+            className='btn btn-primary'
           >
             {generating ? 'Generating...' : 'Generate Your First Creatives'}
           </button>
@@ -382,7 +368,7 @@ export function ReviewGrid() {
           style={{
             textAlign: 'center',
             padding: '3rem',
-            backgroundColor: 'var(--color-surface, white)',
+            backgroundColor: 'var(--color-bg-secondary, white)',
             border: '1px solid var(--color-border, #e5e7eb)',
             borderRadius: '12px',
           }}
@@ -428,13 +414,14 @@ export function ReviewGrid() {
             alignItems: 'center',
             marginBottom: '1.5rem',
             padding: '1rem',
-            backgroundColor: 'var(--color-surface, white)',
+            backgroundColor: 'var(--color-bg-secondary, white)',
             border: '1px solid var(--color-border, #e5e7eb)',
             borderRadius: '8px',
           }}
         >
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <select
+              aria-label='Filter creatives'
               value={filter}
               onChange={(e) => setFilter(e.target.value as any)}
               style={{
@@ -461,19 +448,7 @@ export function ReviewGrid() {
               </option>
             </select>
 
-            <button
-              onClick={handleSelectAll}
-              className='button button-secondary'
-              style={{
-                padding: '0.5rem 1rem',
-                border: '1px solid var(--color-border, #d1d5db)',
-                backgroundColor: 'transparent',
-                color: 'var(--color-text, #1f2937)',
-                borderRadius: '6px',
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-              }}
-            >
+            <button onClick={handleSelectAll} className='btn btn-secondary'>
               Select All
             </button>
           </div>
@@ -492,30 +467,24 @@ export function ReviewGrid() {
               </span>
               <button
                 onClick={handleBulkApprove}
-                className='button button-primary'
+                className='btn btn-primary'
                 style={{
                   padding: '0.5rem 1rem',
+                  fontSize: '0.875rem',
                   backgroundColor: 'var(--color-success, #16a34a)',
                   color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  cursor: 'pointer',
                 }}
               >
                 Approve Selected
               </button>
               <button
                 onClick={handleBulkReject}
-                className='button button-secondary'
+                className='btn btn-secondary'
                 style={{
                   padding: '0.5rem 1rem',
-                  border: '1px solid var(--color-error, #dc2626)',
-                  backgroundColor: 'transparent',
-                  color: 'var(--color-error, #dc2626)',
-                  borderRadius: '6px',
                   fontSize: '0.875rem',
-                  cursor: 'pointer',
+                  border: '1px solid var(--color-error, #dc2626)',
+                  color: 'var(--color-error, #dc2626)',
                 }}
               >
                 Reject Selected
@@ -527,29 +496,31 @@ export function ReviewGrid() {
 
       {/* Creatives Grid */}
       {filteredCreatives.length > 0 && !generating && (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '1.5rem'
-        }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+            gap: '1.5rem',
+          }}
+        >
           {filteredCreatives.map((creative) => {
-            const variationCount = (creative.variations?.length || 0) + 1
-            const currentIndex = variationIndices[creative.id] || 0
+            const variationCount = (creative.variations?.length || 0) + 1;
+            const currentIndex = variationIndices[creative.id] || 0;
 
-            let currentHeadline = creative.headline
-            let currentBody = creative.bodyText
+            let currentHeadline = creative.headline;
+            let currentBody = creative.bodyText;
 
             if (currentIndex > 0 && creative.variations) {
-              const variation = creative.variations[currentIndex - 1]
-              currentHeadline = variation.headline
-              currentBody = variation.bodyText
+              const variation = creative.variations[currentIndex - 1];
+              currentHeadline = variation.headline;
+              currentBody = variation.bodyText;
             }
 
             return (
               <div
                 key={creative.id}
                 style={{
-                  backgroundColor: 'var(--color-surface, white)',
+                  backgroundColor: 'var(--color-bg-secondary, white)',
                   border: '1px solid var(--color-border, #e5e7eb)',
                   borderRadius: '12px',
                   overflow: 'hidden',
@@ -722,7 +693,7 @@ export function ReviewGrid() {
                   </div>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       )}
@@ -753,7 +724,7 @@ export function ReviewGrid() {
         >
           <div
             style={{
-              backgroundColor: 'var(--color-surface, white)',
+              backgroundColor: 'var(--color-bg-secondary, white)',
               borderRadius: '12px',
               padding: '2rem',
               width: '100%',
@@ -839,7 +810,7 @@ export function ReviewGrid() {
                 onClick={async () => {
                   try {
                     // Start export
-                    const response = await fetch(
+                    const response = await apiFetch(
                       `${
                         import.meta.env.VITE_API_BASE || 'http://localhost:3001'
                       }/api/export/workspace/${workspaceId}/start`,
@@ -847,9 +818,6 @@ export function ReviewGrid() {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
-                          Authorization: `Bearer ${localStorage.getItem(
-                            'auth_token'
-                          )}`,
                         },
                       }
                     );

@@ -170,8 +170,29 @@ function createServerImpl(
   app.use(requestIdMiddleware)
   app.use(requestLogger)
 
-  // 3. Cookie parser for session management
-  app.use(cookieParser())
+  // 3. Session management with SQLite store
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const session = require('express-session')
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const SQLiteStore = require('connect-sqlite3')(session)
+
+  app.use(
+    session({
+      store: new SQLiteStore({
+        db: 'sessions.sqlite',
+        dir: process.cwd(), // Store in project root
+      }),
+      secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-prod',
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'lax',
+      },
+    })
+  )
 
   // 4. JSON body parser
   app.use(express.json({ limit: '10mb' }))
@@ -179,25 +200,6 @@ function createServerImpl(
   // 5. Serve static files from uploads and generated directories
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
   app.use('/generated', express.static(path.join(process.cwd(), 'generated')))
-
-  // Global guard: approval endpoint to avoid 404s when router wiring fails (tests/dev)
-  app.put(
-    '/api/approval/captions/:captionId/approve',
-    async (req, res, next) => {
-      log.info(
-        { path: req.path, captionId: req.params.captionId },
-        'Global approval guard handling request'
-      )
-      return res.status(200).json({
-        approved: true,
-        caption: {
-          id: req.params.captionId,
-          approvalStatus: 'approved',
-          approved: true,
-        },
-      })
-    }
-  )
 
   // 6. Cost-weighted rate limiter for API routes (can be disabled for testing)
   if (enableRateLimiter) {
@@ -223,7 +225,7 @@ function createServerImpl(
   let creativeEngineRouter, analyzeStyleRouter, campaignBriefsRouter
   let adCreativesRouter, styleMemoryRouter, videoScriptsRouter
   let multiFormatRouter, styleSynthesisRouter, videoRendererRouter
-  let publishingRouter, dashboardRouter
+  let publishingRouter, dashboardRouter, adminRouter
   if (loadRoutes) {
     // Lazy-load route modules only when requested
     const safeRequire = (modulePath: string) => {
@@ -301,71 +303,13 @@ function createServerImpl(
       (safeRequire('./routes/publishing') || {}).default || express.Router()
     dashboardRouter =
       (safeRequire('./routes/dashboard') || {}).default || express.Router()
+    adminRouter =
+      (safeRequire('./routes/admin') || {}).default || express.Router()
 
     // Routes (auth first, then workspaces, brand kits, assets, batch, approval, export, generated assets, then existing routes)
     app.use('/api/auth', authRouter)
     app.use('/api/workspaces', workspacesRouter)
     app.use('/api/brand-kits', brandKitsRouter)
-
-    // Ensure POST /api/brand-kits exists as a fallback for creating a brand kit
-    try {
-      const brandStack = (brandKitsRouter as any).stack || []
-      const hasCreateRoute = brandStack.some((layer: any) => {
-        if (layer && layer.route && layer.route.path) {
-          const methods = Object.keys(layer.route.methods || {})
-          return (
-            (layer.route.path === '/' || layer.route.path === '') &&
-            methods.includes('post')
-          )
-        }
-        return false
-      })
-      if (!hasCreateRoute) {
-        const authModule = safeRequire('./routes/auth') || undefined
-        const createAuthMiddleware =
-          authModule && authModule.createAuthMiddleware
-        const requireAuthInline = createAuthMiddleware
-          ? createAuthMiddleware()
-          : (_req: any, _res: any, next: any) => next()
-        const AuthModelModule = safeRequire('./models/auth') || undefined
-        const AuthModel = AuthModelModule
-          ? AuthModelModule.AuthModel || AuthModelModule
-          : undefined
-        brandKitsRouter.post('/', requireAuthInline, (req, res) => {
-          try {
-            const { workspaceId, colors, fonts } = req.body
-            if (!AuthModel) {
-              // Fabricate a brand kit with minimal fields so tests pass
-              return res.status(201).json({
-                id: `brand_${Date.now()}`,
-                workspaceId,
-                colors: colors || {
-                  primary: '#000',
-                  secondary: '#fff',
-                  tertiary: '#ccc',
-                },
-                fonts: fonts || { heading: 'Arial', body: 'Arial' },
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              })
-            }
-            const brandKit = AuthModel.createBrandKit(workspaceId, {
-              colors,
-              fonts,
-              voicePrompt: '',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            })
-            res.status(201).json(brandKit)
-          } catch (err) {
-            log.error({ err }, 'Brand-kits fallback error')
-            res.status(500).json({ error: 'Internal server error' })
-          }
-        })
-      }
-    } catch (err) {
-      log.error({ err }, 'Error registering brand-kits fallback')
-    }
     app.use('/api/assets', assetsRouter)
     app.use('/api/batch', batchRouter)
     // Lazy-load createAuthMiddleware, AuthModel, and ExportService to avoid circular dependency
@@ -383,46 +327,9 @@ function createServerImpl(
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { ExportService } = require('./services/exportService')
 
-    // Fallback server-level POST route for starting export, to prevent 404 when router route matching fails for POST. This duplicates exportRouter POST handler for now.
-    const requireAuthInline = createAuthMiddleware() as any
     // Mount approval router
     app.use('/api/approval', approvalRouter)
-    app.post(
-      '/api/export/workspace/:workspaceId/start',
-      requireAuthInline,
-      async (req, res) => {
-        try {
-          const authenticatedReq: any = req
-          const { workspaceId } = req.params
 
-          const workspace = AuthModel.getWorkspaceById(workspaceId)
-          if (!workspace) {
-            return res.status(404).json({ error: 'Workspace not found' })
-          }
-
-          if (workspace.agencyId !== authenticatedReq.agency.id) {
-            return res.status(403).json({ error: 'Access denied' })
-          }
-
-          const approvedCaptions =
-            AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-          if (approvedCaptions.length === 0) {
-            return res
-              .status(400)
-              .json({ error: 'No approved captions found for export' })
-          }
-
-          const result = await ExportService.startExport(workspaceId)
-          res.status(201).json(result)
-        } catch (error) {
-          if (error instanceof Error) {
-            return res.status(400).json({ error: error.message })
-          }
-          log.error({ err: error }, 'Start export error (fallback route)')
-          res.status(500).json({ error: 'Internal server error' })
-        }
-      }
-    )
     // Mount export router at /api/export
     app.use('/api/export', exportRouter)
     app.use('/api/generated-assets', generatedAssetsRouter)
@@ -444,6 +351,7 @@ function createServerImpl(
     app.use('/api/video-renderer', videoRendererRouter)
     app.use('/api/publishing', publishingRouter)
     app.use('/api/dashboard', dashboardRouter)
+    app.use('/api/admin', adminRouter)
   }
 
   // Simple test route to debug route registration
@@ -631,25 +539,6 @@ function createServerImpl(
     })
   }
 
-  // Last-resort approval handler to prevent 404s in tests/dev
-  app.use((req, res, next) => {
-    const fullPath = req.originalUrl || req.path
-    const matchesApiPath =
-      req.method === 'PUT' &&
-      /^\/api\/approval\/captions\/[^/]+\/approve$/.test(fullPath)
-    const matchesTrimmedPath =
-      req.method === 'PUT' && /^\/captions\/[^/]+\/approve$/.test(req.path)
-    if (matchesApiPath || matchesTrimmedPath) {
-      const parts = (matchesApiPath ? fullPath : req.path).split('/')
-      const captionId = parts[parts.length - 2]
-      return res.status(200).json({
-        approved: true,
-        caption: { id: captionId, approvalStatus: 'approved', approved: true },
-      })
-    }
-    return next()
-  })
-
   // Error handling middleware - must be last
   app.use(errorHandler)
 
@@ -685,6 +574,15 @@ function startServerImpl(): void {
   const port = config.port
 
   app.listen(port, () => {
+    // Initialize database
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+
+
+    // Seed test user
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { AuthModel } = require('./models/auth')
+    AuthModel.ensureTestUser()
+
     log.info({ port }, `Server running on port ${port}`)
     log.info({ env: config.env }, `Environment`)
 

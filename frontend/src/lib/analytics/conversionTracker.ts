@@ -1,17 +1,18 @@
 /**
  * Conversion Tracker
- * 
+ *
  * Tracks conversion metrics:
  * - Free tier usage
  * - Upgrade prompt views
  * - Upgrade clicks
  * - Conversions
  * - Conversion rate calculations
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 
 import { getAnalyticsManager } from './analyticsManager';
+import { safeLocalStorage } from '../storage/safeLocalStorage';
 
 /**
  * Storage keys for conversion tracking
@@ -48,14 +49,14 @@ export interface ConversionMetrics {
  */
 function getFreeTierUsage(): FreeTierUsage {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY_FREE_TIER_USAGE);
+    const stored = safeLocalStorage.getItem(STORAGE_KEY_FREE_TIER_USAGE);
     if (stored) {
       return JSON.parse(stored);
     }
   } catch (error) {
     console.error('Failed to load free tier usage:', error);
   }
-  
+
   return {
     exportsCount: 0,
     captionsCount: 0,
@@ -67,7 +68,10 @@ function getFreeTierUsage(): FreeTierUsage {
  */
 function saveFreeTierUsage(usage: FreeTierUsage): void {
   try {
-    localStorage.setItem(STORAGE_KEY_FREE_TIER_USAGE, JSON.stringify(usage));
+    safeLocalStorage.setItem(
+      STORAGE_KEY_FREE_TIER_USAGE,
+      JSON.stringify(usage)
+    );
   } catch (error) {
     console.error('Failed to save free tier usage:', error);
   }
@@ -78,7 +82,7 @@ function saveFreeTierUsage(usage: FreeTierUsage): void {
  */
 function getCount(key: string): number {
   try {
-    const stored = localStorage.getItem(key);
+    const stored = safeLocalStorage.getItem(key);
     return stored ? parseInt(stored, 10) : 0;
   } catch (error) {
     console.error(`Failed to load count for ${key}:`, error);
@@ -91,7 +95,7 @@ function getCount(key: string): number {
  */
 function saveCount(key: string, count: number): void {
   try {
-    localStorage.setItem(key, count.toString());
+    safeLocalStorage.setItem(key, count.toString());
   } catch (error) {
     console.error(`Failed to save count for ${key}:`, error);
   }
@@ -101,15 +105,17 @@ function saveCount(key: string, count: number): void {
  * Track free tier export usage
  * Requirement 6.1: Track free tier usage
  */
-export function trackFreeTierExport(properties?: Record<string, unknown>): void {
+export function trackFreeTierExport(
+  properties?: Record<string, unknown>
+): void {
   const manager = getAnalyticsManager();
-  
+
   // Update free tier usage count
   const usage = getFreeTierUsage();
   usage.exportsCount += 1;
   usage.lastExportTimestamp = Date.now();
   saveFreeTierUsage(usage);
-  
+
   // Track the event
   manager.track('free_tier_export', {
     ...properties,
@@ -121,15 +127,17 @@ export function trackFreeTierExport(properties?: Record<string, unknown>): void 
  * Track free tier caption generation usage
  * Requirement 6.1: Track free tier usage
  */
-export function trackFreeTierCaption(properties?: Record<string, unknown>): void {
+export function trackFreeTierCaption(
+  properties?: Record<string, unknown>
+): void {
   const manager = getAnalyticsManager();
-  
+
   // Update free tier usage count
   const usage = getFreeTierUsage();
   usage.captionsCount += 1;
   usage.lastCaptionTimestamp = Date.now();
   saveFreeTierUsage(usage);
-  
+
   // Track the event
   manager.track('free_tier_caption', {
     ...properties,
@@ -150,11 +158,11 @@ export function getFreeTierUsageStats(): FreeTierUsage {
  */
 export function trackPromptView(properties?: Record<string, unknown>): void {
   const manager = getAnalyticsManager();
-  
+
   // Increment prompt view count
   const count = getCount(STORAGE_KEY_PROMPT_VIEWS);
   saveCount(STORAGE_KEY_PROMPT_VIEWS, count + 1);
-  
+
   // Track the event
   manager.track('prompt_view', {
     ...properties,
@@ -168,11 +176,11 @@ export function trackPromptView(properties?: Record<string, unknown>): void {
  */
 export function trackUpgradeClick(properties?: Record<string, unknown>): void {
   const manager = getAnalyticsManager();
-  
+
   // Increment upgrade click count
   const count = getCount(STORAGE_KEY_UPGRADE_CLICKS);
   saveCount(STORAGE_KEY_UPGRADE_CLICKS, count + 1);
-  
+
   // Track the event
   manager.track('upgrade_click', {
     ...properties,
@@ -186,11 +194,11 @@ export function trackUpgradeClick(properties?: Record<string, unknown>): void {
  */
 export function trackConversion(properties?: Record<string, unknown>): void {
   const manager = getAnalyticsManager();
-  
+
   // Increment conversion count
   const count = getCount(STORAGE_KEY_CONVERSIONS);
   saveCount(STORAGE_KEY_CONVERSIONS, count + 1);
-  
+
   // Track the event
   manager.track('conversion', {
     ...properties,
@@ -206,12 +214,12 @@ export function calculateConversionMetrics(): ConversionMetrics {
   const promptViews = getCount(STORAGE_KEY_PROMPT_VIEWS);
   const upgradeClicks = getCount(STORAGE_KEY_UPGRADE_CLICKS);
   const conversions = getCount(STORAGE_KEY_CONVERSIONS);
-  
+
   // Calculate rates (avoid division by zero)
   const clickThroughRate = promptViews > 0 ? upgradeClicks / promptViews : 0;
   const conversionRate = upgradeClicks > 0 ? conversions / upgradeClicks : 0;
   const overallConversionRate = promptViews > 0 ? conversions / promptViews : 0;
-  
+
   return {
     promptViews,
     upgradeClicks,
@@ -227,9 +235,9 @@ export function calculateConversionMetrics(): ConversionMetrics {
  */
 export function resetConversionMetrics(): void {
   try {
-    localStorage.removeItem(STORAGE_KEY_PROMPT_VIEWS);
-    localStorage.removeItem(STORAGE_KEY_UPGRADE_CLICKS);
-    localStorage.removeItem(STORAGE_KEY_CONVERSIONS);
+    safeLocalStorage.removeItem(STORAGE_KEY_PROMPT_VIEWS);
+    safeLocalStorage.removeItem(STORAGE_KEY_UPGRADE_CLICKS);
+    safeLocalStorage.removeItem(STORAGE_KEY_CONVERSIONS);
   } catch (error) {
     console.error('Failed to reset conversion metrics:', error);
   }
@@ -240,7 +248,7 @@ export function resetConversionMetrics(): void {
  */
 export function resetFreeTierUsage(): void {
   try {
-    localStorage.removeItem(STORAGE_KEY_FREE_TIER_USAGE);
+    safeLocalStorage.removeItem(STORAGE_KEY_FREE_TIER_USAGE);
   } catch (error) {
     console.error('Failed to reset free tier usage:', error);
   }

@@ -9,6 +9,7 @@ export function usePlayground() {
   const [file, setFile] = useState<File | null>(null);
   const [imageObjUrl, setImageObjUrl] = useState<string>('');
   const [s3Key, setS3Key] = useState<string>('');
+  const [imageUrl, setImageUrl] = useState<string>(''); // Full S3 URL for API calls
   const [maskUrl, setMaskUrl] = useState<string>('');
   const [captions, setCaptions] = useState<string[]>([]);
   const [text, setText] = useState<string>('');
@@ -23,6 +24,22 @@ export function usePlayground() {
   const toast = useToast();
 
   const onFile = async (f: File) => {
+    // Validate file
+    if (!f) {
+      toast.error('No file selected');
+      return;
+    }
+
+    if (f.size > 50 * 1024 * 1024) {
+      toast.error('File too large (max 50MB)');
+      return;
+    }
+
+    if (!f.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
     try {
       setFile(f);
       setLoading(true);
@@ -32,33 +49,112 @@ export function usePlayground() {
       const obj = URL.createObjectURL(f);
       setImageObjUrl(obj);
 
+      // Step 1: Get presigned URL
       setUploadProgress(25);
       setProcessingStatus('Getting upload URL...');
 
-      const { url, key } = await getPresignedUrl(f.name, f.type);
+      let presignedData;
+      try {
+        presignedData = await getPresignedUrl(f.name, f.type);
+      } catch (error) {
+        throw new Error(
+          `Failed to get upload URL: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        );
+      }
+
+      const { url, key } = presignedData;
+      if (!url || !key) {
+        throw new Error('Invalid presigned URL response');
+      }
+
       setS3Key(key);
 
+      // Step 2: Upload to S3 with retry logic
       setUploadProgress(50);
       setProcessingStatus('Uploading to cloud...');
 
-      await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': f.type },
-        body: f,
-      });
+      let uploadResponse: Response | null = null;
+      let uploadAttempt = 0;
+      const maxRetries = 2;
 
+      while (uploadAttempt <= maxRetries && !uploadResponse?.ok) {
+        try {
+          uploadResponse = await fetch(url, {
+            method: 'PUT',
+            headers: { 'Content-Type': f.type },
+            body: f,
+            signal: AbortSignal.timeout(30000), // 30 second timeout
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error(
+              `Upload failed: ${uploadResponse.status} ${uploadResponse.statusText}`
+            );
+          }
+        } catch (error) {
+          uploadAttempt++;
+          if (uploadAttempt > maxRetries) {
+            throw new Error(
+              `Upload failed after ${maxRetries + 1} attempts: ${
+                error instanceof Error ? error.message : 'Network error'
+              }`
+            );
+          }
+          setProcessingStatus(
+            `Upload failed, retrying (attempt ${uploadAttempt})...`
+          );
+          await new Promise((r) => setTimeout(r, 1000 * uploadAttempt)); // Exponential backoff
+        }
+      }
+
+      // Construct the full S3 URL from the key
+      const s3BaseUrl = url.split('?')[0].replace(key, '');
+      const fullImageUrl = `${s3BaseUrl}${key}`;
+      setImageUrl(fullImageUrl);
+
+      // Step 3: Generate captions with error handling
       setUploadProgress(75);
       setProcessingStatus('Generating captions...');
 
-      const cap = await getCaptions(key, tone);
-      setCaptions([cap.base, ...(cap.variants || [])].filter(Boolean));
+      let captions_: string[] = [];
+      try {
+        const cap = await getCaptions(fullImageUrl, tone);
+        captions_ = [cap.baseCaption, ...(cap.variants || [])].filter(Boolean);
+        setCaptions(captions_);
 
+        if (captions_.length === 0) {
+          toast.warn('No captions generated. Please try again.');
+        }
+      } catch (error) {
+        console.warn('Caption generation failed:', error);
+        toast.warn(
+          `Caption generation failed: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        );
+        // Continue with mask generation even if captions fail
+      }
+
+      // Step 4: Generate mask with error handling
       setUploadProgress(90);
       setProcessingStatus('Generating mask...');
 
-      const m = await getMask(key);
-      setMaskUrl(m.maskUrl);
+      try {
+        const m = await getMask(fullImageUrl);
+        setMaskUrl(m.maskUrl || '');
+      } catch (error) {
+        console.warn('Mask generation failed:', error);
+        toast.warn(
+          `Mask generation failed: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        );
+        // Mask is optional, so continue
+      }
 
+      // Success!
       setUploadProgress(100);
       setProcessingStatus('Complete!');
       setLoading(false);
@@ -76,9 +172,17 @@ export function usePlayground() {
           ? error.message
           : 'Failed to process image. Please try again.';
       toast.error(errorMsg);
+
+      // Reset state
       setLoading(false);
       setProcessingStatus('');
       setUploadProgress(0);
+
+      // Clean up partial state
+      if (imageObjUrl) {
+        URL.revokeObjectURL(imageObjUrl);
+        setImageObjUrl('');
+      }
     }
   };
 
@@ -86,6 +190,7 @@ export function usePlayground() {
     file,
     imageObjUrl,
     s3Key,
+    imageUrl,
     maskUrl,
     captions,
     text,

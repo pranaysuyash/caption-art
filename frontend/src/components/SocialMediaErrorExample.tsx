@@ -3,6 +3,7 @@
  */
 
 import React, { useState } from 'react';
+import './SocialMediaErrorExample.css';
 import {
   platformManager,
   errorHandler,
@@ -10,20 +11,26 @@ import {
   type ErrorHandlingResult,
   type ShareablePlatform,
 } from '../lib/social';
+import { safeLocalStorage } from '../lib/storage/safeLocalStorage';
 
 export const SocialMediaErrorExample: React.FC = () => {
-  const [errorResult, setErrorResult] = useState<ErrorHandlingResult | null>(null);
+  const [errorResult, setErrorResult] = useState<ErrorHandlingResult | null>(
+    null
+  );
   const [postResult, setPostResult] = useState<PostResult | null>(null);
 
   const simulateAuthError = async () => {
-    // Clear auth to simulate authentication error
-    localStorage.removeItem('instagram_auth_token');
+    // Clear auth to simulate authentication error - use safeLocalStorage wrapper
+    safeLocalStorage.removeItem('instagram_auth_token');
 
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
     canvas.height = 1080;
 
-    const prepared = await platformManager.prepareImageForPosting(canvas, 'instagram');
+    const prepared = await platformManager.prepareImageForPosting(
+      canvas,
+      'instagram'
+    );
     const result = await platformManager.postToPlatform(
       'instagram',
       prepared,
@@ -74,12 +81,12 @@ export const SocialMediaErrorExample: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <div className='social-media-error-example'>
       <h2>Social Media Error Handling Examples</h2>
 
-      <div style={{ marginBottom: '20px' }}>
+      <div className='actions'>
         <h3>Simulate Errors:</h3>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div className='controls'>
           <button onClick={simulateAuthError}>Authentication Error</button>
           <button onClick={simulateImageSizeError}>Image Size Error</button>
           <button onClick={simulateRateLimitError}>Rate Limit Error</button>
@@ -89,14 +96,7 @@ export const SocialMediaErrorExample: React.FC = () => {
       </div>
 
       {errorResult && (
-        <div
-          style={{
-            border: '2px solid #e74c3c',
-            borderRadius: '8px',
-            padding: '20px',
-            backgroundColor: '#ffe6e6',
-          }}
-        >
+        <div className='error-box'>
           <h3>Error Details</h3>
           <p>
             <strong>Type:</strong> {errorResult.type}
@@ -124,21 +124,16 @@ export const SocialMediaErrorExample: React.FC = () => {
             </p>
           )}
 
-          <div style={{ marginTop: '15px' }}>
+          <div className='available-actions'>
             <h4>Available Actions:</h4>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div className='controls'>
               {errorResult.actions.map((action, index) => (
                 <button
                   key={index}
                   onClick={() => action.action()}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: action.isPrimary ? '#3498db' : '#95a5a6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
+                  className={`action-button ${
+                    action.isPrimary ? 'primary' : 'secondary'
+                  }`}
                 >
                   {action.label}
                 </button>
@@ -149,15 +144,7 @@ export const SocialMediaErrorExample: React.FC = () => {
       )}
 
       {postResult && (
-        <div
-          style={{
-            border: '2px solid #95a5a6',
-            borderRadius: '8px',
-            padding: '20px',
-            backgroundColor: '#f5f5f5',
-            marginTop: '20px',
-          }}
-        >
+        <div className='post-result-box'>
           <h3>Post Result</h3>
           <p>
             <strong>Success:</strong> {postResult.success ? 'Yes' : 'No'}
@@ -168,7 +155,11 @@ export const SocialMediaErrorExample: React.FC = () => {
           {postResult.postUrl && (
             <p>
               <strong>Post URL:</strong>{' '}
-              <a href={postResult.postUrl} target="_blank" rel="noopener noreferrer">
+              <a
+                href={postResult.postUrl}
+                target='_blank'
+                rel='noopener noreferrer'
+              >
                 {postResult.postUrl}
               </a>
             </p>

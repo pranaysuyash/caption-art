@@ -2,7 +2,7 @@ import { Router } from 'express'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
-import { AuthModel } from '../models/auth'
+import { getPrismaClient } from '../lib/prisma'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
 import { AuthenticatedRequest } from '../types/auth'
@@ -10,6 +10,7 @@ import { UploadAssetsSchema } from '../schemas/validation'
 import { safeValidateData } from '../middleware/validation'
 
 const router = Router()
+const prisma = getPrismaClient()
 const requireAuth = createAuthMiddleware() as any
 
 // Configure multer for file uploads
@@ -86,7 +87,9 @@ router.post(
       const { workspaceId } = validation.data
 
       // Verify workspace belongs to current agency
-      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' })
       }
@@ -101,22 +104,26 @@ router.post(
       }
 
       // Check current asset count
-      const existingAssets = AuthModel.getAssetsByWorkspace(workspaceId)
-      if (existingAssets.length + files.length > 20) {
+      const existingAssets = await prisma.asset.count({
+        where: { workspaceId },
+      })
+      if (existingAssets + files.length > 20) {
         return res.status(400).json({
-          error: `Cannot upload ${files.length} files. Maximum 20 assets allowed per workspace. Currently have ${existingAssets.length}.`,
+          error: `Cannot upload ${files.length} files. Maximum 20 assets allowed per workspace. Currently have ${existingAssets}.`,
         })
       }
 
       const uploadedAssets = []
       for (const file of files) {
-        const asset = await AuthModel.createAsset({
-          workspaceId,
-          filename: file.filename,
-          originalName: file.originalname,
-          mimeType: file.mimetype,
-          size: file.size,
-          url: `/uploads/${file.filename}`,
+        const asset = await prisma.asset.create({
+          data: {
+            workspaceId,
+            filename: file.filename,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: file.size,
+            url: `/uploads/${file.filename}`,
+          },
         })
         uploadedAssets.push(asset)
       }
@@ -142,7 +149,9 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
     const { workspaceId } = req.params
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -151,7 +160,9 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const assets = AuthModel.getAssetsByWorkspace(workspaceId)
+    const assets = await prisma.asset.findMany({
+      where: { workspaceId },
+    })
     res.json({ assets })
   } catch (error) {
     log.error({ err: error }, 'Get assets by workspace error')
@@ -164,14 +175,18 @@ router.get('/:id', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
-    const asset = AuthModel.getAssetById(id)
+    const asset = await prisma.asset.findUnique({
+      where: { id },
+    })
 
     if (!asset) {
       return res.status(404).json({ error: 'Asset not found' })
     }
 
     // Verify asset belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(asset.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: asset.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
@@ -188,14 +203,18 @@ router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
-    const asset = AuthModel.getAssetById(id)
+    const asset = await prisma.asset.findUnique({
+      where: { id },
+    })
 
     if (!asset) {
       return res.status(404).json({ error: 'Asset not found' })
     }
 
     // Verify asset belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(asset.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: asset.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
@@ -206,12 +225,8 @@ router.delete('/:id', requireAuth, async (req, res) => {
       fs.unlinkSync(filePath)
     }
 
-    const deleted = AuthModel.deleteAsset(id)
-    if (!deleted) {
-      return res.status(404).json({ error: 'Asset not found' })
-    }
-
-    res.json({ message: 'Asset deleted successfully' })
+    await prisma.asset.delete({ where: { id } })
+    res.json({ success: true })
   } catch (error) {
     log.error({ err: error }, 'Delete asset error')
     res.status(500).json({ error: 'Internal server error' })

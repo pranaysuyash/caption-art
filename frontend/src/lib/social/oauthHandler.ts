@@ -68,6 +68,8 @@ const OAUTH_CONFIGS: Record<ShareablePlatform, OAuthConfig> = {
  * Storage key prefix for OAuth tokens
  * Using a prefix to namespace our tokens
  */
+import { safeLocalStorage } from '../storage/safeLocalStorage';
+
 const TOKEN_STORAGE_PREFIX = 'oauth_token_';
 
 /**
@@ -104,8 +106,12 @@ export class OAuthHandler {
     this.pendingAuth.set(state, platform);
 
     // Store state in sessionStorage for verification
-    sessionStorage.setItem('oauth_state', state);
-    sessionStorage.setItem('oauth_platform', platform);
+    try {
+      sessionStorage.setItem('oauth_state', state);
+      sessionStorage.setItem('oauth_platform', platform);
+    } catch (err) {
+      // ignore sessionStorage failures in restrictive environments
+    }
 
     // Build authorization URL
     const authUrl = this.buildAuthUrl(platform, config, state);
@@ -170,8 +176,14 @@ export class OAuthHandler {
     platform: ShareablePlatform
   ): Promise<AuthStatus> {
     // Verify state parameter
-    const storedState = sessionStorage.getItem('oauth_state');
-    const storedPlatform = sessionStorage.getItem('oauth_platform');
+    let storedState: string | null = null;
+    let storedPlatform: string | null = null;
+    try {
+      storedState = sessionStorage.getItem('oauth_state');
+      storedPlatform = sessionStorage.getItem('oauth_platform');
+    } catch {
+      // sessionStorage may be unavailable
+    }
 
     if (state !== storedState || platform !== storedPlatform) {
       // Don't include state values in error message to prevent exposure
@@ -179,8 +191,12 @@ export class OAuthHandler {
     }
 
     // Clean up session storage
-    sessionStorage.removeItem('oauth_state');
-    sessionStorage.removeItem('oauth_platform');
+    try {
+      sessionStorage.removeItem('oauth_state');
+      sessionStorage.removeItem('oauth_platform');
+    } catch {
+      // ignore
+    }
 
     // Exchange code for token
     const token = await this.exchangeCodeForToken(platform, code);
@@ -257,7 +273,7 @@ export class OAuthHandler {
 
     // Store in localStorage (encrypted in production)
     const tokenKey = `${TOKEN_STORAGE_PREFIX}${platform}`;
-    localStorage.setItem(tokenKey, JSON.stringify(storedToken));
+    safeLocalStorage.setItem(tokenKey, JSON.stringify(storedToken));
   }
 
   /**
@@ -266,7 +282,7 @@ export class OAuthHandler {
    */
   getStoredToken(platform: ShareablePlatform): StoredToken | null {
     const tokenKey = `${TOKEN_STORAGE_PREFIX}${platform}`;
-    const tokenJson = localStorage.getItem(tokenKey);
+    const tokenJson = safeLocalStorage.getItem(tokenKey);
 
     if (!tokenJson) {
       return null;
@@ -352,13 +368,13 @@ export class OAuthHandler {
     // In production, would call platform's revoke endpoint
     // For now, just remove from storage
     const tokenKey = `${TOKEN_STORAGE_PREFIX}${platform}`;
-    localStorage.removeItem(tokenKey);
+    safeLocalStorage.removeItem(tokenKey);
 
     // Also clear legacy storage keys (all possible variations)
-    localStorage.removeItem(`${platform}_auth_token`);
-    localStorage.removeItem(`${platform}_username`);
-    localStorage.removeItem(`${platform}_profile_picture`);
-    localStorage.removeItem(`${platform}_token_expiry`);
+    safeLocalStorage.removeItem(`${platform}_auth_token`);
+    safeLocalStorage.removeItem(`${platform}_username`);
+    safeLocalStorage.removeItem(`${platform}_profile_picture`);
+    safeLocalStorage.removeItem(`${platform}_token_expiry`);
   }
 
   /**
@@ -384,7 +400,9 @@ export class OAuthHandler {
   private generateState(): string {
     const array = new Uint8Array(32);
     crypto.getRandomValues(array);
-    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join(
+      ''
+    );
   }
 
   /**

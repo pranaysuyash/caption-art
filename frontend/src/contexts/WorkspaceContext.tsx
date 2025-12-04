@@ -10,6 +10,7 @@ import {
   ReactNode,
 } from 'react';
 import { workspaceClient, Workspace } from '../lib/api/workspaceClient';
+import { safeLocalStorage } from '../lib/storage/safeLocalStorage';
 
 interface WorkspaceContextType {
   workspaces: Workspace[];
@@ -38,7 +39,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
       // Set active workspace if not set
       if (!activeWorkspace && ws.length > 0) {
-        const savedId = localStorage.getItem('activeWorkspaceId');
+        const savedId = safeLocalStorage.getItem('activeWorkspaceId');
         const active = savedId ? ws.find((w) => w.id === savedId) : ws[0];
         setActiveWorkspace(active || ws[0]);
       }
@@ -55,7 +56,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
 
   const handleSetActiveWorkspace = (workspace: Workspace) => {
     setActiveWorkspace(workspace);
-    localStorage.setItem('activeWorkspaceId', workspace.id);
+    safeLocalStorage.setItem('activeWorkspaceId', workspace.id);
   };
 
   return (

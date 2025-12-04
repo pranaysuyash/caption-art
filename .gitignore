@@ -36,6 +36,13 @@ mcp-shell.log
 **/coverage/
 **/.nyc_output/
 
+# Database files
+**/*.sqlite
+**/*.sqlite-*
+**/*.db
+**/*.db-*
+backend/app.sqlite
+
 # Generated content and renders
 **/generated/
 **/uploads/
@@ -81,6 +88,11 @@ mcp-shell.log
 
 # TypeScript
 **/*.tsbuildinfo
+
+# Prisma
+**/prisma/migrations/
+.env.production
+.env.local
 
 # Misc
 **/*.pem

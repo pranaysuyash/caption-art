@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { AuthModel } from '../models/auth'
+import { getPrismaClient } from '../lib/prisma'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
 import { validateRequest } from '../middleware/validation'
@@ -9,6 +9,7 @@ import { CaptionGenerator } from '../services/captionGenerator'
 import { StartBatchSchema } from '../schemas/validation'
 
 const router = Router()
+const prisma = getPrismaClient()
 const requireAuth = createAuthMiddleware() as any
 
 // POST /api/batch/generate - Start batch caption generation
@@ -22,7 +23,9 @@ router.post(
       const { workspaceId, assetIds } = req.body
 
       // Verify workspace belongs to current agency
-      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' })
       }
@@ -58,24 +61,33 @@ router.get('/jobs/:jobId', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { jobId } = req.params
-    const job = AuthModel.getBatchJobById(jobId)
+    const job = await prisma.batchJob.findUnique({
+      where: { id: jobId },
+    })
 
     if (!job) {
       return res.status(404).json({ error: 'Batch job not found' })
     }
 
     // Verify job belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(job.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: job.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
 
     // Get captions for this job
+    const assetIds = job.assetIds.split(',')
     const jobCaptions = []
-    for (const assetId of job.assetIds) {
-      const captions = AuthModel.getCaptionsByAsset(assetId)
+    for (const assetId of assetIds) {
+      const captions = await prisma.caption.findMany({
+        where: { assetId },
+      })
       if (captions.length > 0) {
-        const asset = AuthModel.getAssetById(assetId)
+        const asset = await prisma.asset.findUnique({
+          where: { id: assetId },
+        })
         jobCaptions.push({
           assetId,
           assetName: asset?.originalName || 'Unknown',
@@ -104,7 +116,9 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
     const { workspaceId } = req.params
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -113,7 +127,9 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const jobs = AuthModel.getBatchJobsByWorkspace(workspaceId)
+    const jobs = await prisma.batchJob.findMany({
+      where: { workspaceId },
+    })
     res.json({ jobs })
   } catch (error) {
     log.error({ err: error }, 'Get batch jobs error')
@@ -131,7 +147,9 @@ router.get(
       const { workspaceId } = req.params
 
       // Verify workspace belongs to current agency
-      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' })
       }
@@ -140,37 +158,46 @@ router.get(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const captions = AuthModel.getCaptionsByWorkspace(workspaceId)
+      const captions = await prisma.caption.findMany({
+        where: { workspaceId },
+        include: {
+          variations: true,
+        },
+      })
 
       // Enrich captions with asset information
-      const enrichedCaptions = captions.map((caption) => {
-        const asset = AuthModel.getAssetById(caption.assetId)
-        return {
-          ...caption,
-          text:
-            caption.variations.length > 0
-              ? caption.variations[0]?.text || ''
-              : '', // For backward compatibility
-          approved: caption.approvalStatus === 'approved',
-          variations: caption.variations.map((v) => ({
-            ...v,
-            approved: v.approvalStatus === 'approved',
-          })),
-          primaryVariation: caption.primaryVariationId
-            ? caption.variations.find(
-                (v) => v.id === caption.primaryVariationId
-              )
-            : caption.variations[0] || null,
-          asset: asset
-            ? {
-                id: asset.id,
-                originalName: asset.originalName,
-                mimeType: asset.mimeType,
-                url: asset.url,
-              }
-            : null,
-        }
-      })
+      const enrichedCaptions = await Promise.all(
+        captions.map(async (caption) => {
+          const asset = await prisma.asset.findUnique({
+            where: { id: caption.assetId },
+          })
+          return {
+            ...caption,
+            text:
+              caption.variations.length > 0
+                ? caption.variations[0]?.text || ''
+                : '', // For backward compatibility
+            approved: caption.approvalStatus === 'approved',
+            variations: caption.variations.map((v) => ({
+              ...v,
+              approved: v.approvalStatus === 'approved',
+            })),
+            primaryVariation: caption.primaryVariationId
+              ? caption.variations.find(
+                  (v) => v.id === caption.primaryVariationId
+                )
+              : caption.variations[0] || null,
+            asset: asset
+              ? {
+                  id: asset.id,
+                  originalName: asset.originalName,
+                  mimeType: asset.mimeType,
+                  url: asset.url,
+                }
+              : null,
+          }
+        })
+      )
 
       res.json({ captions: enrichedCaptions })
     } catch (error) {
@@ -193,41 +220,42 @@ router.put('/captions/:captionId', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Caption text is required' })
     }
 
-    const caption = AuthModel.getCaptionById(captionId)
+    const caption = await prisma.caption.findUnique({
+      where: { id: captionId },
+      include: { variations: true },
+    })
     if (!caption) {
       return res.status(404).json({ error: 'Caption not found' })
     }
 
     // Verify caption belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: caption.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
 
     // For backward compatibility and manual editing, add a new variation with the edited text
-    const updatedCaption = AuthModel.addCaptionVariation(captionId, {
-      text: (safeText || text || '').trim(),
-      label: 'main',
-      status: 'completed',
-      approvalStatus: 'pending',
-      approved: false,
+    const newVariation = await prisma.captionVariation.create({
+      data: {
+        captionId,
+        text: (safeText || text || '').trim(),
+        label: 'main',
+        status: 'completed',
+        approvalStatus: 'pending',
+        approved: false,
+      },
     })
 
-    if (!updatedCaption) {
-      return res.status(404).json({ error: 'Caption not found' })
-    }
-
     // Set this new variation as the primary one
-    const latestVariation =
-      updatedCaption.variations[updatedCaption.variations.length - 1]
-    if (latestVariation) {
-      AuthModel.setPrimaryCaptionVariation(captionId, latestVariation.id)
-      // Refresh the caption to get the updated primary variation
-      const refreshedCaption = AuthModel.getCaptionById(captionId)
-      if (refreshedCaption) {
-        updatedCaption.primaryVariationId = refreshedCaption.primaryVariationId
-      }
-    }
+    const updatedCaption = await prisma.caption.update({
+      where: { id: captionId },
+      data: { primaryVariationId: newVariation.id },
+      include: { variations: true },
+    })
+
+    const latestVariation = newVariation
 
     res.json({
       caption: {
@@ -256,22 +284,25 @@ router.delete('/captions/:captionId', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { captionId } = req.params
-    const caption = AuthModel.getCaptionById(captionId)
+    const caption = await prisma.caption.findUnique({
+      where: { id: captionId },
+    })
 
     if (!caption) {
       return res.status(404).json({ error: 'Caption not found' })
     }
 
     // Verify caption belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: caption.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const deleted = AuthModel.deleteCaption(captionId)
-    if (!deleted) {
-      return res.status(404).json({ error: 'Caption not found' })
-    }
+    await prisma.caption.delete({
+      where: { id: captionId },
+    })
 
     res.json({ message: 'Caption deleted successfully' })
   } catch (error) {

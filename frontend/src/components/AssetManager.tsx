@@ -6,6 +6,8 @@ import { useState, useEffect } from 'react';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import { creativeEngineClient } from '../lib/api/creativeEngineClient';
 import { campaignClient } from '../lib/api/campaignClient';
+import apiFetch from '../lib/api/httpClient';
+import { safeLocalStorage } from '../lib/storage/safeLocalStorage';
 import './AssetManager.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
@@ -56,11 +58,10 @@ export function AssetManager() {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/assets?workspaceId=${activeWorkspace.id}`,
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          method: 'GET',
         }
       );
 
@@ -118,10 +119,9 @@ export function AssetManager() {
         formData.append('files', selectedFiles[i]);
       }
 
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`${API_URL}/assets/upload`, {
+      const response = await apiFetch(`${API_URL}/assets/upload`, {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        // apiFetch will include credentials
         body: formData,
       });
 
@@ -155,11 +155,10 @@ export function AssetManager() {
 
       // Get brandKitId from workspace (assuming first brand kit for now)
       // In production, this would come from campaign or user selection
-      const token = localStorage.getItem('authToken');
-      const brandKitResponse = await fetch(
+      const brandKitResponse = await apiFetch(
         `${API_URL}/brand-kits?workspaceId=${activeWorkspace.id}`,
         {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          method: 'GET',
         }
       );
 
@@ -232,14 +231,8 @@ export function AssetManager() {
         <div className='header-actions'>
           {assets.length > 0 && (
             <>
-              <div
-                className='campaign-selector'
-                style={{ marginRight: '12px' }}
-              >
-                <label
-                  htmlFor='campaign-select'
-                  style={{ fontSize: '13px', marginRight: '6px' }}
-                >
+              <div className='campaign-selector campaign-selector-right'>
+                <label htmlFor='campaign-select' className='campaign-label'>
                   Campaign:
                 </label>
                 <select
@@ -249,7 +242,7 @@ export function AssetManager() {
                     setSelectedCampaignId(e.target.value || null)
                   }
                   disabled={generating}
-                  style={{ minWidth: '150px' }}
+                  className='campaign-select'
                 >
                   <option value=''>None (no style learning)</option>
                   {campaigns.map((campaign) => (
@@ -316,7 +309,7 @@ export function AssetManager() {
               multiple
               accept='image/*,video/*'
               onChange={handleFileSelect}
-              style={{ display: 'none' }}
+              className='hidden-input'
             />
           </label>
           {assets.length > 0 && (
