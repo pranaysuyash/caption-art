@@ -91,17 +91,31 @@ export function CampaignList() {
                 </td>
                 <td>
                   <span className='badge badge-objective'>
-                    {campaign.objective}
+                    {(campaign as any).briefData?.objective ||
+                      campaign.objective}
                   </span>
                 </td>
                 <td>
                   <span
-                    className={`badge badge-funnel badge-funnel-${campaign.funnelStage}`}
+                    className={`badge badge-funnel badge-funnel-${
+                      (campaign as any).briefData?.funnelStage ||
+                      campaign.funnelStage
+                    }`}
                   >
-                    {campaign.funnelStage}
+                    {(campaign as any).briefData?.funnelStage ||
+                      campaign.funnelStage}
                   </span>
                 </td>
-                <td>{campaign.placements.length} platforms</td>
+                <td>
+                  {
+                    (
+                      (campaign as any).briefData?.placements ||
+                      campaign.placements ||
+                      []
+                    ).length
+                  }{' '}
+                  platforms
+                </td>
                 <td>
                   <span
                     className={`badge badge-status badge-status-${campaign.status}`}

@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import apiFetch from '../../lib/api/httpClient';
+import { CreateCampaignModal } from '../CreateCampaignModal';
 
 interface Campaign {
   id: string;
   name: string;
   status: string;
-  objective: string;
+  objective?: string;
   lastUpdated: string;
   qualityScore?: number;
   scoreBreakdown?: Record<string, number>;
@@ -16,12 +17,7 @@ export function CampaignList() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-
-  const [createForm, setCreateForm] = useState({
-    name: '',
-    objective: 'awareness',
-  });
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     loadCampaigns();
@@ -31,9 +27,12 @@ export function CampaignList() {
     try {
       setLoading(true);
 
-      const response = await apiFetch(`/api/campaigns?workspaceId=${workspaceId}`, {
-        method: 'GET',
-      });
+      const response = await apiFetch(
+        `/api/campaigns?workspaceId=${workspaceId}`,
+        {
+          method: 'GET',
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Failed to load campaigns');
@@ -48,38 +47,9 @@ export function CampaignList() {
     }
   };
 
-  const handleCreateCampaign = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    try {
-      const response = await apiFetch(`/api/campaigns`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...createForm,
-          workspaceId,
-          status: 'draft',
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create campaign');
-      }
-
-      const newCampaign = await response.json();
-      const normalized = Array.isArray(newCampaign?.campaigns)
-        ? newCampaign.campaigns
-        : newCampaign.campaign
-        ? [newCampaign.campaign]
-        : [newCampaign];
-      setCampaigns((prev) => [...prev, ...normalized]);
-      setShowCreateForm(false);
-      setCreateForm({ name: '', objective: 'awareness' });
-    } catch (error) {
-      console.error('Error creating campaign:', error);
-    }
+  const handleCreateCampaign = async () => {
+    loadCampaigns(); // Reload campaigns after successful creation
+    setShowCreateModal(false);
   };
 
   const formatDate = (dateString: string) => {
@@ -182,146 +152,20 @@ export function CampaignList() {
         </div>
 
         <button
-          onClick={() => setShowCreateForm(true)}
+          onClick={() => setShowCreateModal(true)}
           className='btn btn-primary'
         >
           + New Campaign
         </button>
       </div>
 
-      {/* Create Campaign Modal */}
-      {showCreateForm && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: 'var(--color-bg-secondary, white)',
-              padding: '2rem',
-              borderRadius: '12px',
-              width: '100%',
-              maxWidth: '500px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <h2
-              style={{
-                fontFamily: 'var(--font-heading, sans-serif)',
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                color: 'var(--color-text, #1f2937)',
-                margin: '0 0 1.5rem 0',
-              }}
-            >
-              Create New Campaign
-            </h2>
-
-            <form
-              onSubmit={handleCreateCampaign}
-              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.5rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text, #1f2937)',
-                  }}
-                >
-                  Campaign Name
-                </label>
-                <input
-                  type='text'
-                  value={createForm.name}
-                  onChange={(e) =>
-                    setCreateForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  placeholder='e.g., Spring Sale 2025'
-                  className='input'
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border, #d1d5db)',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.5rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text, #1f2937)',
-                  }}
-                >
-                  Objective
-                </label>
-                <select
-                  value={createForm.objective}
-                  onChange={(e) =>
-                    setCreateForm((prev) => ({
-                      ...prev,
-                      objective: e.target.value,
-                    }))
-                  }
-                  className='input'
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border, #d1d5db)',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                  }}
-                >
-                  <option value='awareness'>Brand Awareness</option>
-                  <option value='conversion'>Conversions / Sales</option>
-                  <option value='traffic'>Website Traffic</option>
-                  <option value='engagement'>Engagement</option>
-                </select>
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  justifyContent: 'flex-end',
-                  marginTop: '1rem',
-                }}
-              >
-                <button
-                  type='button'
-                  onClick={() => setShowCreateForm(false)}
-                  className='btn btn-secondary'
-                >
-                  Cancel
-                </button>
-                <button
-                  type='submit'
-                  disabled={!createForm.name}
-                  className='btn btn-primary'
-                >
-                  Create Campaign
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+      {/* Create Campaign Modal component */}
+      {showCreateModal && (
+        <CreateCampaignModal
+          workspaceId={workspaceId || ''}
+          onClose={() => setShowCreateModal(false)}
+          onCreated={handleCreateCampaign}
+        />
       )}
 
       {/* Campaigns Grid */}
@@ -434,7 +278,8 @@ export function CampaignList() {
                             textTransform: 'capitalize',
                           }}
                         >
-                          {campaign.objective}
+                          {(campaign as any).briefData?.objective ||
+                            campaign.objective}
                         </span>
                       </div>
                       <div

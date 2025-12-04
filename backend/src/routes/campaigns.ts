@@ -49,7 +49,8 @@ router.post(
   validateRequest({ body: CreateCampaignSchema }),
   async (req, res) => {
     log.info('Creating campaign')
-    log.debug({ body: req.body }, 'Create campaign payload')
+    console.log('Create campaign: req.body', JSON.stringify(req.body))
+    log.info({ body: req.body }, 'Create campaign payload')
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       let validatedData = req.body
@@ -73,8 +74,14 @@ router.post(
       let brandKitId = validatedData.brandKitId
 
       // Defensive defaults and type checks to prevent runtime errors
-      if (!validatedData.placements || !Array.isArray(validatedData.placements)) {
-        log.warn({ placements: validatedData.placements }, 'Missing or invalid placements; defaulting to ig-feed')
+      if (
+        !validatedData.placements ||
+        !Array.isArray(validatedData.placements)
+      ) {
+        log.warn(
+          { placements: validatedData.placements },
+          'Missing or invalid placements; defaulting to ig-feed'
+        )
         validatedData.placements = ['ig-feed']
       }
       // Ensure brandKitId is undefined when not provided (Prisma prefers null/undefined over empty string)
@@ -111,14 +118,20 @@ router.post(
         referenceCaptions: validatedData.referenceCaptions || null,
       }
 
-      log.debug({ briefData }, 'Campaign briefData')
+      // Print placements for debugging to stdout for easier debugging
+      console.log('Create campaign payload placements:', JSON.stringify(validatedData.placements))
+      log.info(
+        { workspaceId, brandKitId, validatedData, briefData },
+        'Campaign creation debug'
+      )
       const campaign = await prisma.campaign.create({
         data: {
           workspaceId,
           brandKitId: brandKitId || undefined,
           name: validatedData.name,
           description: validatedData.description,
-          callToAction: validatedData.primaryCTA || validatedData.primaryCTA || null,
+          callToAction:
+            validatedData.primaryCTA || validatedData.primaryCTA || null,
           primaryOffer: validatedData.primaryOffer || null,
           targetAudience: validatedData.targetAudience || null,
           // pack additional fields into briefData JSON column
@@ -134,7 +147,13 @@ router.post(
           .status(400)
           .json({ error: 'Validation error', details: error.issues })
       }
-      log.error({ error: error instanceof Error ? error.message : error, stack: error instanceof Error ? error.stack : undefined }, 'Create campaign error')
+      log.error(
+        {
+          error: error instanceof Error ? error.message : error,
+          stack: error instanceof Error ? error.stack : undefined,
+        },
+        'Create campaign error'
+      )
       res.status(500).json({ error: 'Internal server error' })
     }
   }

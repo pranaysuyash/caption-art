@@ -2,7 +2,7 @@
  * CreateCampaignModal - Modal for creating new campaigns
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   campaignClient,
   CreateCampaignData,
@@ -25,9 +25,10 @@ export function CreateCampaignModal({
   onCreated,
 }: CreateCampaignModalProps) {
   const [formData, setFormData] = useState<CreateCampaignData>({
+    workspaceId,
     name: '',
     description: '',
-    brandKitId: workspaceId, // Using workspaceId as placeholder - will need to fetch actual brandKitId
+    brandKitId: undefined,
     objective: 'awareness',
     launchType: 'new-launch',
     funnelStage: 'cold',
@@ -38,14 +39,33 @@ export function CreateCampaignModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newReferenceCaption, setNewReferenceCaption] = useState('');
+  const [workspaceBrandKit, setWorkspaceBrandKit] = useState<{
+    id: string;
+    name?: string;
+  } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+      if (!payload.workspaceId) {
+        setError('Workspace required to create a campaign');
+        return;
+      }
       setLoading(true);
       setError(null);
-      await campaignClient.createCampaign(formData);
+      // Ensure required fields are present; add defaults if omitted
+      const payload: CreateCampaignData = {
+        ...formData,
+        workspaceId: formData.workspaceId || workspaceId,
+        launchType: formData.launchType || 'new-launch',
+        funnelStage: formData.funnelStage || 'cold',
+        placements:
+          formData.placements && formData.placements.length
+            ? formData.placements
+            : ['ig-feed'],
+      };
+      await campaignClient.createCampaign(payload);
       onCreated();
     } catch (err) {
       setError(
@@ -55,6 +75,32 @@ export function CreateCampaignModal({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const loadBrandKit = async () => {
+      if (!workspaceId) return;
+      try {
+        const resp = await fetch(
+          `${
+            import.meta.env.VITE_API_BASE || 'http://localhost:3001'
+          }/api/brand-kits/workspace/${workspaceId}`,
+          { credentials: 'include' }
+        );
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (data.brandKit) {
+          setWorkspaceBrandKit({
+            id: data.brandKit.id,
+            name: data.brandKit.name || '',
+          });
+          setFormData((f) => ({ ...f, brandKitId: data.brandKit.id }));
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    loadBrandKit();
+  }, [workspaceId]);
 
   const togglePlacement = (placement: Placement) => {
     setFormData((prev) => ({
@@ -119,6 +165,30 @@ export function CreateCampaignModal({
               placeholder='Campaign goals and details...'
               rows={3}
             />
+          </div>
+
+          <div className='form-group'>
+            <label>Brand Kit</label>
+            <select
+              value={formData.brandKitId || ''}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  brandKitId: e.target.value || undefined,
+                })
+              }
+            >
+              <option value=''>Default from workspace</option>
+              {workspaceBrandKit && (
+                <option value={workspaceBrandKit.id}>
+                  {workspaceBrandKit.name || workspaceBrandKit.id}
+                </option>
+              )}
+            </select>
+            <small style={{ display: 'block', marginTop: '4px', opacity: 0.7 }}>
+              Select a brand kit to attach to this campaign. If none selected,
+              workspace's default will be used.
+            </small>
           </div>
 
           <div className='form-row'>

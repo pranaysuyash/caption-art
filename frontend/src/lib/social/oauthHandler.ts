@@ -69,6 +69,7 @@ const OAUTH_CONFIGS: Record<ShareablePlatform, OAuthConfig> = {
  * Using a prefix to namespace our tokens
  */
 import { safeLocalStorage } from '../storage/safeLocalStorage';
+import { safeSessionStorage } from '../storage/safeSessionStorage';
 
 const TOKEN_STORAGE_PREFIX = 'oauth_token_';
 
@@ -107,8 +108,8 @@ export class OAuthHandler {
 
     // Store state in sessionStorage for verification
     try {
-      sessionStorage.setItem('oauth_state', state);
-      sessionStorage.setItem('oauth_platform', platform);
+      safeSessionStorage.setItem('oauth_state', state);
+      safeSessionStorage.setItem('oauth_platform', platform);
     } catch (err) {
       // ignore sessionStorage failures in restrictive environments
     }
@@ -179,8 +180,8 @@ export class OAuthHandler {
     let storedState: string | null = null;
     let storedPlatform: string | null = null;
     try {
-      storedState = sessionStorage.getItem('oauth_state');
-      storedPlatform = sessionStorage.getItem('oauth_platform');
+      storedState = safeSessionStorage.getItem('oauth_state');
+      storedPlatform = safeSessionStorage.getItem('oauth_platform');
     } catch {
       // sessionStorage may be unavailable
     }
@@ -192,8 +193,8 @@ export class OAuthHandler {
 
     // Clean up session storage
     try {
-      sessionStorage.removeItem('oauth_state');
-      sessionStorage.removeItem('oauth_platform');
+      safeSessionStorage.removeItem('oauth_state');
+      safeSessionStorage.removeItem('oauth_platform');
     } catch {
       // ignore
     }

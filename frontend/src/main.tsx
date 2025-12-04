@@ -1,3 +1,38 @@
+// Global error tracking for debugging storage/other runtime errors in dev
+if (process.env.NODE_ENV === 'development') {
+  window.addEventListener('error', (event: ErrorEvent) => {
+    try {
+      const message = event.message || ''
+      if (message.toLowerCase().includes('storage') || message.toLowerCase().includes('localstorage') || message.toLowerCase().includes('sessionstorage')) {
+        // Provide stack details for easier debugging
+        // eslint-disable-next-line no-console
+        console.warn('Storage access error captured:', {
+          message: event.message,
+          filename: event.filename,
+          lineno: event.lineno,
+          colno: event.colno,
+          error: event.error && event.error.stack,
+        })
+      }
+    } catch (err) {
+      // ignore
+    }
+  })
+
+  window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+    try {
+      const reason = event.reason
+      const msg = typeof reason === 'string' ? reason : (reason && reason.message) || ''
+      if (msg.toLowerCase().includes('storage')) {
+        // eslint-disable-next-line no-console
+        console.warn('Unhandled promise rejection (storage related):', event.reason)
+      }
+    } catch (err) {
+      // ignore
+    }
+  })
+}
+
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'

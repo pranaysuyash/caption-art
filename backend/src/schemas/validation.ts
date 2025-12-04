@@ -196,14 +196,16 @@ export const CreateBrandKitSchema = z.object({
 /**
  * Schema for campaign creation
  */
-export const CreateCampaignSchema = z.object({
-  workspaceId: workspaceIdSchema,
+export const CreateCampaignSchema = z
+  .object({
+  workspaceId: workspaceIdSchema.optional(),
   brandKitId: z.string().min(1, 'Brand kit ID is required').optional(),
   name: z.string().min(1, 'Campaign name is required').max(100, 'Campaign name too long'),
   description: z.string().optional(),
   objective: z.enum(['awareness', 'traffic', 'conversion', 'engagement']),
   launchType: z.enum(['new-launch', 'evergreen', 'seasonal', 'sale', 'event']),
   funnelStage: z.enum(['cold', 'warm', 'hot']),
+  placements: z.array(z.enum(['ig-feed', 'ig-story', 'fb-feed', 'fb-story', 'li-feed'])).optional(),
   // Campaign brief fields
   brief: z.object({
     clientOverview: z.string().optional(),
@@ -244,7 +246,11 @@ export const CreateCampaignSchema = z.object({
       trackingMethods: z.array(z.string()).optional(),
     }).optional(),
   }).optional(),
-})
+  })
+  .refine((data) => !!data.workspaceId || !!data.brandKitId, {
+    message: 'Either workspaceId or brandKitId must be provided',
+    path: ['workspaceId'],
+  })
 
 /**
  * Schema for campaign brief update

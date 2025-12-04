@@ -29,9 +29,9 @@ export interface Campaign {
   brandKitId?: string;
   name: string;
   description?: string;
-  objective: CampaignObjective;
-  launchType: LaunchType;
-  funnelStage: FunnelStage;
+  objective?: CampaignObjective;
+  launchType?: LaunchType;
+  funnelStage?: FunnelStage;
   primaryOffer?: string;
   primaryCTA?: string;
   secondaryCTA?: string;
@@ -39,12 +39,14 @@ export interface Campaign {
   placements: Placement[];
   referenceCaptions?: string[];
   learnedStyleProfile?: string;
+  briefData?: any;
   status: 'draft' | 'active' | 'paused' | 'completed';
   createdAt: string;
   updatedAt: string;
 }
 
 export interface CreateCampaignData {
+  workspaceId?: string;
   name: string;
   description?: string;
   brandKitId?: string;
