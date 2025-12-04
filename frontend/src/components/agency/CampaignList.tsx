@@ -136,37 +136,12 @@ export function CampaignList() {
   };
 
   return (
-    <div
-      style={{ padding: '2rem', fontFamily: 'var(--font-body, sans-serif)' }}
-    >
+    <div className='page-container'>
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-        }}
-      >
+      <div className='page-header'>
         <div>
-          <h1
-            style={{
-              fontFamily: 'var(--font-heading, sans-serif)',
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              color: 'var(--color-text, #1f2937)',
-              margin: 0,
-            }}
-          >
-            Campaigns
-          </h1>
-          <p
-            style={{
-              color: 'var(--color-text-secondary, #6b7280)',
-              marginTop: '0.5rem',
-              marginBottom: 0,
-            }}
-          >
+          <h1 className='page-title'>Campaigns</h1>
+          <p className='page-subtitle'>
             Organize your creative work by campaign
           </p>
         </div>
@@ -200,13 +175,7 @@ export function CampaignList() {
           Loading campaigns...
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-            gap: '1.5rem',
-          }}
-        >
+        <div className='card-grid'>
           <div
             style={{
               gridColumn: '1 / -1',
@@ -241,29 +210,7 @@ export function CampaignList() {
                   color: 'inherit',
                 }}
               >
-                <div
-                  style={{
-                    backgroundColor: 'var(--color-bg-secondary, white)',
-                    border: '1px solid var(--color-border, #e5e7eb)',
-                    borderRadius: '12px',
-                    padding: '1.5rem',
-                    transition: 'all 0.2s ease',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor =
-                      'var(--color-primary, #2563eb)';
-                    e.currentTarget.style.boxShadow =
-                      '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor =
-                      'var(--color-border, #e5e7eb)';
-                    e.currentTarget.style.boxShadow = 'none';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                >
+                <div className='card card-interactive'>
                   <div
                     style={{
                       display: 'flex',

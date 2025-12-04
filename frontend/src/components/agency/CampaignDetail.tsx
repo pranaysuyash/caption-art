@@ -202,9 +202,7 @@ export function CampaignDetail() {
   }
 
   return (
-    <div
-      style={{ padding: '2rem', fontFamily: 'var(--font-body, sans-serif)' }}
-    >
+    <div className='page-container'>
       <style>
         {`.brand-form-input {
             background: #161616;
@@ -343,41 +341,11 @@ export function CampaignDetail() {
 
       {/* Content */}
       {activeTab === 'brand-kit' && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '2rem',
-          }}
-        >
+        <div className='two-column-layout'>
           {/* Brand Kit Editor */}
-          <div
-            style={{
-              backgroundColor: 'var(--color-bg-secondary, white)',
-              border: '1px solid var(--color-border, #e5e7eb)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1rem',
-              }}
-            >
-              <h3
-                style={{
-                  fontFamily: 'var(--font-heading, sans-serif)',
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: 'var(--color-text, #1f2937)',
-                  margin: 0,
-                }}
-              >
-                Brand Configuration
-              </h3>
+          <div className='panel'>
+            <div className='panel-header'>
+              <h3 className='panel-title'>Brand Configuration</h3>
               <button onClick={handleSave} className='btn btn-primary'>
                 Save Changes
               </button>
@@ -543,25 +511,10 @@ export function CampaignDetail() {
           </div>
 
           {/* Campaign Settings */}
-          <div
-            style={{
-              backgroundColor: 'var(--color-bg-secondary, white)',
-              border: '1px solid var(--color-border, #e5e7eb)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-            }}
-          >
-            <h3
-              style={{
-                fontFamily: 'var(--font-heading, sans-serif)',
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: 'var(--color-text, #1f2937)',
-                margin: '0 0 1rem 0',
-              }}
-            >
-              Campaign Settings
-            </h3>
+          <div className='panel'>
+            <div className='panel-header'>
+              <h3 className='panel-title'>Campaign Settings</h3>
+            </div>
 
             <div
               style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}

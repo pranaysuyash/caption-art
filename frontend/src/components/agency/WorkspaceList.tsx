@@ -192,9 +192,7 @@ export function WorkspaceList() {
   }, [workspaces, workspaceMeta]);
 
   return (
-    <div
-      style={{ padding: '2rem', fontFamily: 'var(--font-body, sans-serif)' }}
-    >
+    <div className='page-container'>
       {error && (
         <div
           role='alert'
@@ -228,33 +226,10 @@ export function WorkspaceList() {
       )}
 
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-        }}
-      >
+      <div className='page-header'>
         <div>
-          <h1
-            style={{
-              fontFamily: 'var(--font-heading, sans-serif)',
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              color: 'var(--color-text, #1f2937)',
-              margin: 0,
-            }}
-          >
-            Workspaces
-          </h1>
-          <p
-            style={{
-              color: 'var(--color-text-secondary, #6b7280)',
-              marginTop: '0.5rem',
-              marginBottom: 0,
-            }}
-          >
+          <h1 className='page-title'>Workspaces</h1>
+          <p className='page-subtitle'>
             Manage your client workspaces and campaigns
           </p>
         </div>
@@ -478,13 +453,7 @@ export function WorkspaceList() {
 
       {/* Workspaces Grid */}
       {!loading && enrichedWorkspaces.length > 0 && (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '1.5rem',
-          }}
-        >
+        <div className='card-grid'>
           {enrichedWorkspaces.map((workspace) => (
             <Link
               key={workspace.id}
@@ -494,86 +463,16 @@ export function WorkspaceList() {
                 color: 'inherit',
               }}
             >
-              <div
-                style={{
-                  backgroundColor: 'var(--color-bg-secondary, white)',
-                  border: '1px solid var(--color-border, #e5e7eb)',
-                  borderRadius: '12px',
-                  padding: '1.5rem',
-                  transition: 'all 0.2s ease',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor =
-                    'var(--color-primary, #2563eb)';
-                  e.currentTarget.style.boxShadow =
-                    '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor =
-                    'var(--color-border, #e5e7eb)';
-                  e.currentTarget.style.boxShadow = 'none';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    marginBottom: '1rem',
-                  }}
-                >
+              <div className='card card-interactive'>
+                <div className='card-header'>
                   <div>
-                    <h3
-                      style={{
-                        fontFamily: 'var(--font-heading, sans-serif)',
-                        fontSize: '1.25rem',
-                        fontWeight: '600',
-                        color: 'var(--color-text, #1f2937)',
-                        margin: '0 0 0.25rem 0',
-                      }}
-                    >
-                      {workspace.clientName}
-                    </h3>
-                    <p
-                      style={{
-                        color: 'var(--color-text-secondary, #6b7280)',
-                        fontSize: '0.875rem',
-                        margin: 0,
-                      }}
-                    >
-                      {workspace.industry}
-                    </p>
+                    <h3 className='card-title'>{workspace.clientName}</h3>
+                    <p className='card-subtitle'>{workspace.industry}</p>
                   </div>
-                  <div
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      backgroundColor: 'var(--color-primary, #2563eb)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '1.25rem',
-                    }}
-                  >
-                    🏢
-                  </div>
+                  <div className='card-icon'>🏢</div>
                 </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontSize: '0.875rem',
-                    color: 'var(--color-text-secondary, #6b7280)',
-                    gap: '0.75rem',
-                  }}
-                >
+                <div className='card-meta'>
                   <span>{workspace.campaignCount || 0} campaigns</span>
                   <span>Created {formatDate(workspace.createdAt)}</span>
                   <button
@@ -583,8 +482,7 @@ export function WorkspaceList() {
                       e.stopPropagation();
                       handleReset(workspace.id);
                     }}
-                    className='btn btn-secondary'
-                    style={{ padding: '0.35rem 0.75rem' }}
+                    className='btn btn-ghost btn-sm'
                     disabled={resetLoading === workspace.id}
                   >
                     {resetLoading === workspace.id ? 'Resetting…' : 'Reset'}
