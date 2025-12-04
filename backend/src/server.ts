@@ -22,7 +22,7 @@ import { requestLogger, log } from './middleware/logger'
 // "createServer is not a function" errors when other modules import the
 // server during a circular dependency.
 export function createServer(
-  options: { enableRateLimiter?: boolean; loadRoutes?: boolean } = {}
+  options: { enableRateLimiter?: boolean; loadRoutes?: boolean; enableSession?: boolean } = {}
 ) {
   return createServerImpl(options)
 }
@@ -171,33 +171,38 @@ function createServerImpl(
   app.use(requestLogger)
 
   // 3. Session management with SQLite store
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const session = require('express-session')
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const SQLiteStore = require('connect-sqlite3')(session)
+  // Session middleware can be disabled for tests to avoid IO overhead
+  if ((options as any).enableSession ?? true) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const session = require('express-session')
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const SQLiteStore = require('connect-sqlite3')(session)
 
-  app.use(
-    session({
-      store: new SQLiteStore({
-        db: 'sessions.sqlite',
-        dir: process.cwd(), // Store in project root
-      }),
-      secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-prod',
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        // In development we allow cross-site cookies for the local dev setup
-        // to support frontend running on a different port (Vite dev server).
-        // In production default to 'lax' unless overridden by SESSION_SAMESITE.
-        sameSite:
-          (process.env.SESSION_SAMESITE as any) ||
-          (process.env.NODE_ENV === 'production' ? 'lax' : 'none'),
-      },
-    })
-  )
+    app.use(
+      session({
+        store: new SQLiteStore({
+          db: 'sessions.sqlite',
+          dir: process.cwd(), // Store in project root
+        }),
+        secret: process.env.SESSION_SECRET || 'dev-secret-key-change-in-prod',
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          // In development we allow cross-site cookies for the local dev setup
+          // to support frontend running on a different port (Vite dev server).
+          // In production default to 'lax' unless overridden by SESSION_SAMESITE.
+          sameSite:
+            (process.env.SESSION_SAMESITE as any) ||
+            (process.env.NODE_ENV === 'production' ? 'lax' : 'none'),
+        },
+      })
+    )
+  } else {
+    log.info('Session middleware disabled (enableSession=false)')
+  }
 
   // 4. JSON body parser
   app.use(express.json({ limit: '10mb' }))

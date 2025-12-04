@@ -1,7 +1,8 @@
-import { useLocation, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { getThemeManager } from '../../lib/themes/themeManager';
 import { useEffect, useState } from 'react';
 import { Sun, Moon, LogOut, Sparkles } from 'lucide-react';
+import { Breadcrumbs } from '../Breadcrumbs';
 
 interface AgencyHeaderProps {
   onLogout: () => void;
@@ -10,22 +11,27 @@ interface AgencyHeaderProps {
 // Caption Art Logo Component with consistent branding
 function CaptionArtLogo() {
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: 'var(--space-sm)',
-      padding: 'var(--space-xs) var(--space-md)',
-      borderRadius: 'var(--radius-md)',
-      background: 'linear-gradient(135deg, var(--color-brand-primary) 0%, #1d4ed8 100%)',
-    }}>
-      <Sparkles size={20} color="white" strokeWidth={2.5} />
-      <span style={{
-        fontFamily: 'var(--font-heading)',
-        fontSize: 'var(--font-size-xl)',
-        fontWeight: 'var(--font-weight-bold)',
-        color: 'white',
-        letterSpacing: '-0.02em'
-      }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-sm)',
+        padding: 'var(--space-xs) var(--space-md)',
+        borderRadius: 'var(--radius-md)',
+        background:
+          'linear-gradient(135deg, var(--color-brand-primary) 0%, #1d4ed8 100%)',
+      }}
+    >
+      <Sparkles size={20} color='white' strokeWidth={2.5} />
+      <span
+        style={{
+          fontFamily: 'var(--font-heading)',
+          fontSize: 'var(--font-size-xl)',
+          fontWeight: 'var(--font-weight-bold)',
+          color: 'white',
+          letterSpacing: '-0.02em',
+        }}
+      >
         Caption Art
       </span>
     </div>
@@ -33,7 +39,6 @@ function CaptionArtLogo() {
 }
 
 export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
-  const location = useLocation();
   const themeManager = getThemeManager();
   const [mode, setMode] = useState(themeManager.getState().mode);
 
@@ -48,177 +53,45 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
     themeManager.toggleMode();
   };
 
-  // Extract breadcrumb from current path
-  const getBreadcrumb = () => {
-    const pathParts = location.pathname.split('/').filter(Boolean);
-
-    if (pathParts[0] === 'agency') {
-      // Parse: /agency/workspaces/:workspaceId/campaigns/:campaignId/section
-      const relevantParts = pathParts.slice(1); // Remove 'agency'
-
-      const workspaceIndex = relevantParts.indexOf('workspaces');
-      const campaignIndex = relevantParts.indexOf('campaigns');
-
-      const workspaceId =
-        workspaceIndex >= 0 && relevantParts[workspaceIndex + 1]
-          ? relevantParts[workspaceIndex + 1]
-          : null;
-      const campaignId =
-        campaignIndex >= 0 && relevantParts[campaignIndex + 1]
-          ? relevantParts[campaignIndex + 1]
-          : null;
-      const isReview = relevantParts[relevantParts.length - 1] === 'review';
-
-      return {
-        workspaceId,
-        campaignId,
-        isReview,
-        isOnWorkspaceList:
-          relevantParts.length === 1 && relevantParts[0] === 'workspaces',
-        isOnCampaignList:
-          workspaceId &&
-          relevantParts.length === 3 &&
-          relevantParts[2] === 'campaigns',
-        isOnCampaignDetail:
-          campaignId && relevantParts.length === 4 && !isReview,
-      };
-    }
-
-    return {
-      workspaceId: null,
-      campaignId: null,
-      isReview: false,
-      isOnWorkspaceList: false,
-      isOnCampaignList: false,
-      isOnCampaignDetail: false,
-    };
-  };
-
-  const breadcrumb = getBreadcrumb();
-
   return (
-    <header style={{
-      height: '64px',
-      padding: '0 var(--space-2xl)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      borderBottom: 'var(--border-width-sm) solid var(--color-border)',
-      backgroundColor: 'var(--color-bg-secondary)',
-      transition: 'all var(--transition-timing-base) var(--transition-ease-smooth)',
-    }}>
+    <header
+      style={{
+        height: '64px',
+        padding: '0 var(--space-2xl)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottom: 'var(--border-width-sm) solid var(--color-border)',
+        backgroundColor: 'var(--color-bg-secondary)',
+        transition:
+          'all var(--transition-timing-base) var(--transition-ease-smooth)',
+      }}
+    >
       {/* Left: Logo and Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xl)' }}>
-        <Link
-          to='/agency/workspaces'
-          style={{ textDecoration: 'none' }}
-        >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-xl)',
+          flex: 1,
+          minWidth: 0
+        }}
+      >
+        <Link to='/agency/workspaces' style={{ textDecoration: 'none', flexShrink: 0 }}>
           <CaptionArtLogo />
         </Link>
 
-        {/* Clickable Breadcrumb Navigation */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 'var(--space-sm)', 
-          fontFamily: 'var(--font-body)',
-          fontSize: 'var(--font-size-sm)',
-          fontWeight: 'var(--font-weight-medium)'
-        }}>
-          <Link
-            to='/agency/workspaces'
-            style={{ 
-              color: 'var(--color-text-secondary)', 
-              textDecoration: 'none',
-              transition: 'color var(--transition-timing-base)'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-brand-primary)'}
-            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-secondary)'}
-          >
-            Workspaces
-          </Link>
-
-          {breadcrumb.workspaceId && (
-            <>
-              <span style={{ color: 'var(--color-text-secondary)' }}>/</span>
-              <Link
-                to={`/agency/workspaces/${breadcrumb.workspaceId}/campaigns`}
-                style={{ 
-                  color: breadcrumb.isOnCampaignList 
-                    ? 'var(--color-text)' 
-                    : 'var(--color-text-secondary)',
-                  textDecoration: 'none',
-                  fontWeight: breadcrumb.isOnCampaignList 
-                    ? 'var(--font-weight-semibold)' 
-                    : 'var(--font-weight-medium)',
-                  transition: 'color var(--transition-timing-base)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!breadcrumb.isOnCampaignList) {
-                    e.currentTarget.style.color = 'var(--color-brand-primary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!breadcrumb.isOnCampaignList) {
-                    e.currentTarget.style.color = 'var(--color-text-secondary)';
-                  }
-                }}
-              >
-                Campaigns
-              </Link>
-            </>
-          )}
-
-          {breadcrumb.campaignId && (
-            <>
-              <span style={{ color: 'var(--color-text-secondary)' }}>/</span>
-              <Link
-                to={`/agency/workspaces/${breadcrumb.workspaceId}/campaigns/${breadcrumb.campaignId}`}
-                style={{ 
-                  color: breadcrumb.isOnCampaignDetail 
-                    ? 'var(--color-text)' 
-                    : 'var(--color-text-secondary)',
-                  textDecoration: 'none',
-                  fontWeight: breadcrumb.isOnCampaignDetail 
-                    ? 'var(--font-weight-semibold)' 
-                    : 'var(--font-weight-medium)',
-                  transition: 'color var(--transition-timing-base)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!breadcrumb.isOnCampaignDetail) {
-                    e.currentTarget.style.color = 'var(--color-brand-primary)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!breadcrumb.isOnCampaignDetail) {
-                    e.currentTarget.style.color = 'var(--color-text-secondary)';
-                  }
-                }}
-              >
-                Campaign Detail
-              </Link>
-            </>
-          )}
-
-          {breadcrumb.isReview && (
-            <>
-              <span style={{ color: 'var(--color-text-secondary)' }}>/</span>
-              <span style={{ 
-                color: 'var(--color-text)', 
-                fontWeight: 'var(--font-weight-semibold)' 
-              }}>
-                Review
-              </span>
-            </>
-          )}
+        {/* Breadcrumb Navigation */}
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <Breadcrumbs />
         </div>
       </div>
 
       {/* Right: User Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexShrink: 0 }}>
         <Link
           to='/playground'
-          className='btn btn-ghost'
+          className='btn btn-ghost hide-mobile'
         >
           Playground
         </Link>
@@ -233,7 +106,7 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
             padding: '0',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
           }}
         >
           {mode === 'light' ? <Moon size={18} /> : <Sun size={18} />}
@@ -245,11 +118,11 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 'var(--space-sm)'
+            gap: 'var(--space-sm)',
           }}
         >
           <LogOut size={16} />
-          <span>Sign Out</span>
+          <span className="hide-mobile">Sign Out</span>
         </button>
       </div>
     </header>

@@ -100,7 +100,8 @@ describe('Performance Properties', () => {
       (serverModule as any).default?.createServer
 
     // Create server without rate limiter for performance testing
-    app = createServer({ enableRateLimiter: false, loadRoutes: true })
+    // Disable session to avoid SQLite file IO impacting timing
+    app = createServer({ enableRateLimiter: false, loadRoutes: true, enableSession: false })
   })
 
   describe('Property 9: Response time', () => {

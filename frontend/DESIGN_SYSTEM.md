@@ -20,6 +20,7 @@ All design tokens are defined in `src/styles/design-system.css` and should be us
 ### Colors
 
 #### Brand Colors (Primary Palette)
+
 - `--color-brand-primary`: #2563eb (Blue) - Primary actions, brand identity
 - `--color-brand-secondary`: #4ECDC4 (Teal) - Secondary elements
 - `--color-brand-accent`: #FFE66D (Yellow) - Highlights and accents
@@ -28,6 +29,7 @@ All design tokens are defined in `src/styles/design-system.css` and should be us
 - `--color-brand-error`: #dc2626 (Red) - Errors, destructive actions
 
 #### Semantic Colors (Theme-aware)
+
 - `--color-background`: Page background
 - `--color-surface`: Card and panel backgrounds
 - `--color-text`: Primary text color
@@ -39,11 +41,13 @@ All design tokens are defined in `src/styles/design-system.css` and should be us
 ### Typography
 
 #### Font Families
+
 - `--font-heading`: Inter, Space Grotesk, sans-serif (Headings, buttons, emphasis)
 - `--font-body`: Inter, sans-serif (Body text, labels, inputs)
 - `--font-mono`: JetBrains Mono, Fira Code (Code, technical content)
 
 #### Font Sizes
+
 - `--font-size-xs`: 0.75rem (12px) - Fine print, labels
 - `--font-size-sm`: 0.875rem (14px) - Secondary text
 - `--font-size-base`: 1rem (16px) - Body text
@@ -53,6 +57,7 @@ All design tokens are defined in `src/styles/design-system.css` and should be us
 - `--font-size-3xl`: 2rem (32px) - Page titles
 
 #### Font Weights
+
 - `--font-weight-normal`: 400 - Body text
 - `--font-weight-medium`: 500 - Labels, emphasized text
 - `--font-weight-semibold`: 600 - Buttons, card titles
@@ -61,6 +66,7 @@ All design tokens are defined in `src/styles/design-system.css` and should be us
 ### Spacing
 
 Use the spacing scale for consistent margins, padding, and gaps:
+
 - `--space-xs`: 4px
 - `--space-sm`: 8px
 - `--space-md`: 12px
@@ -70,12 +76,14 @@ Use the spacing scale for consistent margins, padding, and gaps:
 - `--space-3xl`: 48px
 
 ### Border Radius
+
 - `--radius-sm`: 6px - Small elements, inputs
 - `--radius-md`: 8px - Buttons, standard UI
 - `--radius-lg`: 12px - Cards, panels
 - `--radius-xl`: 16px - Large containers
 
 ### Shadows
+
 - `--shadow-sm`: Subtle elevation
 - `--shadow-md`: Standard cards
 - `--shadow-lg`: Hover states
@@ -88,49 +96,54 @@ Use the spacing scale for consistent margins, padding, and gaps:
 **Purpose**: Establish clear visual priority for user actions.
 
 #### `.btn-primary` - Primary Call-to-Action
+
 - **Use for**: Main action on a page (e.g., "Generate Caption", "Create Workspace", "Save")
 - **Style**: Large, bold, blue background with shadow
 - **Limit**: Typically 1 per screen/section
 - **Example**: "Generate Caption", "Approve", "Create Campaign"
 
 ```tsx
-<button className="btn btn-primary">Generate Caption</button>
+<button className='btn btn-primary'>Generate Caption</button>
 ```
 
 #### `.btn-secondary` - Important Secondary Actions
+
 - **Use for**: Important but not primary actions (e.g., "Cancel", "Edit")
 - **Style**: White background with blue border, medium weight
 - **Example**: "Edit Brief", "View Details"
 
 ```tsx
-<button className="btn btn-secondary">Edit Brief</button>
+<button className='btn btn-secondary'>Edit Brief</button>
 ```
 
 #### `.btn-ghost` - Tertiary/Subtle Actions
+
 - **Use for**: Less important actions, navigation (e.g., "Archive", "Playground link")
 - **Style**: Transparent, gray text, no border
 - **Example**: "Archive Campaign", "Reset"
 
 ```tsx
-<button className="btn btn-ghost">Archive</button>
+<button className='btn btn-ghost'>Archive</button>
 ```
 
 #### `.btn-success` - Positive Approval Actions
+
 - **Use for**: Approval, acceptance actions
 - **Style**: Green background
 - **Example**: "Approve Creative", "Accept"
 
 ```tsx
-<button className="btn btn-success">Approve</button>
+<button className='btn btn-success'>Approve</button>
 ```
 
 #### `.btn-danger` - Destructive Actions
+
 - **Use for**: Delete, remove actions requiring caution
 - **Style**: Red background
 - **Example**: "Delete Workspace"
 
 ```tsx
-<button className="btn btn-danger">Delete</button>
+<button className='btn btn-danger'>Delete</button>
 ```
 
 ### Cards
@@ -138,15 +151,15 @@ Use the spacing scale for consistent margins, padding, and gaps:
 All workspace and campaign cards should use consistent styling:
 
 ```tsx
-<div className="card card-interactive">
-  <div className="card-header">
+<div className='card card-interactive'>
+  <div className='card-header'>
     <div>
-      <h3 className="card-title">Card Title</h3>
-      <p className="card-subtitle">Subtitle or category</p>
+      <h3 className='card-title'>Card Title</h3>
+      <p className='card-subtitle'>Subtitle or category</p>
     </div>
-    <div className="card-icon">🏢</div>
+    <div className='card-icon'>🏢</div>
   </div>
-  <div className="card-meta">
+  <div className='card-meta'>
     <span>Meta information</span>
     <span>Date</span>
   </div>
@@ -157,12 +170,12 @@ All workspace and campaign cards should use consistent styling:
 
 ```tsx
 <div style={{ padding: 'var(--space-2xl)' }}>
-  <div className="page-header">
+  <div className='page-header'>
     <div>
-      <h1 className="page-title">Page Title</h1>
-      <p className="page-subtitle">Brief description of page purpose</p>
+      <h1 className='page-title'>Page Title</h1>
+      <p className='page-subtitle'>Brief description of page purpose</p>
     </div>
-    <button className="btn btn-primary">+ Primary Action</button>
+    <button className='btn btn-primary'>+ Primary Action</button>
   </div>
   {/* Page content */}
 </div>
@@ -171,14 +184,18 @@ All workspace and campaign cards should use consistent styling:
 ## Branding
 
 ### Logo
+
 The Caption Art logo appears consistently in the header with:
+
 - Sparkles icon (✨)
 - "Caption Art" text in bold heading font
 - Blue gradient background
 - Located in top-left of header
 
 ### Colors
+
 Brand colors are applied consistently:
+
 - Primary actions: Blue (`--color-brand-primary`)
 - Success states: Green (`--color-brand-success`)
 - Warnings: Orange (`--color-brand-warning`)
@@ -189,34 +206,40 @@ Brand colors are applied consistently:
 ### Replacing Inline Styles
 
 **Before** (inconsistent inline styles):
+
 ```tsx
-<button style={{
-  backgroundColor: '#2563eb',
-  color: 'white',
-  padding: '12px 16px',
-  borderRadius: '8px'
-}}>
+<button
+  style={{
+    backgroundColor: '#2563eb',
+    color: 'white',
+    padding: '12px 16px',
+    borderRadius: '8px',
+  }}
+>
   Save
 </button>
 ```
 
 **After** (using design system):
+
 ```tsx
-<button className="btn btn-primary">Save</button>
+<button className='btn btn-primary'>Save</button>
 ```
 
 ### Using Design Tokens
 
 **Before** (hard-coded values):
+
 ```tsx
 <div style={{ padding: '24px', marginBottom: '16px' }}>
 ```
 
 **After** (using tokens):
+
 ```tsx
-<div style={{ 
-  padding: 'var(--space-xl)', 
-  marginBottom: 'var(--space-lg)' 
+<div style={{
+  padding: 'var(--space-xl)',
+  marginBottom: 'var(--space-lg)'
 }}>
 ```
 

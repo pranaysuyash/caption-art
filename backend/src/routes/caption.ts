@@ -36,6 +36,7 @@ router.post(
   validateRequest({ body: CaptionRequestSchema }),
   async (req: Request, res: any, next: NextFunction) => {
     try {
+      const handlerStart = Date.now()
       // Validate request body with Zod schema
       const validatedData = req.body
       const { imageUrl, keywords, tone } = validatedData
@@ -44,6 +45,7 @@ router.post(
       const safeKeywords = sanitizeKeywords(keywords)
 
       // Generate base caption with BLIP via Replicate
+      const baseCaptionStart = Date.now()
       let baseCaption: string
       try {
         baseCaption = await generateBaseCaption(imageUrl)
@@ -54,7 +56,11 @@ router.post(
         )
       }
 
+      const baseCaptionEnd = Date.now()
+      log.info({ step: 'generateBaseCaption', duration: baseCaptionEnd - baseCaptionStart }, 'caption step timing')
+
       // Generate creative variants with OpenAI
+      const rewriteStart = Date.now()
       let variants: string[]
       try {
         variants = await rewriteCaption(baseCaption, safeKeywords, tone)
@@ -65,10 +71,16 @@ router.post(
         )
       }
 
+      const rewriteEnd = Date.now()
+      log.info({ step: 'rewriteCaption', duration: rewriteEnd - rewriteStart }, 'caption step timing')
+
       const response: CaptionResponse = {
         baseCaption,
         variants,
       }
+
+      const handlerEnd = Date.now()
+      log.info({ step: 'handlerTotal', duration: handlerEnd - handlerStart }, 'caption step timing')
 
       res.json(response)
     } catch (error) {

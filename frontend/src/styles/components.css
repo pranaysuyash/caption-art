@@ -68,6 +68,113 @@
   flex-wrap: wrap;
 }
 
+/* Card actions - consistent placement */
+.card-actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+  margin-top: var(--space-md);
+}
+
+.card-actions-top-right {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  display: flex;
+  gap: var(--space-sm);
+  z-index: 10;
+}
+
+/* Card with consistent action placement */
+.card-with-actions {
+  position: relative;
+  padding-top: var(--space-2xl);
+}
+
+/* Panel - for grouping related information with whitespace */
+.panel {
+  background-color: var(--color-surface);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: var(--border-width-sm) solid var(--color-border);
+}
+
+.panel-title {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0;
+}
+
+.panel-section {
+  margin-bottom: var(--space-lg);
+}
+
+.panel-section:last-child {
+  margin-bottom: 0;
+}
+
+.panel-section-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-sm);
+}
+
+/* Stats grid - for dashboard stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.stat-card {
+  background-color: var(--color-surface);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+}
+
+.stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.stat-value {
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  line-height: 1;
+}
+
+.stat-change {
+  font-size: var(--font-size-sm);
+  margin-top: var(--space-xs);
+}
+
+.stat-change.positive {
+  color: var(--color-brand-success);
+}
+
+.stat-change.negative {
+  color: var(--color-brand-error);
+}
+
 /* ===== BUTTON HIERARCHY SYSTEM ===== */
 /* Base button shared styles */
 .btn {
@@ -290,4 +397,206 @@
 [data-theme-id="neobrutalism"] .btn-primary,
 [data-theme-id="neobrutalism"] .btn-secondary {
   color: #111111;
+}
+
+/* ===== RESPONSIVE LAYOUT SYSTEM ===== */
+
+/* Container - consistent max-width and padding */
+.container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--space-lg);
+  padding-right: var(--space-lg);
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: var(--container-sm);
+    padding-left: var(--space-xl);
+    padding-right: var(--space-xl);
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: var(--container-md);
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: var(--container-lg);
+    padding-left: var(--space-2xl);
+    padding-right: var(--space-2xl);
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: var(--container-xl);
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    max-width: var(--container-2xl);
+  }
+}
+
+/* Consistent page padding */
+.page-container {
+  padding: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+  .page-container {
+    padding: var(--space-2xl);
+  }
+}
+
+/* ===== RESPONSIVE GRID SYSTEM ===== */
+
+/* Card grid - consistent across workspace, campaign, and asset lists */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--card-min-width), 1fr));
+  gap: var(--card-gap);
+  width: 100%;
+}
+
+/* Responsive card grid adjustments */
+@media (max-width: 639px) {
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-lg);
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-xl);
+  }
+}
+
+/* Two column layout for detail pages */
+.two-column-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
+}
+
+@media (min-width: 1024px) {
+  .two-column-layout {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-2xl);
+  }
+}
+
+/* Three column layout for dashboards */
+.three-column-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+}
+
+@media (min-width: 768px) {
+  .three-column-layout {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-xl);
+  }
+}
+
+@media (min-width: 1024px) {
+  .three-column-layout {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-xl);
+  }
+}
+
+/* Responsive table - stacks on mobile */
+.responsive-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 767px) {
+  .responsive-table {
+    display: block;
+  }
+  
+  .responsive-table thead {
+    display: none;
+  }
+  
+  .responsive-table tbody,
+  .responsive-table tr,
+  .responsive-table td {
+    display: block;
+    width: 100%;
+  }
+  
+  .responsive-table tr {
+    margin-bottom: var(--space-lg);
+    border: var(--border-width-sm) solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+  }
+  
+  .responsive-table td {
+    text-align: right;
+    padding-left: 50%;
+    position: relative;
+  }
+  
+  .responsive-table td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: var(--space-md);
+    font-weight: var(--font-weight-semibold);
+    text-align: left;
+  }
+}
+
+/* Responsive utilities */
+.hide-mobile {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .hide-mobile {
+    display: block;
+  }
+}
+
+.show-mobile {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .show-mobile {
+    display: none;
+  }
+}
+
+/* Stack on mobile */
+.stack-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+@media (min-width: 768px) {
+  .stack-mobile {
+    flex-direction: row;
+    gap: var(--space-lg);
+  }
 }

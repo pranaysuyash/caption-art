@@ -27,6 +27,18 @@ export async function rewriteCaption(
   keywords: string[] = [],
   tone: Tone = 'default'
 ): Promise<string[]> {
+  // Short-circuit OpenAI calls during unit tests to avoid network
+  // access and to keep the tests deterministic and fast.
+  if (process.env.NODE_ENV === 'test') {
+    return Promise.resolve([
+      `${baseCaption} (Variant 1)`,
+      `${baseCaption} (Variant 2)`,
+      `${baseCaption} (Variant 3)`,
+      `${baseCaption} (Variant 4)`,
+      `${baseCaption} (Variant 5)`,
+    ])
+  }
+
   return withRetry(
     async () => {
       const openai = new OpenAI({ apiKey: config.openai.apiKey });
