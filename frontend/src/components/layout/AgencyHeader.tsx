@@ -1,10 +1,35 @@
 import { useLocation, Link } from 'react-router-dom';
 import { getThemeManager } from '../../lib/themes/themeManager';
 import { useEffect, useState } from 'react';
-import { Sun, Moon, LogOut } from 'lucide-react';
+import { Sun, Moon, LogOut, Sparkles } from 'lucide-react';
 
 interface AgencyHeaderProps {
   onLogout: () => void;
+}
+
+// Caption Art Logo Component with consistent branding
+function CaptionArtLogo() {
+  return (
+    <div style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: 'var(--space-sm)',
+      padding: 'var(--space-xs) var(--space-md)',
+      borderRadius: 'var(--radius-md)',
+      background: 'linear-gradient(135deg, var(--color-brand-primary) 0%, #1d4ed8 100%)',
+    }}>
+      <Sparkles size={20} color="white" strokeWidth={2.5} />
+      <span style={{
+        fontFamily: 'var(--font-heading)',
+        fontSize: 'var(--font-size-xl)',
+        fontWeight: 'var(--font-weight-bold)',
+        color: 'white',
+        letterSpacing: '-0.02em'
+      }}>
+        Caption Art
+      </span>
+    </div>
+  );
 }
 
 export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
@@ -72,35 +97,72 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
   const breadcrumb = getBreadcrumb();
 
   return (
-    <header className='h-16 px-8 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)] transition-colors duration-200'>
+    <header style={{
+      height: '64px',
+      padding: '0 var(--space-2xl)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderBottom: 'var(--border-width-sm) solid var(--color-border)',
+      backgroundColor: 'var(--color-bg-secondary)',
+      transition: 'all var(--transition-timing-base) var(--transition-ease-smooth)',
+    }}>
       {/* Left: Logo and Breadcrumb */}
-      <div className='flex items-center gap-4'>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xl)' }}>
         <Link
           to='/agency/workspaces'
-          className='text-2xl font-bold font-[var(--font-heading)] text-[var(--color-primary)] no-underline'
+          style={{ textDecoration: 'none' }}
         >
-          Caption Art
+          <CaptionArtLogo />
         </Link>
 
         {/* Clickable Breadcrumb Navigation */}
-        <div className='flex items-center gap-2 text-sm font-[var(--font-body)]'>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 'var(--space-sm)', 
+          fontFamily: 'var(--font-body)',
+          fontSize: 'var(--font-size-sm)',
+          fontWeight: 'var(--font-weight-medium)'
+        }}>
           <Link
             to='/agency/workspaces'
-            className='text-[var(--color-text-secondary)] hover:text-[var(--color-primary)] no-underline transition-colors'
+            style={{ 
+              color: 'var(--color-text-secondary)', 
+              textDecoration: 'none',
+              transition: 'color var(--transition-timing-base)'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--color-brand-primary)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--color-text-secondary)'}
           >
             Workspaces
           </Link>
 
           {breadcrumb.workspaceId && (
             <>
-              <span className='text-[var(--color-text-secondary)]'>/</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>/</span>
               <Link
                 to={`/agency/workspaces/${breadcrumb.workspaceId}/campaigns`}
-                className={`no-underline transition-colors ${
-                  breadcrumb.isOnCampaignList
-                    ? 'text-[var(--color-text)] font-medium'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'
-                }`}
+                style={{ 
+                  color: breadcrumb.isOnCampaignList 
+                    ? 'var(--color-text)' 
+                    : 'var(--color-text-secondary)',
+                  textDecoration: 'none',
+                  fontWeight: breadcrumb.isOnCampaignList 
+                    ? 'var(--font-weight-semibold)' 
+                    : 'var(--font-weight-medium)',
+                  transition: 'color var(--transition-timing-base)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!breadcrumb.isOnCampaignList) {
+                    e.currentTarget.style.color = 'var(--color-brand-primary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!breadcrumb.isOnCampaignList) {
+                    e.currentTarget.style.color = 'var(--color-text-secondary)';
+                  }
+                }}
               >
                 Campaigns
               </Link>
@@ -109,14 +171,29 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
 
           {breadcrumb.campaignId && (
             <>
-              <span className='text-[var(--color-text-secondary)]'>/</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>/</span>
               <Link
                 to={`/agency/workspaces/${breadcrumb.workspaceId}/campaigns/${breadcrumb.campaignId}`}
-                className={`no-underline transition-colors ${
-                  breadcrumb.isOnCampaignDetail
-                    ? 'text-[var(--color-text)] font-medium'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-primary)]'
-                }`}
+                style={{ 
+                  color: breadcrumb.isOnCampaignDetail 
+                    ? 'var(--color-text)' 
+                    : 'var(--color-text-secondary)',
+                  textDecoration: 'none',
+                  fontWeight: breadcrumb.isOnCampaignDetail 
+                    ? 'var(--font-weight-semibold)' 
+                    : 'var(--font-weight-medium)',
+                  transition: 'color var(--transition-timing-base)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!breadcrumb.isOnCampaignDetail) {
+                    e.currentTarget.style.color = 'var(--color-brand-primary)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!breadcrumb.isOnCampaignDetail) {
+                    e.currentTarget.style.color = 'var(--color-text-secondary)';
+                  }
+                }}
               >
                 Campaign Detail
               </Link>
@@ -125,8 +202,11 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
 
           {breadcrumb.isReview && (
             <>
-              <span className='text-[var(--color-text-secondary)]'>/</span>
-              <span className='text-[var(--color-text)] font-medium'>
+              <span style={{ color: 'var(--color-text-secondary)' }}>/</span>
+              <span style={{ 
+                color: 'var(--color-text)', 
+                fontWeight: 'var(--font-weight-semibold)' 
+              }}>
                 Review
               </span>
             </>
@@ -135,25 +215,38 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
       </div>
 
       {/* Right: User Actions */}
-      <div className='flex items-center gap-4'>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
         <Link
           to='/playground'
-          className='px-4 py-2 text-sm rounded-md text-[var(--color-text-secondary)] hover:bg-[var(--color-background)] hover:text-[var(--color-text)] transition-all duration-200'
+          className='btn btn-ghost'
         >
           Playground
         </Link>
 
         <button
           onClick={toggleTheme}
-          className='p-2 rounded-md border border-[var(--color-border)] text-[var(--color-text)] hover:bg-transparent transition-all duration-200 flex items-center justify-center w-9 h-9'
+          className='btn btn-ghost btn-sm'
           title={`Switch to ${mode === 'light' ? 'Dark' : 'Light'} Mode`}
+          style={{
+            width: '36px',
+            height: '36px',
+            padding: '0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
-          {mode === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          {mode === 'light' ? <Moon size={18} /> : <Sun size={18} />}
         </button>
 
         <button
           onClick={onLogout}
-          className='flex items-center gap-2 px-4 py-2 text-sm rounded-md border border-[var(--color-border)] text-[var(--color-text)] hover:bg-red-50 hover:border-red-600 hover:text-red-600 transition-all duration-200'
+          className='btn btn-secondary btn-sm'
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-sm)'
+          }}
         >
           <LogOut size={16} />
           <span>Sign Out</span>

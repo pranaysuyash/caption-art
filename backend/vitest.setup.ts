@@ -41,6 +41,17 @@ vi.mock('replicate', () => {
   }
 })
 
+// Additionally mock the service module by absolute path to ensure that any
+// require/import resolvers that resolve via absolute paths during lazy-loading
+// in createServer are intercepted in tests.
+vi.mock('/Users/pranay/Projects/caption-art/backend/src/services/replicate.ts', () => {
+  return {
+    generateBaseCaption: vi.fn().mockResolvedValue('A mock caption for testing'),
+    generateMask: vi.fn().mockResolvedValue('http://example.com/mask.png'),
+    generateImage: vi.fn().mockResolvedValue('http://example.com/generated.png'),
+  }
+})
+
 // Mock the 'openai' npm package used by styleAnalyzer and multiFormatService
 vi.mock('openai', () => {
   return {

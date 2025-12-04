@@ -1,29 +1,58 @@
 /* frontend/src/styles/design-system.css */
 
 :root {
+  /* ===== UNIFIED AGENCY COLOR PALETTE ===== */
+  /* Primary Brand Colors - Consistent across all screens */
+  --color-brand-primary: #2563eb;      /* Primary action color - blue */
+  --color-brand-secondary: #4ECDC4;    /* Secondary elements - teal */
+  --color-brand-accent: #FFE66D;       /* Accent highlights - yellow */
+  --color-brand-success: #16a34a;      /* Success states - green */
+  --color-brand-warning: #f97316;      /* Warning states - orange */
+  --color-brand-error: #dc2626;        /* Error states - red */
+
   /* Colors - Light Theme */
-  --color-background-light: #FEFAE0;
-  --color-primary-light: #FF6B6B;
+  --color-background-light: #f8fafc;
+  --color-primary-light: #2563eb;
   --color-secondary-light: #4ECDC4;
   --color-accent-light: #FFE66D;
-  --color-text-light: #1A1A1A;
+  --color-text-light: #0f172a;
+  --color-text-secondary-light: #64748b;
   --color-surface-light: #FFFFFF;
-  --color-border-light: #1A1A1A;
+  --color-border-light: #e2e8f0;
+  --color-bg-secondary-light: #FFFFFF;
 
   /* Colors - Dark Theme */
-  --color-background-dark: #0F0F0F;
-  --color-primary-dark: #FF6B6B;
+  --color-background-dark: #0f172a;
+  --color-primary-dark: #3b82f6;
   --color-secondary-dark: #4ECDC4;
   --color-accent-dark: #FFE66D;
-  --color-text-dark: #FAFAFA;
-  --color-surface-dark: #1A1A1A;
-  --color-border-dark: #FAFAFA;
+  --color-text-dark: #f1f5f9;
+  --color-text-secondary-dark: #94a3b8;
+  --color-surface-dark: #1e293b;
+  --color-border-dark: #334155;
+  --color-bg-secondary-dark: #1e293b;
 
-  /* Typography */
-  --font-heading: 'Space Grotesk', sans-serif;
-  --font-body: 'JetBrains Mono', monospace;
+  /* Typography - Consistent font stack */
+  --font-heading: 'Inter', 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 
-  /* Spacing Scale */
+  /* Font Sizes - Establish clear hierarchy */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-lg: 1.125rem;   /* 18px */
+  --font-size-xl: 1.25rem;    /* 20px */
+  --font-size-2xl: 1.5rem;    /* 24px */
+  --font-size-3xl: 2rem;      /* 32px */
+
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Spacing Scale - Consistent spacing */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 12px;
@@ -33,23 +62,41 @@
   --space-3xl: 48px;
 
   /* Border Widths */
-  --border-width-md: 3px;
-  --border-width-lg: 4px;
-  --border-width-xl: 5px;
+  --border-width-sm: 1px;
+  --border-width-md: 2px;
+  --border-width-lg: 3px;
+  --border-width-xl: 4px;
 
-  /* Shadows (Neo-Brutalism Offset) */
+  /* Shadows - Simplified for agency UI */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Neo-Brutalism Shadows (for themed components) */
   --shadow-offset-md: 4px;
   --shadow-offset-lg: 8px;
   --shadow-offset-xl: 12px;
 
   /* Border Radius */
-  --radius-sm: 4px;
+  --radius-sm: 6px;
   --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
   /* Transitions */
   --transition-timing-fast: 0.15s;
-  --transition-timing-base: 0.3s;
-  --transition-timing-slow: 0.5s;
+  --transition-timing-base: 0.2s;
+  --transition-timing-slow: 0.3s;
   --transition-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
   --transition-ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Z-Index Scale */
+  --z-dropdown: 1000;
+  --z-sticky: 1020;
+  --z-fixed: 1030;
+  --z-modal-backdrop: 1040;
+  --z-modal: 1050;
+  --z-popover: 1060;
+  --z-tooltip: 1070;
 }

@@ -50,6 +50,8 @@ vi.mock('./services/imageRenderer', () => ({
 
 describe('Performance Properties', () => {
   let app: Express
+  // Use a tiny, inlined data URI for image inputs to avoid network fetches
+  const tinyGif = 'data:image/gif;base64,R0lGODdhAQABAPAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw=='
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -127,7 +129,7 @@ describe('Performance Properties', () => {
     it('should respond to caption endpoint within 200ms (excluding external API time)', async () => {
       await fc.assert(
         fc.asyncProperty(fc.constant(null), async (_unused) => {
-          const imageUrl = `http://localhost:3000/generated/test.jpg`
+          const imageUrl = tinyGif
           const startTime = Date.now()
           const response = await request(app)
             .post('/api/caption')
@@ -147,7 +149,7 @@ describe('Performance Properties', () => {
     it('should respond to mask endpoint within 200ms (excluding external API time)', async () => {
       await fc.assert(
         fc.asyncProperty(fc.constant(null), async (_unused) => {
-          const imageUrl = `http://localhost:3000/generated/test.jpg`
+          const imageUrl = tinyGif
           const startTime = Date.now()
           const response = await request(app)
             .post('/api/mask')
@@ -249,7 +251,7 @@ describe('Performance Properties', () => {
               () =>
                 request(app)
                   .post('/api/caption')
-                  .send({ imageUrl: 'http://example.com/image.jpg' })
+                  .send({ imageUrl: tinyGif })
                   .catch((err) => ({
                     status: err.code === 'ECONNRESET' ? 503 : 500,
                   }))
@@ -260,7 +262,7 @@ describe('Performance Properties', () => {
               () =>
                 request(app)
                   .post('/api/mask')
-                  .send({ imageUrl: 'http://example.com/image.jpg' })
+                  .send({ imageUrl: tinyGif })
                   .catch((err) => ({
                     status: err.code === 'ECONNRESET' ? 503 : 500,
                   }))
@@ -523,7 +525,7 @@ describe('Performance Properties', () => {
                   case 0:
                     return request(app)
                       .post('/api/caption')
-                      .send({ imageUrl: 'http://example.com/image.jpg' })
+                      .send({ imageUrl: tinyGif })
                   case 1:
                     return request(app)
                       .post('/api/mask')
