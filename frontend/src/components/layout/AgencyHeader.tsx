@@ -90,13 +90,6 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
 
       {/* Right: User Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexShrink: 0 }}>
-        <Link
-          to='/playground'
-          className='btn btn-ghost hide-mobile'
-        >
-          Playground
-        </Link>
-
         <ThemeSwitcher />
 
         <button

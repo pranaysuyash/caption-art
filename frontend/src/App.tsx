@@ -11,7 +11,6 @@ import { CampaignDetail } from './components/agency/CampaignDetail';
 import { ReviewGrid } from './components/agency/ReviewGrid';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Login } from './components/auth/Login';
-import { Playground } from './components/playground/Playground';
 import { ToastContainer, useToast } from './components/Toast';
 import { AgencyHeader } from './components/layout/AgencyHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -90,22 +89,12 @@ export default function App() {
               }
             />
 
-            {/* Legacy playground - moved from root */}
-            <Route 
-              path='/playground' 
-              element={
-                <ErrorBoundary>
-                  <Playground />
-                </ErrorBoundary>
-              } 
-            />
-
             {/* Default redirect */}
             <Route
               path='/'
               element={
                 <Navigate
-                  to={isAuthenticated ? '/agency/workspaces' : '/playground'}
+                  to={isAuthenticated ? '/agency/workspaces' : '/login'}
                   replace
                 />
               }
@@ -116,7 +105,7 @@ export default function App() {
               path='*'
               element={
                 <Navigate
-                  to={isAuthenticated ? '/agency/workspaces' : '/playground'}
+                  to={isAuthenticated ? '/agency/workspaces' : '/login'}
                   replace
                 />
               }
