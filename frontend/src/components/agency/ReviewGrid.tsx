@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import apiFetch from '../../lib/api/httpClient';
+import { formatDate } from '../../lib/utils/dateUtils';
+import { useToast } from '../Toast';
 
 type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
@@ -76,6 +78,7 @@ const statusLabel: Record<ApprovalStatus, string> = {
 
 export function ReviewGrid() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { success, error: toastError } = useToast();
   const [grid, setGrid] = useState<GridItem[]>([]);
   const [stats, setStats] = useState<GridStats | null>(null);
   const [selectedCaptions, setSelectedCaptions] = useState<string[]>([]);
@@ -134,6 +137,7 @@ export function ReviewGrid() {
       setSelectedCaptions([]);
     } catch (error) {
       console.error(error);
+      toastError('Failed to load approval grid');
     } finally {
       setLoading(false);
     }
@@ -225,9 +229,10 @@ export function ReviewGrid() {
       const data = await res.json();
       updateCaptionInState(data.caption);
       refreshExportData();
+      success('Caption approved');
     } catch (error) {
       console.error(error);
-      alert('Failed to approve caption. Please try again.');
+      toastError('Failed to approve caption');
     } finally {
       setSubmitting(false);
       setProcessing((p) => {
@@ -257,9 +262,10 @@ export function ReviewGrid() {
       const data = await res.json();
       updateCaptionInState(data.caption);
       refreshExportData();
+      success('Caption rejected');
     } catch (error) {
       console.error(error);
-      alert('Failed to reject caption. Please try again.');
+      toastError('Failed to reject caption');
     } finally {
       setSubmitting(false);
       setProcessing((p) => {
@@ -281,9 +287,10 @@ export function ReviewGrid() {
       if (!res.ok) throw new Error('Failed to bulk approve');
       await loadGrid();
       await refreshExportData();
+      success(`Approved ${selectedCaptions.length} captions`);
     } catch (error) {
       console.error(error);
-      alert('Bulk approve failed. Please try again.');
+      toastError('Bulk approve failed');
     } finally {
       setSubmitting(false);
     }
@@ -301,9 +308,10 @@ export function ReviewGrid() {
       if (!res.ok) throw new Error('Failed to bulk reject');
       await loadGrid();
       await refreshExportData();
+      success(`Rejected ${selectedCaptions.length} captions`);
     } catch (error) {
       console.error(error);
-      alert('Bulk reject failed. Please try again.');
+      toastError('Bulk reject failed');
     } finally {
       setSubmitting(false);
     }
@@ -346,14 +354,12 @@ export function ReviewGrid() {
         setActiveJobId(data.jobId);
       }
       await refreshExportData();
+      success('Export started');
     } catch (error) {
       console.error(error);
-      alert(
-        error instanceof Error ? error.message : 'Failed to start export'
-      );
-      setExportError(
-        error instanceof Error ? error.message : 'Failed to start export'
-      );
+      const msg = error instanceof Error ? error.message : 'Failed to start export';
+      toastError(msg);
+      setExportError(msg);
     } finally {
       setStartingExport(false);
     }
@@ -379,6 +385,9 @@ export function ReviewGrid() {
             refreshExportData();
             if (job.status === 'failed') {
               setExportError(job.errorMessage || 'Export failed');
+              toastError(`Export failed: ${job.errorMessage}`);
+            } else {
+              success('Export completed successfully');
             }
           }
         }
@@ -577,6 +586,7 @@ export function ReviewGrid() {
           </button>
         </div>
       </div>
+      </div>
 
       {activeJob && (
         <div
@@ -663,6 +673,15 @@ export function ReviewGrid() {
                 {job.captionCount} captions • {job.generatedAssetCount || 0}{' '}
                 renders
               </div>
+              <div
+                style={{
+                  color: 'var(--color-text-secondary, #6b7280)',
+                  fontSize: '0.75rem',
+                  marginTop: '0.25rem',
+                }}
+              >
+                {formatDate(job.createdAt)}
+              </div>
               {job.status === 'completed' && (
                 <button
                   className='btn btn-secondary btn-sm'
@@ -710,6 +729,14 @@ export function ReviewGrid() {
             const selectedVariation = caption?.variations.find(
               (v) => v.id === selectedVariationId
             );
+            const captionText =
+              selectedVariation?.text ||
+              caption?.primaryVariation?.text ||
+              caption?.text ||
+              '';
+            const wordCount = captionText
+              ? captionText.trim().split(/\s+/).filter(Boolean).length
+              : 0;
 
             return (
               <div key={item.asset.id} className='card'>
@@ -784,20 +811,37 @@ export function ReviewGrid() {
                         style={{
                           margin: 0,
                           color: 'var(--color-text, #0f172a)',
-                          fontSize: '0.95rem',
-                          lineHeight: 1.4,
-                        }}
-                      >
-                        {selectedVariation?.text ||
-                          caption.primaryVariation?.text ||
-                          caption.text ||
-                          'No caption text available'}
-                      </p>
+                      fontSize: '0.95rem',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {captionText || 'No caption text available'}
+                  </p>
+                  {captionText && (
+                    <div
+                      style={{
+                        marginTop: '0.35rem',
+                        color: 'var(--color-text-secondary, #6b7280)',
+                        fontSize: '0.8rem',
+                        display: 'flex',
+                        gap: '0.75rem',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span>{captionText.length} characters</span>
+                      <span>{wordCount} words</span>
+                      {caption.status && (
+                        <span style={{ textTransform: 'capitalize' }}>
+                          Status: {caption.status}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
-                      {caption.variations.length > 1 && (
-                        <div
-                          style={{
-                            marginTop: '0.75rem',
+                  {caption.variations.length > 1 && (
+                    <div
+                      style={{
+                        marginTop: '0.75rem',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '0.35rem',
