@@ -313,6 +313,30 @@
     gap: 16px;
 }
 
+.skeleton-grid {
+    gap: 18px;
+}
+
+.skeleton-card {
+    border: 1px solid #1f2937;
+    background: #0f172a;
+}
+
+.skeleton-box {
+    background: #1f2937;
+}
+
+.skeleton-line {
+    height: 10px;
+    background: #1f2937;
+    border-radius: 6px;
+    margin: 6px 0;
+}
+
+.skeleton-line.short {
+    width: 60%;
+}
+
 .asset-card {
     background: white;
     border: 1px solid #e5e7eb;

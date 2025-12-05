@@ -396,7 +396,17 @@ export function AssetManager() {
       )}
 
       {loading ? (
-        <div className='asset-grid-loading'>Loading assets...</div>
+        <div className='asset-grid skeleton-grid'>
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div key={idx} className='asset-card skeleton-card'>
+              <div className='asset-preview skeleton-box' />
+              <div className='asset-info'>
+                <div className='skeleton-line short' />
+                <div className='skeleton-line' />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : assets.length === 0 ? (
         <div className='asset-grid-empty'>
           <div className='empty-icon'>🖼️</div>
