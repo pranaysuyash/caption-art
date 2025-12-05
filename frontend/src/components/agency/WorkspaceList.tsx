@@ -397,14 +397,68 @@ export function WorkspaceList() {
 
       {/* Loading State */}
       {loading && (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '3rem',
-            color: 'var(--color-text-secondary, #6b7280)',
-          }}
-        >
-          Loading workspaces...
+        <div className='card-grid'>
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div
+              key={idx}
+              className='card'
+              style={{
+                background: 'var(--color-bg-secondary, #111827)',
+                border: '1px solid var(--color-border, #1f2937)',
+              }}
+            >
+              <div
+                style={{
+                  width: '70%',
+                  height: '16px',
+                  borderRadius: '6px',
+                  background: '#1f2937',
+                  marginBottom: '0.6rem',
+                }}
+              />
+              <div
+                style={{
+                  width: '50%',
+                  height: '12px',
+                  borderRadius: '6px',
+                  background: '#1f2937',
+                  marginBottom: '0.6rem',
+                }}
+              />
+              <div
+                style={{
+                  width: '90%',
+                  height: '12px',
+                  borderRadius: '6px',
+                  background: '#1f2937',
+                  marginBottom: '0.6rem',
+                }}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: '#1f2937',
+                  }}
+                />
+                <div
+                  style={{
+                    flex: 1,
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: '#1f2937',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
