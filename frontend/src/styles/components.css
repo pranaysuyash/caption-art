@@ -9,12 +9,18 @@
   padding: var(--space-xl);
   transition: all var(--transition-timing-base) var(--transition-ease-smooth);
   box-shadow: var(--shadow-sm);
+  position: relative;
 }
 
 .card:hover {
   border-color: var(--color-brand-primary);
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
+}
+
+.card:focus-within {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
 }
 
 .card-interactive {
@@ -192,6 +198,17 @@
   justify-content: center;
   gap: var(--space-sm);
   white-space: nowrap;
+}
+
+.btn:hover:not(:disabled),
+.btn:focus-visible:not(:disabled) {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
 }
 
 .btn:disabled {
