@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { getThemeManager } from '../../lib/themes/themeManager';
 import { useEffect, useState } from 'react';
-import { Sun, Moon, LogOut, Sparkles } from 'lucide-react';
+import { Sun, Moon, LogOut, Sparkles, Settings } from 'lucide-react';
 import { Breadcrumbs } from '../Breadcrumbs';
 import { ThemeSwitcher } from '../ThemeSwitcher';
 
@@ -92,10 +92,28 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)', flexShrink: 0 }}>
         <ThemeSwitcher />
 
+        <Link
+          to='/agency/settings'
+          className='btn btn-ghost btn-sm'
+          title='Settings'
+          style={{
+            width: '36px',
+            height: '36px',
+            padding: '0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textDecoration: 'none',
+          }}
+        >
+          <Settings size={18} />
+        </Link>
+
         <button
           onClick={toggleTheme}
           className='btn btn-ghost btn-sm'
           title={`Switch to ${mode === 'light' ? 'Dark' : 'Light'} Mode`}
+          aria-label={`Switch to ${mode === 'light' ? 'Dark' : 'Light'} Mode`}
           style={{
             width: '36px',
             height: '36px',
