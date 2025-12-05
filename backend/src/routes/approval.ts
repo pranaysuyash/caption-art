@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { AuthModel } from '../models/auth'
 import { createAuthMiddleware } from '../routes/auth'
 import { validateRequest } from '../middleware/validation'
 import { AuthenticatedRequest } from '../types/auth'
@@ -10,9 +9,11 @@ import {
   BatchApproveRejectSchema,
 } from '../schemas/validation'
 import { log } from '../middleware/logger'
+import { getPrismaClient } from '../lib/prisma'
 
 const router = Router()
 const requireAuth = createAuthMiddleware() as any
+const prisma = getPrismaClient()
 
 // GET /api/approval/workspace/:workspaceId/grid - Get approval grid data
 router.get('/workspace/:workspaceId/grid', requireAuth, async (req, res) => {
@@ -21,7 +22,9 @@ router.get('/workspace/:workspaceId/grid', requireAuth, async (req, res) => {
     const { workspaceId } = req.params
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -31,13 +34,17 @@ router.get('/workspace/:workspaceId/grid', requireAuth, async (req, res) => {
     }
 
     // Get all assets and captions for the workspace
-    const assets = AuthModel.getAssetsByWorkspace(workspaceId)
-    const captions = AuthModel.getCaptionsByWorkspace(workspaceId)
+    const [assets, captions] = await Promise.all([
+      prisma.asset.findMany({ where: { workspaceId } }),
+      prisma.caption.findMany({
+        where: { workspaceId },
+        include: { variations: true },
+      }),
+    ])
 
     // Build grid data with asset and caption information
     const gridData = assets.map((asset) => {
-      const assetCaptions = AuthModel.getCaptionsByAsset(asset.id)
-      const caption = assetCaptions[0] || null
+      const caption = captions.find((c) => c.assetId === asset.id) || null
 
       return {
         asset: {
@@ -54,7 +61,7 @@ router.get('/workspace/:workspaceId/grid', requireAuth, async (req, res) => {
                 caption.variations.length > 0
                   ? caption.variations[0]?.text || ''
                   : '',
-              variations: caption.variations.map((v) => ({
+              variations: caption.variations.map((v: any) => ({
                 ...v,
                 approved: v.approvalStatus === 'approved',
               })),
@@ -108,26 +115,48 @@ router.put(
       const { captionId } = req.params
       const { variationId } = req.body || {}
 
-      const caption = AuthModel.getCaptionById(captionId)
-      if (!caption) {
-        return res.status(404).json({ error: 'Caption not found' })
-      }
+    const caption = await prisma.caption.findUnique({
+      where: { id: captionId },
+      include: { variations: true },
+    })
+    if (!caption) {
+      return res.status(404).json({ error: 'Caption not found' })
+    }
 
-      // Verify caption belongs to agency via workspace
-      const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
-      if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
-        return res.status(403).json({ error: 'Access denied' })
-      }
+    // Verify caption belongs to agency via workspace
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: caption.workspaceId },
+    })
+    if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
 
-      const approvedCaption = AuthModel.approveCaption(captionId, variationId)
-      if (!approvedCaption) {
-        return res.status(404).json({ error: 'Caption not found' })
-      }
+    // Approve variation if provided
+    if (variationId) {
+      await prisma.captionVariation.update({
+        where: { id: variationId },
+        data: {
+          approvalStatus: 'approved',
+          approvedAt: new Date(),
+        },
+      })
+    }
 
-      res.json({
-        message: 'Caption approved successfully',
-        caption: {
-          ...approvedCaption,
+    // Approve caption
+    const approvedCaption = await prisma.caption.update({
+      where: { id: captionId },
+      data: {
+        approvalStatus: 'approved',
+        approvedAt: new Date(),
+        primaryVariationId: variationId || caption.primaryVariationId,
+      },
+      include: { variations: true },
+    })
+
+    res.json({
+      message: 'Caption approved successfully',
+      caption: {
+        ...approvedCaption,
           text:
             approvedCaption.variations.length > 0
               ? approvedCaption.variations[0]?.text || ''
@@ -170,25 +199,42 @@ router.put(
       const { captionId } = req.params
       const { reason, variationId } = req.body
 
-      const caption = AuthModel.getCaptionById(captionId)
+      const caption = await prisma.caption.findUnique({
+        where: { id: captionId },
+        include: { variations: true },
+      })
       if (!caption) {
         return res.status(404).json({ error: 'Caption not found' })
       }
 
       // Verify caption belongs to agency via workspace
-      const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: caption.workspaceId },
+      })
       if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const rejectedCaption = AuthModel.rejectCaption(
-        captionId,
-        reason,
-        variationId
-      )
-      if (!rejectedCaption) {
-        return res.status(404).json({ error: 'Caption not found' })
+      if (variationId) {
+        await prisma.captionVariation.update({
+          where: { id: variationId },
+          data: {
+            approvalStatus: 'rejected',
+            rejectedAt: new Date(),
+            errorMessage: reason,
+          },
+        })
       }
+
+      const rejectedCaption = await prisma.caption.update({
+        where: { id: captionId },
+        data: {
+          approvalStatus: 'rejected',
+          rejectedAt: new Date(),
+          errorMessage: reason,
+        },
+        include: { variations: true },
+      })
 
       res.json({
         message: 'Caption rejected successfully',
@@ -234,14 +280,18 @@ router.post(
 
       // Verify all captions belong to current agency
       for (const captionId of captionIds) {
-        const caption = AuthModel.getCaptionById(captionId)
+        const caption = await prisma.caption.findUnique({
+          where: { id: captionId },
+        })
         if (!caption) {
           return res
             .status(404)
             .json({ error: `Caption ${captionId} not found` })
         }
 
-        const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: caption.workspaceId },
+        })
         if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
           return res
             .status(403)
@@ -249,11 +299,15 @@ router.post(
         }
       }
 
-      const result = AuthModel.batchApproveCaptions(captionIds)
+      await prisma.caption.updateMany({
+        where: { id: { in: captionIds } },
+        data: { approvalStatus: 'approved', approvedAt: new Date() },
+      })
 
       res.json({
-        message: `Successfully approved ${result.approved} captions`,
-        ...result,
+        message: `Successfully approved ${captionIds.length} captions`,
+        approved: captionIds.length,
+        failed: 0,
       })
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -279,14 +333,18 @@ router.post(
 
       // Verify all captions belong to current agency
       for (const captionId of captionIds) {
-        const caption = AuthModel.getCaptionById(captionId)
+        const caption = await prisma.caption.findUnique({
+          where: { id: captionId },
+        })
         if (!caption) {
           return res
             .status(404)
             .json({ error: `Caption ${captionId} not found` })
         }
 
-        const workspace = AuthModel.getWorkspaceById(caption.workspaceId)
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: caption.workspaceId },
+        })
         if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
           return res
             .status(403)
@@ -294,11 +352,15 @@ router.post(
         }
       }
 
-      const result = AuthModel.batchRejectCaptions(captionIds, reason)
+      await prisma.caption.updateMany({
+        where: { id: { in: captionIds } },
+        data: { approvalStatus: 'rejected', rejectedAt: new Date(), errorMessage: reason },
+      })
 
       res.json({
-        message: `Successfully rejected ${result.rejected} captions`,
-        ...result,
+        message: `Successfully rejected ${captionIds.length} captions`,
+        rejected: captionIds.length,
+        failed: 0,
       })
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -322,7 +384,9 @@ router.get(
       const { workspaceId } = req.params
 
       // Verify workspace belongs to current agency
-      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' })
       }
@@ -331,29 +395,17 @@ router.get(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const approvedCaptions =
-        AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-
-      // Enrich with asset information
-      const enrichedCaptions = approvedCaptions.map((caption) => {
-        const asset = AuthModel.getAssetById(caption.assetId)
-        return {
-          ...caption,
-          approved: caption.approvalStatus === 'approved',
-          asset: asset
-            ? {
-                id: asset.id,
-                originalName: asset.originalName,
-                mimeType: asset.mimeType,
-                url: asset.url,
-              }
-            : null,
-        }
+      const approvedCaptions = await prisma.caption.findMany({
+        where: { workspaceId, approvalStatus: 'approved' },
+        include: { asset: true, variations: true },
       })
 
       res.json({
-        captions: enrichedCaptions,
-        count: enrichedCaptions.length,
+        captions: approvedCaptions.map((caption) => ({
+          ...caption,
+          approved: caption.approvalStatus === 'approved',
+        })),
+        count: approvedCaptions.length,
       })
     } catch (error) {
       log.error({ error }, 'Get approved captions error')
@@ -373,7 +425,9 @@ router.post('/auto-approve-best', requireAuth, async (req, res) => {
     }
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -383,7 +437,10 @@ router.post('/auto-approve-best', requireAuth, async (req, res) => {
     }
 
     // Get all captions for the workspace
-    const captions = AuthModel.getCaptionsByWorkspace(workspaceId)
+    const captions = await prisma.caption.findMany({
+      where: { workspaceId },
+      include: { variations: true },
+    })
 
     let approvedCount = 0
 
@@ -403,13 +460,21 @@ router.post('/auto-approve-best', requireAuth, async (req, res) => {
         }
 
         // Approve the best variation
-        const result = AuthModel.approveCaptionVariation(
-          caption.id,
-          bestVariation.id
-        )
-        if (result) {
-          approvedCount++
-        }
+        const result = await prisma.caption.update({
+          where: { id: caption.id },
+          data: {
+            approvalStatus: 'approved',
+            approvedAt: new Date(),
+            primaryVariationId: bestVariation.id,
+            variations: {
+              update: {
+                where: { id: bestVariation.id },
+                data: { approvalStatus: 'approved', approvedAt: new Date() },
+              },
+            },
+          },
+        })
+        if (result) approvedCount++
       }
     }
 
