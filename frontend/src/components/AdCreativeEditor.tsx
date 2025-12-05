@@ -28,7 +28,11 @@ export function AdCreativeEditor({
     brandKitId,
     objective: initialData?.objective || 'consideration',
     funnelStage: initialData?.funnelStage || 'middle',
-    platforms: [initialData?.primaryPlatform || 'instagram'],
+    platforms: [
+      initialData?.primaryPlatform === 'multi'
+        ? 'instagram'
+        : initialData?.primaryPlatform || 'instagram',
+    ],
     targetAudience: {
       demographics: '',
       psychographics: '',

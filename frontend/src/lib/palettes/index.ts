@@ -60,3 +60,42 @@ export {
   deepClone,
   deepEqual,
 } from './utils'
+
+// Export color space converter
+export {
+  ColorSpaceConverter,
+  rgbToHsl,
+  hslToRgb,
+  hexToRgb,
+  rgbToHex,
+  hexToHsl,
+  hslToHex,
+} from './colorSpaceConverter'
+
+// Export color harmony
+export {
+  ColorHarmony,
+  getComplementaryColor,
+  getAnalogousColors,
+  getTriadicColors,
+  getSplitComplementaryColors,
+  getTetradicColors,
+  areColorsSimilar,
+  getHueDifference,
+  areColorsComplementary,
+} from './colorHarmony'
+
+// Export color adjuster
+export {
+  ColorAdjuster,
+  adjustLightness,
+  adjustSaturation,
+  rotateHue,
+  lighten,
+  darken,
+  saturate,
+  desaturate,
+  suggestAccessibleColor,
+  suggestAccessibleAlternatives,
+  getNearestAccessibleColor,
+} from './colorAdjuster'

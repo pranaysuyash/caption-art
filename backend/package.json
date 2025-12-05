@@ -58,12 +58,8 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "pg": "^8.11.0",
-    "@prisma/client": "^6.19.0",
-    "@prisma/internals": "^7.1.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.5.0",
-    "canvas": "^3.2.0",
     "connect-sqlite3": "^0.9.16",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -76,16 +72,20 @@
     "jszip": "^3.10.1",
     "multer": "^2.0.2",
     "node-fetch": "^2.7.0",
-    "openai": "^6.9.1",
-    "prisma": "^6.19.0",
-    "replicate": "^1.4.0",
-    "sharp": "^0.34.5",
     "undici": "^7.16.0",
     "zod": "^4.1.13"
   },
   "optionalDependencies": {
     "pino": "^8.17.0",
     "pino-http": "^8.1.0",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "pg": "^8.11.0",
+    "@prisma/client": "^6.19.0",
+    "@prisma/internals": "^7.1.0",
+    "prisma": "^6.19.0",
+    "canvas": "^3.2.0",
+    "sharp": "^0.34.5",
+    "openai": "^6.9.1",
+    "replicate": "^1.4.0"
   }
 }

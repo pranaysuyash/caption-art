@@ -95,7 +95,13 @@ describe('Property 22: Functional equivalence', () => {
   it('caption endpoint should return Lambda-compatible response structure', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.constant(null),
+        fc.oneof(
+          fc.constant('https://example.com/image.jpg'),
+          fc.constant('https://example.com/photo.png'),
+          fc.constant(
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+          )
+        ),
         fc.option(fc.array(fc.string(), { minLength: 0, maxLength: 5 }), {
           nil: undefined,
         }),
@@ -348,7 +354,7 @@ describe('Property 22: Functional equivalence', () => {
   it('should handle CORS headers like Lambda API Gateway', async () => {
     await fc.assert(
       fc.asyncProperty(fc.constant(null), async (_unused) => {
-        const imageUrl = `http://localhost:3000/generated/test.jpg`
+        const imageUrl = `data:image/png;base64,abcd`
         const response = await request(app)
           .post('/api/caption')
           .send({ imageUrl })

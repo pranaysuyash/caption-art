@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import apiFetch from '../../lib/api/httpClient';
 import { safeLocalStorage } from '../../lib/storage/safeLocalStorage';
 import { adminClient } from '../../lib/api/adminClient';
+import { Breadcrumbs } from '../Breadcrumbs';
 
 type WorkspaceApi = {
   id: string;
@@ -48,16 +49,20 @@ export function WorkspaceList() {
   const [createLoading, setCreateLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetLoading, setResetLoading] = useState<string | null>(null);
-  const [workspaceMeta, setWorkspaceMeta] = useState<Record<string, WorkspaceMeta>>(
-    () => loadWorkspaceMeta()
-  );
+  const [workspaceMeta, setWorkspaceMeta] = useState<
+    Record<string, WorkspaceMeta>
+  >(() => loadWorkspaceMeta());
 
   useEffect(() => {
     loadWorkspaces();
   }, []);
 
   const persistWorkspaceMeta = useCallback(
-    (updater: (prev: Record<string, WorkspaceMeta>) => Record<string, WorkspaceMeta>) => {
+    (
+      updater: (
+        prev: Record<string, WorkspaceMeta>
+      ) => Record<string, WorkspaceMeta>
+    ) => {
       setWorkspaceMeta((prev) => {
         const next = updater(prev);
         safeLocalStorage.setItem(WORKSPACE_META_KEY, JSON.stringify(next));
@@ -87,7 +92,8 @@ export function WorkspaceList() {
           createdAt:
             typeof workspace.createdAt === 'string'
               ? workspace.createdAt
-              : workspace.createdAt?.toISOString?.() ?? new Date().toISOString(),
+              : workspace.createdAt?.toISOString?.() ??
+                new Date().toISOString(),
         })
       );
       setWorkspaces(normalized);
@@ -130,7 +136,8 @@ export function WorkspaceList() {
         createdAt:
           typeof result.workspace.createdAt === 'string'
             ? result.workspace.createdAt
-            : result.workspace.createdAt?.toISOString?.() ?? new Date().toISOString(),
+            : result.workspace.createdAt?.toISOString?.() ??
+              new Date().toISOString(),
       };
 
       persistWorkspaceMeta((prev) => ({
@@ -184,15 +191,14 @@ export function WorkspaceList() {
   const enrichedWorkspaces = useMemo(() => {
     return workspaces.map((workspace) => ({
       ...workspace,
-      industry:
-        workspace.industry ||
-        workspaceMeta[workspace.id]?.industry ||
-        'Uncategorized',
+      industry: workspaceMeta[workspace.id]?.industry || 'Uncategorized',
     }));
   }, [workspaces, workspaceMeta]);
 
   return (
     <div className='page-container'>
+      <Breadcrumbs />
+
       {error && (
         <div
           role='alert'
@@ -397,11 +403,16 @@ export function WorkspaceList() {
 
       {/* Loading State */}
       {loading && (
-        <div className='card-grid'>
+        <div
+          className='card-grid skeleton-grid'
+          style={{
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          }}
+        >
           {Array.from({ length: 6 }).map((_, idx) => (
             <div
               key={idx}
-              className='card'
+              className='card skeleton-card'
               style={{
                 background: 'var(--color-bg-secondary, #111827)',
                 border: '1px solid var(--color-border, #1f2937)',
@@ -507,7 +518,12 @@ export function WorkspaceList() {
 
       {/* Workspaces Grid */}
       {!loading && enrichedWorkspaces.length > 0 && (
-        <div className='card-grid'>
+        <div
+          className='card-grid'
+          style={{
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+          }}
+        >
           {enrichedWorkspaces.map((workspace) => (
             <Link
               key={workspace.id}
@@ -528,7 +544,7 @@ export function WorkspaceList() {
 
                 <div className='card-meta'>
                   <span>{workspace.campaignCount || 0} campaigns</span>
-                  <span>Created {formatDate(workspace.createdAt)}</span>
+                  <span>Created {formatDate(String(workspace.createdAt))}</span>
                   <button
                     type='button'
                     onClick={(e) => {

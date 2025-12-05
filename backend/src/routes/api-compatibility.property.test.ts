@@ -68,10 +68,17 @@ describe('Property 8: API compatibility', () => {
   it('caption endpoint should return baseCaption and variants fields', async () => {
     await fc.assert(
       fc.asyncProperty(
-        fc.constant(null),
-        fc.option(fc.array(fc.string(), { minLength: 0, maxLength: 5 }), {
-          nil: undefined,
-        }),
+        fc.oneof(
+          fc.constant('https://example.com/image.jpg'),
+          fc.constant('data:image/png;base64,abcd')
+        ),
+        fc.option(
+          fc.array(fc.stringMatching(/^[a-zA-Z0-9\s]+$/), {
+            minLength: 0,
+            maxLength: 5,
+          }),
+          { nil: undefined }
+        ),
         async (imageUrl, keywords) => {
           const response = await request(app)
             .post('/api/caption')

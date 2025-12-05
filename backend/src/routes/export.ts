@@ -1,15 +1,16 @@
 import { Router } from 'express'
-import { z } from 'zod'
-import { AuthModel } from '../models/auth'
 import { log } from '../middleware/logger'
 import { createAuthMiddleware } from '../routes/auth'
 import { AuthenticatedRequest } from '../types/auth'
 import { ExportService } from '../services/exportService'
 import path from 'path'
+import fs from 'fs'
+import { getPrismaClient } from '../lib/prisma'
 
 const router = Router()
 log.info('Initializing export router')
 const requireAuth = createAuthMiddleware() as any
+const prisma = getPrismaClient()
 
 // Debug: log every request into export router
 router.use((req, res, next) => {
@@ -40,7 +41,9 @@ router.post('/workspace/:workspaceId/start', requireAuth, async (req, res) => {
     const { workspaceId } = req.params
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -50,12 +53,23 @@ router.post('/workspace/:workspaceId/start', requireAuth, async (req, res) => {
     }
 
     // Check if there are approved captions to export
-    const approvedCaptions =
-      AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-    if (approvedCaptions.length === 0) {
+    const [approvedCaptionsCount, approvedGeneratedAssetsCount] =
+      await Promise.all([
+        prisma.caption.count({
+          where: { workspaceId, approvalStatus: 'approved' },
+        }),
+        prisma.generatedAsset.count({
+          where: { workspaceId, approvalStatus: 'approved' },
+        }),
+      ])
+
+    if (
+      approvedCaptionsCount === 0 &&
+      approvedGeneratedAssetsCount === 0
+    ) {
       return res
         .status(400)
-        .json({ error: 'No approved captions found for export' })
+        .json({ error: 'No approved content found for export' })
     }
 
     const result = await ExportService.startExport(workspaceId)
@@ -78,14 +92,16 @@ router.get('/jobs/:jobId', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { jobId } = req.params
-    const job = AuthModel.getExportJobById(jobId)
+    const job = await prisma.exportJob.findUnique({ where: { id: jobId } })
 
     if (!job) {
       return res.status(404).json({ error: 'Export job not found' })
     }
 
     // Verify job belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(job.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: job.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
@@ -105,24 +121,26 @@ router.get('/jobs/:jobId/download', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { jobId } = req.params
-    const job = AuthModel.getExportJobById(jobId)
+    const job = await prisma.exportJob.findUnique({ where: { id: jobId } })
 
     if (!job) {
       return res.status(404).json({ error: 'Export job not found' })
     }
 
     // Verify job belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(job.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: job.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    if (job.status !== 'completed' || !job.zipFilePath) {
+    if (job.status !== 'completed' || !job.downloadUrl) {
       return res.status(400).json({ error: 'Export not ready for download' })
     }
 
-    const fileName = path.basename(job.zipFilePath)
-    res.download(job.zipFilePath, fileName, (err) => {
+    const fileName = path.basename(job.downloadUrl)
+    res.download(job.downloadUrl, fileName, (err) => {
       if (err) {
         log.error({ err }, 'Download error')
         if (!res.headersSent) {
@@ -143,7 +161,9 @@ router.get('/workspace/:workspaceId/summary', requireAuth, async (req, res) => {
     const { workspaceId } = req.params
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -152,9 +172,16 @@ router.get('/workspace/:workspaceId/summary', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const approvedCaptions =
-      AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-    const assets = AuthModel.getAssetsByWorkspace(workspaceId)
+    const [approvedCaptions, assets, approvedGeneratedAssets] = await Promise.all([
+      prisma.caption.findMany({
+        where: { workspaceId, approvalStatus: 'approved' },
+        include: { asset: true },
+      }),
+      prisma.asset.findMany({ where: { workspaceId } }),
+      prisma.generatedAsset.findMany({
+        where: { workspaceId, approvalStatus: 'approved' },
+      }),
+    ])
 
     // Estimate file size
     let estimatedBytes = 1024 // ~1KB for metadata
@@ -180,16 +207,17 @@ router.get('/workspace/:workspaceId/summary', requireAuth, async (req, res) => {
         id: workspace.id,
         clientName: workspace.clientName,
       },
-      readyForExport: approvedCaptions.length > 0,
+      readyForExport:
+        approvedCaptions.length > 0 || approvedGeneratedAssets.length > 0,
       totalApproved: approvedCaptions.length,
+      totalGenerated: approvedGeneratedAssets.length,
       totalAssets: assets.length,
       estimatedSize: formatSize(estimatedBytes),
-      recentExports: AuthModel.getExportJobsByWorkspace(workspaceId)
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        )
-        .slice(0, 5),
+      recentExports: await prisma.exportJob.findMany({
+        where: { workspaceId },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
     })
   } catch (error) {
     log.error(
@@ -205,22 +233,29 @@ router.delete('/jobs/:jobId', requireAuth, async (req, res) => {
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { jobId } = req.params
-    const job = AuthModel.getExportJobById(jobId)
-
+    const job = await prisma.exportJob.findUnique({ where: { id: jobId } })
     if (!job) {
       return res.status(404).json({ error: 'Export job not found' })
     }
 
-    // Verify job belongs to agency via workspace
-    const workspace = AuthModel.getWorkspaceById(job.workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: job.workspaceId },
+    })
     if (!workspace || workspace.agencyId !== authenticatedReq.agency.id) {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const deleted = AuthModel.deleteExportJob(jobId)
-    if (!deleted) {
-      return res.status(404).json({ error: 'Export job not found' })
+    if (job.downloadUrl) {
+      const fileName = path.basename(job.downloadUrl)
+      log.info({ jobId, fileName }, 'Deleting export file from disk')
+      try {
+        fs.existsSync(job.downloadUrl) && fs.unlinkSync(job.downloadUrl)
+      } catch (err) {
+        log.warn({ err, jobId }, 'Failed to delete export file')
+      }
     }
+
+    await prisma.exportJob.delete({ where: { id: jobId } })
 
     res.json({ message: 'Export job deleted successfully' })
   } catch (error) {
@@ -261,7 +296,9 @@ router.get('/workspace/:workspaceId/history', requireAuth, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 10
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -270,11 +307,21 @@ router.get('/workspace/:workspaceId/history', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    const history = AuthModel.getExportHistory(workspaceId, limit)
+    const exports = await prisma.exportJob.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    })
 
     res.json({
       workspaceId,
-      ...history,
+      total: exports.length,
+      exports,
+      recentActivity: exports.map((exp) => ({
+        date: exp.createdAt.toISOString().split('T')[0],
+        count: 1,
+        status: exp.status,
+      })),
     })
   } catch (error) {
     log.error(
@@ -295,7 +342,9 @@ router.get(
       const { workspaceId } = req.params
 
       // Verify workspace belongs to current agency
-      const workspace = AuthModel.getWorkspaceById(workspaceId)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' })
       }
@@ -304,11 +353,43 @@ router.get(
         return res.status(403).json({ error: 'Access denied' })
       }
 
-      const statistics = AuthModel.getExportStatistics(workspaceId)
+      const exports = await prisma.exportJob.findMany({
+        where: { workspaceId },
+      })
+
+      const completed = exports.filter((job) => job.status === 'completed')
+      const failed = exports.filter((job) => job.status === 'failed')
+
+      const processingTimes = completed
+        .filter((job) => job.completedAt && job.createdAt)
+        .map((job) => {
+          const start = new Date(job.createdAt!).getTime()
+          const end = new Date(job.completedAt!).getTime()
+          return (end - start) / 1000
+        })
+
+      const averageTime =
+        processingTimes.length > 0
+          ? processingTimes.reduce((sum, time) => sum + time, 0) /
+            processingTimes.length
+          : 0
+
+      const totalAssets = exports.reduce(
+        (sum, job) => sum + (job.itemsTotal || 0),
+        0
+      )
 
       res.json({
         workspaceId,
-        ...statistics,
+        totalExports: exports.length,
+        completedExports: completed.length,
+        failedExports: failed.length,
+        averageProcessingTime: Math.round(averageTime),
+        totalAssetsExported: totalAssets,
+        successRate:
+          exports.length > 0
+            ? (completed.length / exports.length) * 100
+            : 0,
       })
     } catch (error) {
       log.error(
@@ -329,7 +410,9 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20
 
     // Verify workspace belongs to current agency
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       return res.status(404).json({ error: 'Workspace not found' })
     }
@@ -338,7 +421,10 @@ router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied' })
     }
 
-    let jobs = AuthModel.getExportJobsByWorkspace(workspaceId)
+    let jobs = await prisma.exportJob.findMany({
+      where: { workspaceId },
+      orderBy: { createdAt: 'desc' },
+    })
 
     // Filter by status if provided
     if (status) {

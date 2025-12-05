@@ -20,7 +20,10 @@ export function validateRequest(options: ValidationOptions) {
   return (req: Request, res: Response, next: NextFunction) => {
     const start = Date.now()
     const reqId = (req as any).requestId || 'no-req-id'
-    log.debug({ requestId: reqId, middleware: 'validateRequest' }, 'validateRequest start')
+    log.debug(
+      { requestId: reqId, middleware: 'validateRequest' },
+      'validateRequest start'
+    )
     try {
       // Validate body if schema provided
       if (options.body) {
@@ -54,22 +57,23 @@ export function validateRequest(options: ValidationOptions) {
       )
     } catch (error) {
       if (error instanceof z.ZodError) {
-        // Format validation errors for response
-        const errors = error.issues.map((issue) => ({
-          field: issue.path.join('.'),
-          message: issue.message,
-          value: issue.input,
-        }))
+        // Format validation errors for response - details must be string for Lambda compatibility
+        const errorMessages = error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ')
 
         return res.status(400).json({
           error: 'Validation error',
-          details: errors,
+          details: errorMessages,
         })
       }
 
       // Handle other errors
       const duration = Date.now() - start
-      log.debug({ requestId: reqId, middleware: 'validateRequest', duration }, 'validateRequest failed')
+      log.debug(
+        { requestId: reqId, middleware: 'validateRequest', duration },
+        'validateRequest failed'
+      )
 
       return res.status(500).json({
         error: 'Internal server error during validation',

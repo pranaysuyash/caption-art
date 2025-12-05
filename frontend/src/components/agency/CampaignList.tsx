@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import apiFetch from '../../lib/api/httpClient';
 import { CreateCampaignModal } from '../CreateCampaignModal';
+import { formatDate } from '../../lib/utils/dateUtils';
+import { Breadcrumbs } from '../Breadcrumbs';
 
 interface Campaign {
   id: string;
@@ -73,16 +75,6 @@ export function CampaignList() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const d = new Date(dateString);
-    if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  };
-
   const getQualityStatus = (score?: number) => {
     if (typeof score !== 'number') {
       return { label: 'Not scored', color: '#94a3b8' };
@@ -140,6 +132,8 @@ export function CampaignList() {
 
   return (
     <div className='page-container'>
+      <Breadcrumbs />
+      
       {/* Header */}
       <div className='page-header'>
         <div>
@@ -181,25 +175,41 @@ export function CampaignList() {
         <div
           style={{
             textAlign: 'center',
-            padding: '3rem',
+            padding: '4rem 2rem',
             color: 'var(--color-text-secondary, #6b7280)',
-            border: '1px dashed var(--color-border, #d1d5db)',
-            borderRadius: '12px',
+            border: '2px dashed var(--color-border, #d1d5db)',
+            borderRadius: '16px',
             background: 'var(--color-bg-secondary, #0b0b0b)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '1.5rem',
           }}
         >
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🧭</div>
-          <div style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-            No campaigns yet
-          </div>
-          <div style={{ marginBottom: '1rem' }}>
-            Create your first campaign to start generating captions.
+          <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🚀</div>
+          <div>
+            <h3
+              style={{
+                fontSize: '1.5rem',
+                color: 'var(--color-text, #0f172a)',
+                marginBottom: '0.5rem',
+                fontWeight: 600,
+              }}
+            >
+              Start your first campaign
+            </h3>
+            <p style={{ maxWidth: '400px', margin: '0 auto', lineHeight: 1.5 }}>
+              Create a campaign to organize your assets, define your brand voice,
+              and generate AI-powered captions.
+            </p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className='btn btn-primary'
+            className='btn btn-primary btn-lg'
+            style={{ padding: '0.75rem 1.5rem', fontSize: '1rem' }}
           >
-            + New Campaign
+            + Create Campaign
           </button>
         </div>
       ) : (
@@ -402,7 +412,7 @@ export function CampaignList() {
                       color: 'var(--color-text-secondary, #6b7280)',
                     }}
                   >
-                    Last updated {dateSource ? formatDate(dateSource) : '—'}
+                    Last updated {formatDate(dateSource)}
                   </div>
                 </div>
               </Link>

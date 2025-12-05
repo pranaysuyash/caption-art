@@ -23,7 +23,11 @@ import { registerPrismaSignalHandlers, initializePrisma } from './lib/prisma'
 // "createServer is not a function" errors when other modules import the
 // server during a circular dependency.
 export function createServer(
-  options: { enableRateLimiter?: boolean; loadRoutes?: boolean; enableSession?: boolean } = {}
+  options: {
+    enableRateLimiter?: boolean
+    loadRoutes?: boolean
+    enableSession?: boolean
+  } = {}
 ) {
   return createServerImpl(options)
 }
@@ -52,7 +56,10 @@ export async function waitForAppReady(
         if (stack.length >= minStackLength) return resolve()
         if (Date.now() - start >= timeoutMs) {
           // Timeout: resolve anyway but warn to avoid brittle test failures
-          log.warn({ timeoutMs, stackLen: stack.length }, 'waitForAppReady timed out')
+          log.warn(
+            { timeoutMs, stackLen: stack.length },
+            'waitForAppReady timed out'
+          )
           return resolve()
         }
       } catch (err) {
@@ -102,11 +109,19 @@ if (process.env.NODE_ENV === 'test') {
   )
 }
 
-// Also provide a default export that exposes the current bindings. This keeps
-// backwards compatibility with code that imports the default and expects an
-// object with createServer/startServer getters.
-// No default export - keep only named exports. This avoids ESM/CJS interop
-// issues where dynamic import only exposes `default` and not named exports.
+// Also provide a default export that exposes the current bindings. Some test
+// environments access the default export when using dynamic import with
+// CommonJS transpilation, so include waitForAppReady there as well.
+;(module as any).exports.default = {
+  createServer,
+  startServer,
+  waitForAppReady,
+}
+export default {
+  createServer,
+  startServer,
+  waitForAppReady,
+}
 
 // Global route registry to make route information accessible across functions
 let globalMountedRoutes: Array<{
@@ -230,8 +245,9 @@ function createServerImpl(
           // to support frontend running on a different port (Vite dev server).
           // In production default to 'lax' unless overridden by SESSION_SAMESITE.
           sameSite:
-            (process.env.SESSION_SAMESITE as any) ||
-            (process.env.NODE_ENV === 'production' ? 'lax' : 'none'),
+            process.env.NODE_ENV === 'production'
+              ? (process.env.SESSION_SAMESITE as any) || 'lax'
+              : 'lax', // Use 'lax' in development since 'none' requires secure
         },
       })
     )
@@ -270,7 +286,7 @@ function createServerImpl(
   let creativeEngineRouter, analyzeStyleRouter, campaignBriefsRouter
   let adCreativesRouter, styleMemoryRouter, videoScriptsRouter
   let multiFormatRouter, styleSynthesisRouter, videoRendererRouter
-  let publishingRouter, dashboardRouter, adminRouter
+  let publishingRouter, dashboardRouter, adminRouter, accountRouter
   if (loadRoutes) {
     // Lazy-load route modules only when requested
     const safeRequire = (modulePath: string) => {
@@ -350,6 +366,8 @@ function createServerImpl(
       (safeRequire('./routes/dashboard') || {}).default || express.Router()
     adminRouter =
       (safeRequire('./routes/admin') || {}).default || express.Router()
+    accountRouter =
+      (safeRequire('./routes/account') || {}).default || express.Router()
 
     // Routes (auth first, then workspaces, brand kits, assets, batch, approval, export, generated assets, then existing routes)
     app.use('/api/auth', authRouter)
@@ -397,6 +415,7 @@ function createServerImpl(
     app.use('/api/publishing', publishingRouter)
     app.use('/api/dashboard', dashboardRouter)
     app.use('/api/admin', adminRouter)
+    app.use('/api/account', accountRouter)
   }
 
   // Simple test route to debug route registration

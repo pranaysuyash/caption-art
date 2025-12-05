@@ -92,6 +92,8 @@ export function ReviewGrid() {
     null
   );
   const [exportJobs, setExportJobs] = useState<ExportJob[]>([]);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [jobsLoading, setJobsLoading] = useState(true);
   const [startingExport, setStartingExport] = useState(false);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -146,6 +148,7 @@ export function ReviewGrid() {
   const loadExportSummary = async () => {
     if (!workspaceId) return;
     try {
+      setSummaryLoading(true);
       const res = await apiFetch(
         `/api/export/workspace/${workspaceId}/summary`,
         { method: 'GET' }
@@ -160,12 +163,15 @@ export function ReviewGrid() {
           ? error.message
           : 'Unable to load export readiness'
       );
+    } finally {
+      setSummaryLoading(false);
     }
   };
 
   const loadExportJobs = async () => {
     if (!workspaceId) return;
     try {
+      setJobsLoading(true);
       const res = await apiFetch(
         `/api/export/workspace/${workspaceId}/jobs?limit=5`,
         { method: 'GET' }
@@ -181,6 +187,8 @@ export function ReviewGrid() {
       setActiveJobId(active ? active.id : null);
     } catch (error) {
       console.error(error);
+    } finally {
+      setJobsLoading(false);
     }
   };
 
@@ -552,9 +560,13 @@ export function ReviewGrid() {
           <div>
             <h3 className='panel-title'>Export</h3>
             <p style={{ color: 'var(--color-text-secondary)', marginTop: 'var(--space-xs)', marginBottom: 0 }}>
-              {exportSummary
-                ? `${exportSummary.totalApproved} approved • Estimated ${exportSummary.estimatedSize}`
-                : 'Loading export summary...'}
+              {summaryLoading ? (
+                <span className='skeleton-line' style={{ display: 'inline-block', minWidth: '220px', height: '12px' }} />
+              ) : exportSummary ? (
+                `${exportSummary.totalApproved} approved • Estimated ${exportSummary.estimatedSize}`
+              ) : (
+                'Export summary unavailable'
+              )}
               {exportError && (
                 <span style={{ display: 'block', marginTop: 'var(--space-xs)', color: 'var(--color-brand-error)', fontSize: 'var(--font-size-sm)' }}>
                   {exportError}
@@ -622,7 +634,44 @@ export function ReviewGrid() {
       )}
 
       {/* Recent exports */}
-      {exportJobs.length > 0 && (
+      {jobsLoading && (
+        <div
+          style={{
+            marginBottom: '1rem',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '0.75rem',
+          }}
+        >
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div
+              key={idx}
+              className='skeleton-card'
+              style={{
+                border: '1px solid var(--color-border, #e5e7eb)',
+                borderRadius: '10px',
+                padding: '0.75rem',
+                background: 'var(--color-bg-secondary, #111827)',
+              }}
+            >
+              <div
+                className='skeleton-line'
+                style={{ width: '60%', height: '14px', marginBottom: '0.5rem' }}
+              />
+              <div
+                className='skeleton-line'
+                style={{ width: '40%', height: '12px', marginBottom: '0.35rem' }}
+              />
+              <div
+                className='skeleton-line'
+                style={{ width: '80%', height: '12px' }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {exportJobs.length > 0 && !jobsLoading && (
         <div
           style={{
             marginBottom: '1rem',

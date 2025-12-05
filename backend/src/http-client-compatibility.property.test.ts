@@ -15,11 +15,15 @@ vi.mock('./services/replicate', () => ({
 }))
 
 vi.mock('./services/openai', () => ({
-  rewriteCaption: vi.fn().mockResolvedValue(['Variant 1', 'Variant 2', 'Variant 3']),
+  rewriteCaption: vi
+    .fn()
+    .mockResolvedValue(['Variant 1', 'Variant 2', 'Variant 3']),
 }))
 
 vi.mock('./services/gumroad', () => ({
-  verifyLicense: vi.fn().mockResolvedValue({ valid: true, email: 'test@example.com' }),
+  verifyLicense: vi
+    .fn()
+    .mockResolvedValue({ valid: true, email: 'test@example.com' }),
 }))
 
 vi.mock('./services/imageRenderer', () => ({
@@ -36,25 +40,32 @@ vi.mock('./services/imageRenderer', () => ({
 beforeEach(async () => {
   vi.resetModules()
   const serverModule = await import('./server')
-  const createServer = (serverModule as any).createServer || (serverModule as any).default?.createServer
+  const createServer =
+    (serverModule as any).createServer ||
+    (serverModule as any).default?.createServer
   app = createServer({ enableRateLimiter: false, loadRoutes: true })
   const { waitForAppReady } = await import('./server')
   await waitForAppReady(app)
   port = 3000 + Math.floor(Math.random() * 1000)
-  await new Promise<void>((resolve) => (server = app!.listen(port, () => resolve())))
+  await new Promise<void>(
+    (resolve) => (server = app!.listen(port, () => resolve()))
+  )
 })
 
 afterEach(async () => {
   vi.clearAllMocks()
-  if (server) await new Promise<void>((resolve, reject) => server!.close((err) => (err ? reject(err) : resolve())))
+  if (server)
+    await new Promise<void>((resolve, reject) =>
+      server!.close((err) => (err ? reject(err) : resolve()))
+    )
 })
 
 describe('HTTP client compatibility', () => {
   it('supports fetch API', async () => {
     await fc.assert(
       fc.asyncProperty(fc.constant(null), async () => {
-          // Use a small 1x1 GIF data URI to avoid network fetches during tests
-          const imageUrl = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
+        // Use a small 1x1 GIF data URI to avoid network fetches during tests
+        const imageUrl = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
         const res = await fetch(`http://localhost:${port}/api/caption`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -74,11 +85,14 @@ describe('HTTP client compatibility', () => {
       fc.asyncProperty(fc.constant(null), async () => {
         // Use a small 1x1 GIF data URI to avoid network fetches during tests
         const imageUrl = 'data:image/gif;base64,R0lGODlhAQABAAAAACw='
-        const { statusCode, body } = await request(`http://localhost:${port}/api/mask`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ imageUrl }),
-        })
+        const { statusCode, body } = await request(
+          `http://localhost:${port}/api/mask`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ imageUrl }),
+          }
+        )
         expect(statusCode).toBe(200)
         const data = await body.json()
         expect(data).toHaveProperty('maskUrl')
@@ -90,11 +104,18 @@ describe('HTTP client compatibility', () => {
   it('supports supertest', async () => {
     const request = await import('supertest')
     await fc.assert(
-      fc.asyncProperty(fc.string({ minLength: 5, maxLength: 50 }), async (licenseKey) => {
-        const res = await request.default(app!).post('/api/verify').send({ licenseKey }).set('Content-Type', 'application/json')
-        expect(res.status).toBe(200)
-        expect(res.body).toHaveProperty('valid')
-      }),
+      fc.asyncProperty(
+        fc.string({ minLength: 5, maxLength: 50 }),
+        async (licenseKey) => {
+          const res = await request
+            .default(app!)
+            .post('/api/verify')
+            .send({ licenseKey })
+            .set('Content-Type', 'application/json')
+          expect(res.status).toBe(200)
+          expect(res.body).toHaveProperty('valid')
+        }
+      ),
       { numRuns: 3 }
     )
   }, 20000)

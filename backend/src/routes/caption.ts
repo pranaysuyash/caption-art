@@ -59,7 +59,13 @@ router.post(
       }
 
       const baseCaptionEnd = Date.now()
-      log.info({ step: 'generateBaseCaption', duration: baseCaptionEnd - baseCaptionStart }, 'caption step timing')
+      log.info(
+        {
+          step: 'generateBaseCaption',
+          duration: baseCaptionEnd - baseCaptionStart,
+        },
+        'caption step timing'
+      )
 
       // Generate creative variants with OpenAI
       const rewriteStart = Date.now()
@@ -74,7 +80,10 @@ router.post(
       }
 
       const rewriteEnd = Date.now()
-      log.info({ step: 'rewriteCaption', duration: rewriteEnd - rewriteStart }, 'caption step timing')
+      log.info(
+        { step: 'rewriteCaption', duration: rewriteEnd - rewriteStart },
+        'caption step timing'
+      )
 
       const response: CaptionResponse = {
         baseCaption,
@@ -82,7 +91,10 @@ router.post(
       }
 
       const handlerEnd = Date.now()
-      log.info({ step: 'handlerTotal', duration: handlerEnd - handlerStart }, 'caption step timing')
+      log.info(
+        { step: 'handlerTotal', duration: handlerEnd - handlerStart },
+        'caption step timing'
+      )
 
       res.json(response)
     } catch (error) {

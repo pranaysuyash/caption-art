@@ -1,300 +1,210 @@
 # Design System Migration Checklist
 
-## Overview
-This checklist helps the team systematically apply the Caption Art design system to remaining pages. Use this to track progress and ensure consistency.
+## Visual Improvements Implementation Plan
 
-## ✅ Completed Pages
+### Phase 1: Core Design System (✅ COMPLETED)
+- [x] Create design-system.css with CSS variables
+- [x] Define consistent color palette
+- [x] Establish typography system  
+- [x] Set standard spacing units
+- [x] Create component styles (buttons, inputs, cards)
 
-### Phase 1: Core Pages
-- [x] **WorkspaceList** - Applied card-grid, page-container, card components
-- [x] **CampaignList** - Applied card-grid, page-header, card-interactive
-- [x] **CampaignDetail** - Applied two-column-layout, panel components
-- [x] **AgencyHeader** - Integrated breadcrumbs, responsive styling
+### Phase 2: Navigation Improvements (✅ COMPLETED)
+- [x] Implement Breadcrumbs component
+- [x] Add breadcrumbs to WorkspaceList
+- [x] Add breadcrumbs to CampaignList
+- [x] Add breadcrumbs to CampaignDetail
+- [x] Add breadcrumbs to Settings pages
 
-### Phase 2: Secondary Pages (High Priority) ✅
-- [x] **ReviewGrid** - Applied card-grid, panel, btn-success/danger, page-container
-- [x] **BrandKitEditor** - Applied page-container, panel components, btn-primary
-- [x] **AssetManager** - Applied page-container, card-grid, btn hierarchy
-- [x] **SettingsPanel** - Applied btn hierarchy (primary, secondary, ghost)
+### Phase 3: Account Settings (✅ COMPLETED)
+- [x] Organization Settings page
+- [x] User Management with roles
+- [x] Billing & Subscription management
+- [x] Audit Logs with filtering
+- [x] Integrations Settings
+- [x] Security Settings
+- [x] Brand Kit Settings
 
-## ⏳ Remaining Pages
+### Phase 4: Visual Consistency (🔄 IN PROGRESS)
+#### Button Standardization
+- [ ] Audit all buttons for consistent sizing (40px height)
+- [ ] Ensure primary actions use `btn-primary` class
+- [ ] Ensure secondary actions use `btn-secondary` class
+- [ ] Place card action buttons consistently (top-right corner)
+- [ ] Add hover states to all interactive elements
 
-### Phase 3: Additional Pages (Medium Priority) ✅
-- [x] **TemplateSelector** - Applied panel, card-grid, card-interactive
-- [x] **AnalyticsDashboard** - Applied page-container, stats-grid, panel components
-- [x] **Playground** - Applied page-container, two-column-layout, stack-mobile, panels
-- [x] **CampaignBriefEditor** - Applied page-container, page-header, btn hierarchy
+#### Card Layout Standardization  
+- [ ] All cards use consistent padding (1.5rem)
+- [ ] All cards use consistent border-radius (12px)
+- [ ] Card headers have consistent structure
+- [ ] Card actions placed in same location
+- [ ] Grid layouts use consistent gaps (1.5rem)
 
-### Phase 4: Modals & Overlays (Low Priority) ✅
-- [x] **CreateCampaignModal** - Applied btn btn-primary, btn btn-secondary, btn-sm
-- [x] **CreateWorkspaceModal** - Already using btn btn-primary, btn btn-secondary
+#### Typography Consistency
+- [ ] Page titles use `page-title` class (2rem, bold)
+- [ ] Section headings use `section-title` class (1.5rem, semibold)
+- [ ] Body text uses consistent line-height (1.6)
+- [ ] All text uses design system colors
 
-## ✅ Migration Complete - 100%
+### Phase 5: Responsive Design (⏳ TODO)
+#### Breakpoints
+- Mobile: < 640px
+- Tablet: 640px - 1024px  
+- Desktop: > 1024px
 
-All pages and components have been successfully migrated to the unified design system!
+#### Tasks
+- [ ] Test all pages on mobile viewport
+- [ ] Convert tables to stacked lists on mobile
+- [ ] Make navigation responsive (hamburger menu)
+- [ ] Adjust card grids for smaller screens
+- [ ] Test form layouts on mobile
+- [ ] Add horizontal scroll indicators for wide tables
 
-#### Create Campaign Modal
-- [ ] Apply `.panel` styling
-- [ ] Use proper button hierarchy
-- [ ] Add `WorkflowProgress` if multi-step
-- [ ] Test keyboard navigation
+### Phase 6: Workflow Improvements (⏳ TODO)
+#### Multi-Step Processes
+- [ ] Add stepper component for workflows
+- [ ] Implement "Save & Continue Later" in campaign creation
+- [ ] Add "Back" buttons in multi-step flows
+- [ ] Show progress indicators
+- [ ] Allow skipping optional steps
 
-**Estimated Time**: 30 minutes
-**Files to Update**:
-- `frontend/src/components/CreateCampaignModal.tsx`
+#### Error Handling
+- [ ] Consistent error message styling
+- [ ] Toast notifications for success/error
+- [ ] Inline validation messages
+- [ ] Loading states for all async operations
+- [ ] Empty states with helpful guidance
 
-#### Create Workspace Modal
-- [ ] Apply consistent form styling
-- [ ] Use button hierarchy
-- [ ] Test responsive behavior
+### Phase 7: Accessibility (⏳ TODO)
+- [ ] All interactive elements keyboard accessible
+- [ ] Proper ARIA labels on complex components
+- [ ] Focus indicators visible and consistent
+- [ ] Color contrast meets WCAG AA standards
+- [ ] Screen reader friendly
 
-**Estimated Time**: 30 minutes
-**Files to Update**:
-- `frontend/src/components/CreateWorkspaceModal.tsx`
+### Phase 8: Performance (⏳ TODO)
+- [ ] Lazy load heavy components
+- [ ] Optimize images and assets
+- [ ] Add loading skeletons
+- [ ] Implement virtual scrolling for long lists
+- [ ] Cache API responses appropriately
 
-## Migration Steps (For Each Page)
+## Implementation Guidelines
 
-### 1. Preparation (5 minutes)
-- [ ] Open the page file in your editor
-- [ ] Review current inline styles
-- [ ] Identify grid/layout patterns
-- [ ] Check for custom button styles
-
-### 2. Layout Migration (15-30 minutes)
-- [ ] Replace page wrapper padding with `.page-container`
-- [ ] Replace page header with `.page-header`, `.page-title`, `.page-subtitle`
-- [ ] Replace inline grids with `.card-grid` or `.two-column-layout`
-- [ ] Replace panel wrappers with `.panel` and `.panel-header`
-
-### 3. Component Migration (20-40 minutes)
-- [ ] Replace card styling with `.card`, `.card-header`, `.card-title`, etc.
-- [ ] Replace button classes with proper hierarchy (`.btn-primary`, etc.)
-- [ ] Apply `.card-meta` for card metadata
-- [ ] Use `.card-actions` for consistent button placement
-
-### 4. Responsive Check (10-15 minutes)
-- [ ] Test on mobile (375px width)
-- [ ] Test on tablet (768px width)
-- [ ] Test on desktop (1280px width)
-- [ ] Verify no horizontal scrolling on mobile
-- [ ] Check touch targets are 44px minimum
-
-### 5. Cleanup (5 minutes)
-- [ ] Remove unused inline styles
-- [ ] Remove redundant style objects
-- [ ] Format code
-- [ ] Run linter
-
-### 6. Testing (10 minutes)
-- [ ] Test all interactive features
-- [ ] Verify navigation works
-- [ ] Test keyboard navigation
-- [ ] Check accessibility (color contrast, focus states)
-
-## Quick Reference: Class Replacements
-
-### Page Structure
+### Button Hierarchy
 ```tsx
-// Before
-<div style={{ padding: '2rem' }}>
-  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
-    <h1 style={{ fontSize: '2rem' }}>Title</h1>
-    <button>Action</button>
-  </div>
-</div>
+// Primary action (one per page/section)
+<button className="btn btn-primary">Create Campaign</button>
 
-// After
-<div className="page-container">
-  <div className="page-header">
-    <div>
-      <h1 className="page-title">Title</h1>
-      <p className="page-subtitle">Description</p>
+// Secondary actions  
+<button className="btn btn-secondary">Cancel</button>
+
+// Tertiary actions (minimal styling)
+<button className="btn btn-tertiary">View Details</button>
+
+// Danger actions
+<button className="btn btn-danger">Delete</button>
+```
+
+### Card Structure
+```tsx
+<div className="card">
+  <div className="card-header">
+    <div className="card-title">Title</div>
+    <div className="card-actions">
+      <button className="btn btn-primary">Action</button>
     </div>
-    <button className="btn btn-primary">Action</button>
+  </div>
+  <div className="card-body">
+    {/* Content */}
   </div>
 </div>
 ```
 
 ### Grid Layouts
 ```tsx
-// Before
-<div style={{
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+// 3-column grid
+<div style={{ 
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
   gap: '1.5rem'
 }}>
-
-// After
-<div className="card-grid">
-```
-
-### Cards
-```tsx
-// Before
-<div style={{
-  backgroundColor: 'white',
-  border: '1px solid #e5e7eb',
-  borderRadius: '12px',
-  padding: '1.5rem'
-}}>
-
-// After
-<div className="card card-interactive">
-  <div className="card-header">
-    <div>
-      <h3 className="card-title">Title</h3>
-      <p className="card-subtitle">Subtitle</p>
-    </div>
-    <div className="card-icon">🏢</div>
-  </div>
-  <div className="card-meta">
-    <span>Info</span>
-    <span>Date</span>
-  </div>
+  {/* Cards */}
 </div>
 ```
 
-### Panels
-```tsx
-// Before
-<div style={{
-  backgroundColor: 'white',
-  border: '1px solid #e5e7eb',
-  borderRadius: '12px',
-  padding: '1.5rem',
-  marginBottom: '2rem'
-}}>
-  <h3>Section Title</h3>
-  {/* Content */}
-</div>
-
-// After
-<div className="panel">
-  <div className="panel-header">
-    <h3 className="panel-title">Section Title</h3>
-  </div>
-  <div className="panel-section">
-    {/* Content */}
-  </div>
-</div>
-```
-
-### Buttons
-```tsx
-// Before
-<button style={{ backgroundColor: '#2563eb', color: 'white', padding: '12px 16px' }}>
-  Save
-</button>
-
-// After
-<button className="btn btn-primary">Save</button>
-<button className="btn btn-secondary">Cancel</button>
-<button className="btn btn-ghost">Reset</button>
-<button className="btn btn-success">Approve</button>
-<button className="btn btn-danger">Delete</button>
-```
+### Spacing Scale
+- xs: 0.25rem (4px)
+- sm: 0.5rem (8px)
+- md: 1rem (16px)
+- lg: 1.5rem (24px)
+- xl: 2rem (32px)
+- 2xl: 3rem (48px)
 
 ## Testing Checklist
 
-### Responsive Testing
-- [ ] Mobile portrait (375px)
-- [ ] Mobile landscape (667px)
-- [ ] Tablet (768px)
-- [ ] Desktop (1280px)
-- [ ] Large desktop (1920px)
+### Visual Testing
+- [ ] All pages use consistent fonts
+- [ ] All pages use design system colors
+- [ ] Buttons have consistent sizes
+- [ ] Cards have consistent styling
+- [ ] Spacing is uniform throughout
 
-### Functionality Testing
-- [ ] All buttons work
-- [ ] Forms submit properly
-- [ ] Navigation works
-- [ ] Modals open/close
-- [ ] Data loads correctly
+### Functional Testing
+- [ ] All forms submit correctly
+- [ ] Navigation works on all pages
+- [ ] Breadcrumbs update correctly
+- [ ] Modals open and close properly
+- [ ] Settings can be saved
+
+### Responsive Testing
+- [ ] Test on iPhone SE (375px width)
+- [ ] Test on iPad (768px width)
+- [ ] Test on desktop (1920px width)
+- [ ] Test on ultrawide (2560px+ width)
+- [ ] No horizontal scroll on mobile
 
 ### Accessibility Testing
-- [ ] Keyboard navigation works
-- [ ] Focus states are visible
-- [ ] Color contrast meets WCAG AA
-- [ ] Screen reader compatible
-- [ ] Touch targets are 44px minimum
+- [ ] Tab through entire page
+- [ ] Test with screen reader
+- [ ] Check color contrast ratios
+- [ ] Verify all images have alt text
+- [ ] Test with keyboard only
 
-## Resources
+## Browser Compatibility
+- [ ] Chrome/Edge (latest)
+- [ ] Firefox (latest)
+- [ ] Safari (latest)
+- [ ] Mobile Safari (iOS)
+- [ ] Chrome Mobile (Android)
 
-### Documentation
-- **Design System Guide**: `frontend/DESIGN_SYSTEM.md`
-- **Visual Guide**: `VISUAL_IMPROVEMENTS_GUIDE.md`
-- **Layout Guide**: `LAYOUT_RESPONSIVENESS_IMPROVEMENTS.md`
+## Documentation
+- [ ] Update README with design system info
+- [ ] Document component usage patterns
+- [ ] Create style guide page
+- [ ] Add code examples
+- [ ] Document breakpoints and responsive behavior
 
-### Component Examples
-- **WorkspaceList.tsx**: Grid layout, cards
-- **CampaignList.tsx**: Card grid, filters
-- **CampaignDetail.tsx**: Two-column layout, panels
-- **AgencyHeader.tsx**: Breadcrumbs, responsive header
+## Priority Order
+1. **High Priority** (blocking release)
+   - Visual consistency (buttons, cards)
+   - Breadcrumb navigation
+   - Basic responsive design
 
-### Design Tokens
-- Colors: `frontend/src/styles/design-system.css`
-- Components: `frontend/src/styles/components.css`
-- Breakpoints: Defined in design-system.css
+2. **Medium Priority** (nice to have)
+   - Workflow improvements
+   - Advanced responsive features
+   - Empty states and loading indicators
 
-## Progress Tracking
+3. **Low Priority** (future enhancement)
+   - Micro-interactions
+   - Advanced animations
+   - Performance optimizations
 
-### Summary
-- **Completed**: 12 pages + 2 modals = 14 components (100%)
-- **Pages**: WorkspaceList, CampaignList, CampaignDetail, AgencyHeader, ReviewGrid, BrandKitEditor, AssetManager, SettingsPanel, TemplateSelector, AnalyticsDashboard, Playground, CampaignBriefEditor
-- **Modals**: CreateCampaignModal, CreateWorkspaceModal (in WorkspaceList)
-- **Status**: ✅ COMPLETE
-
-### Estimated Total Time
-- ~~High Priority: ~6.5 hours~~ ✅ COMPLETE
-- ~~Medium Priority: ~7 hours~~ ✅ COMPLETE
-- ~~Low Priority: ~1 hour~~ ✅ COMPLETE
-- **Total Time**: ~14.5 hours → Completed in 2 days
-- **Status**: 100% COMPLETE 🎉
-
-### Recommended Schedule
-- **Week 1**: High priority pages (2-3 pages)
-- **Week 2**: Remaining high priority + start medium priority
-- **Week 3**: Complete medium priority + low priority items
-- **Week 4**: Testing, polish, and documentation updates
-
-## Support
-
-### Getting Help
-1. Check documentation first (DESIGN_SYSTEM.md)
-2. Look at completed examples (WorkspaceList.tsx)
-3. Review this checklist
-4. Ask team for guidance
-
-### Common Issues
-
-**Issue**: Grid not responsive on mobile
-**Solution**: Use `.card-grid` class instead of inline grid
-
-**Issue**: Buttons look the same
-**Solution**: Apply proper hierarchy (.btn-primary, .btn-secondary, .btn-ghost)
-
-**Issue**: Cards don't align
-**Solution**: Ensure all cards use `.card` class and are in `.card-grid`
-
-**Issue**: Too much horizontal scrolling on mobile
-**Solution**: Use `.page-container` and remove fixed widths
-
-**Issue**: Content looks cramped
-**Solution**: Use `.panel` with `.panel-section` for proper spacing
-
-## Notes
-
-- Always test on real devices, not just browser DevTools
-- Use design tokens (CSS variables) instead of hard-coded values
-- Keep accessibility in mind (keyboard nav, contrast, focus states)
-- Maintain consistency with existing completed pages
-- Update this checklist as you complete pages
-- Commit changes incrementally (one page at a time)
-
-## Updates
-
-- **2025-12-04**: Initial checklist created
-- **2025-12-04**: Completed WorkspaceList, CampaignList, CampaignDetail, AgencyHeader
-- **2025-12-05**: ✅ Completed ALL High Priority pages (ReviewGrid, BrandKitEditor, AssetManager, SettingsPanel)
-- **2025-12-05**: ✅ Completed ALL Medium Priority pages (TemplateSelector, AnalyticsDashboard, Playground)
-- **2025-12-05**: ✅ Completed CampaignBriefEditor and all Modals
-- **2025-12-05**: 🎉 **100% MIGRATION COMPLETE** - All 14 components migrated successfully!
+## Success Metrics
+- Zero visual inconsistencies across pages
+- 100% of pages have breadcrumbs
+- All pages responsive on mobile/tablet
+- No console errors
+- All settings features functional
+- Loading time < 2s for all pages

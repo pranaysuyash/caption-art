@@ -193,7 +193,6 @@ function ConversionFunnel({ metrics }: { metrics: ConversionMetrics }) {
   
   return (
     <div className='panel'>
-    }}>
       <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 'bold' }}>
         Conversion Funnel
       </h3>
@@ -261,11 +260,49 @@ export function AnalyticsDashboard() {
     }, 500);
   };
 
+  const renderSkeletonGrid = (count: number, minWidth: number = 200) => (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(auto-fit, minmax(${minWidth}px, 1fr))`,
+        gap: 'var(--space-md)',
+      }}
+    >
+      {Array.from({ length: count }).map((_, idx) => (
+        <div
+          key={idx}
+          className='card skeleton-card'
+          style={{
+            padding: '1.25rem',
+            border: '1px solid var(--color-border, #1f2937)',
+            background: 'var(--color-bg-secondary, #111827)',
+          }}
+        >
+          <div
+            className='skeleton-line'
+            style={{ width: '60%', height: '16px', marginBottom: '0.6rem' }}
+          />
+          <div
+            className='skeleton-line'
+            style={{ width: '45%', height: '14px', marginBottom: '0.6rem' }}
+          />
+          <div
+            className='skeleton-line'
+            style={{ width: '35%', height: '12px' }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+
   if (loading && !data) {
     return (
       <div className='page-container'>
-        <div style={{ textAlign: 'center', padding: 'var(--space-3xl)' }}>
-          Loading dashboard...
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
+          {renderSkeletonGrid(3, 220)}
+          {renderSkeletonGrid(2, 320)}
+          {renderSkeletonGrid(2, 320)}
+          {renderSkeletonGrid(1, 320)}
         </div>
       </div>
     );

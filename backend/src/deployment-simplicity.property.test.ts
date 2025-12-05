@@ -188,25 +188,44 @@ describe('Property 23: Deployment simplicity', () => {
           'GUMROAD_PRODUCT_PERMALINK'
         ),
         async (missingVar) => {
-          // Set all required variables
-          process.env.REPLICATE_API_TOKEN = 'test-token'
-          process.env.OPENAI_API_KEY = 'test-key'
-          process.env.GUMROAD_PRODUCT_PERMALINK = 'test-product'
+          // Clear all env variables (even those from .env file)
+          delete process.env.REPLICATE_API_TOKEN
+          delete process.env.OPENAI_API_KEY
+          delete process.env.GUMROAD_PRODUCT_PERMALINK
 
-          // Remove one required variable
-          delete process.env[missingVar]
+          // Set all required variables except one
+          if (missingVar !== 'REPLICATE_API_TOKEN') {
+            process.env.REPLICATE_API_TOKEN = 'test-token'
+          }
+          if (missingVar !== 'OPENAI_API_KEY') {
+            process.env.OPENAI_API_KEY = 'test-key'
+          }
+          if (missingVar !== 'GUMROAD_PRODUCT_PERMALINK') {
+            process.env.GUMROAD_PRODUCT_PERMALINK = 'test-product'
+          }
+
+          // Ensure we're in a non-test environment for this check
+          const savedNodeEnv = process.env.NODE_ENV
+          process.env.NODE_ENV = 'production'
 
           // Importing config should throw with clear error message
+          let errorThrown = false
+          let thrownError: Error | null = null
           try {
             await import('./config')
-            // If we get here, the test should fail
-            expect(true).toBe(false) // Force failure
           } catch (error) {
-            // Verify error message is clear and mentions the missing variable
-            expect(error).toBeInstanceOf(Error)
-            expect((error as Error).message).toContain(missingVar)
-            expect((error as Error).message).toContain('Missing')
+            errorThrown = true
+            thrownError = error as Error
           }
+
+          // Restore NODE_ENV
+          process.env.NODE_ENV = savedNodeEnv
+
+          // Verify error was thrown and mentions the missing variable
+          expect(errorThrown).toBe(true)
+          expect(thrownError).toBeInstanceOf(Error)
+          expect(thrownError?.message).toContain(missingVar)
+          expect(thrownError?.message).toContain('Missing')
 
           // Reset modules for next iteration
           vi.resetModules()

@@ -9,6 +9,7 @@ import {
   BrandKit,
   UpdateBrandKitData,
 } from '../lib/api/brandKitClient';
+import { BrandKitLivePreview } from './BrandKitLivePreview';
 import './BrandKitEditor.css';
 
 const FONT_OPTIONS = [
@@ -182,6 +183,21 @@ export function BrandKitEditor() {
           <h1 className='page-title'>Brand Kit</h1>
           <p className='page-subtitle'>{activeWorkspace.clientName}</p>
         </div>
+      </div>
+
+      <div style={{ marginBottom: '2rem' }}>
+        <BrandKitLivePreview
+          colors={{
+            primary: formData.colors?.primary || '#000000',
+            secondary: formData.colors?.secondary || '#ffffff',
+            tertiary: formData.colors?.tertiary || '#cccccc',
+          }}
+          fonts={{
+            heading: formData.fonts?.heading || 'Arial',
+            body: formData.fonts?.body || 'Arial',
+          }}
+          toneStyle={formData.toneStyle || 'professional'}
+        />
       </div>
 
       <form onSubmit={handleSave} className='brand-kit-form'>

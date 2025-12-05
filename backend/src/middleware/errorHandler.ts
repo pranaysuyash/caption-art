@@ -85,11 +85,7 @@ export function errorHandler(
       ) {
         return res.status(400).json({
           error: 'Validation error',
-          errorCode: 'VALIDATION_ERROR',
-          details: err.issues.map((e) => ({
-            field: e.path.join('.'),
-            message: e.message,
-          })),
+          details: err.issues.map((e) => e.message).join('; '),
         })
       }
     } catch (sendErr) {
@@ -110,10 +106,7 @@ export function errorHandler(
       ) {
         return res.status(err.statusCode).json({
           error: err.message,
-          errorCode: err.errorCode || 'EXTERNAL_API_ERROR',
-          service: err.service,
-          metadata: err.metadata,
-          ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+          ...(err.service && { details: `Service: ${err.service}` }),
         })
       }
     } catch (sendErr) {
@@ -128,23 +121,11 @@ export function errorHandler(
   if (err instanceof AppError) {
     const response: any = {
       error: err.message,
-      errorCode: err.errorCode,
-      ...(err.metadata && { metadata: err.metadata }),
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
     }
 
-    // Only include metadata in the response if it doesn't contain sensitive information
-    if (err.metadata) {
-      const { retryable, rateLimitInfo, ...safeMetadata } = err.metadata
-      if (Object.keys(safeMetadata).length > 0) {
-        response.metadata = safeMetadata
-      }
-      if (retryable !== undefined) {
-        response.retryable = retryable
-      }
-      if (rateLimitInfo) {
-        response.rateLimitInfo = rateLimitInfo
-      }
+    // Include metadata as a string if available and in development
+    if (process.env.NODE_ENV === 'development' && err.metadata) {
+      response.details = JSON.stringify(err.metadata)
     }
 
     try {

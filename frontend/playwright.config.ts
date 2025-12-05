@@ -14,7 +14,7 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5174',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -35,7 +35,7 @@ export default defineConfig({
     // This keeps the test setup self-contained for developers running the
     // Playwright suite locally and in CI.
     command: 'sh -c "npm --prefix ../backend run dev & npm run dev"',
-    url: 'http://localhost:5173',
+    url: 'http://localhost:5174',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

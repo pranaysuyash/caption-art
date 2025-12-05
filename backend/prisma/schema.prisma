@@ -5,7 +5,8 @@ datasource db {
   // Provider and url are now configurable via environment variables.
   // This allows running SQLite locally (provider=sqlite) and Postgres in
   // production (provider=postgresql) without editing the schema file.
-  provider = env("DATABASE_PROVIDER")
+  // NOTE: env() is not supported for provider, defaulting to sqlite for now.
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -16,16 +17,26 @@ generator client {
 // Agency - Billing and license management
 model Agency {
   id              String   @id @default(cuid())
+  name            String   @default("My Agency")
   licenseKey      String?
   billingActive   Boolean  @default(true)
   planType        String   @default("free") // free | paid
+  timezone        String   @default("UTC")
+  language        String   @default("en")
+  contactEmail    String?
+  contactPhone    String?
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  updatedAt       DateTime @default(now()) @updatedAt
 
   // Relations
   users           User[]
   workspaces      Workspace[]
   brandKits       BrandKit[]
+  roles           Role[]
+  auditLogs       AuditLog[]
+  subscription    Subscription?
+  integrations    Integration[]
+  featureFlags    FeatureFlag[]
 
   @@map("agencies")
 }
@@ -35,14 +46,21 @@ model User {
   id              String   @id @default(cuid())
   email           String   @unique
   password        String? // Hashed password (null for OAuth)
+  name            String?
+  avatar          String?
   agencyId        String
+  status          String   @default("active") // active | suspended | invited
+  lastLoginAt     DateTime @default(now())
   createdAt       DateTime @default(now())
-  lastLoginAt     DateTime @updatedAt
+  updatedAt       DateTime @default(now()) @updatedAt
 
   // Relations
   agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[]
+  auditLogs       AuditLog[]
 
   @@index([agencyId])
+  @@index([status])
   @@map("users")
 }
 
@@ -62,7 +80,9 @@ model Workspace {
   assets          Asset[]
   captions        Caption[]
   approvals       Approval[]
+  generatedAssets GeneratedAsset[]
   batchJobs       BatchJob[]
+  userRoles       UserRole[]
 
   @@index([agencyId])
   @@map("workspaces")
@@ -153,6 +173,7 @@ model Campaign {
   captions          Caption[]
   creatives         AdCreative[]
   approvals         Approval[]
+  generatedAssets   GeneratedAsset[]
 
   @@index([workspaceId])
   @@index([brandKitId])
@@ -178,6 +199,7 @@ model Asset {
   campaign          Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   captions          Caption[]
   masks             Mask[]
+  generatedAssets   GeneratedAsset[]
 
   @@index([workspaceId])
   @@index([campaignId])
@@ -219,6 +241,7 @@ model Caption {
   campaign          Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
   asset             Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
   approvals         Approval[]
+  generatedAssets   GeneratedAsset[]
 
   @@index([workspaceId])
   @@index([campaignId])
@@ -368,4 +391,193 @@ model PerformanceMetric {
   @@index([entityType])
   @@index([recordedAt])
   @@map("performance_metrics")
+}
+
+// GeneratedAsset - Rendered images/posts ready for approval/export
+model GeneratedAsset {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  campaignId     String?
+  assetId        String?
+  captionId      String?
+  jobId          String?
+  format         String
+  layout         String
+  captionText    String?
+  imageUrl       String
+  thumbnailUrl   String?
+  approvalStatus String   @default("pending") // pending | approved | rejected
+  watermark      Boolean  @default(false)
+  approvedAt     DateTime?
+  rejectedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign  Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  asset     Asset?    @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  caption   Caption?  @relation(fields: [captionId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([campaignId])
+  @@index([captionId])
+  @@index([approvalStatus])
+  @@map("generated_assets")
+}
+
+// Role - User role definitions
+model Role {
+  id              String   @id @default(cuid())
+  agencyId        String
+  name            String   // Owner, Admin, Member, Viewer, Custom
+  description     String?
+  permissions     Json     // Permission matrix as JSON
+  isSystem        Boolean  @default(false) // System roles can't be deleted
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[]
+
+  @@unique([agencyId, name])
+  @@index([agencyId])
+  @@map("roles")
+}
+
+// UserRole - User to role assignment (with optional workspace scope)
+model UserRole {
+  id              String   @id @default(cuid())
+  userId          String
+  roleId          String
+  workspaceId     String?  // Null = agency-wide role
+  grantedAt       DateTime @default(now())
+  grantedBy       String?  // User ID who granted this role
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role            Role      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  workspace       Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, workspaceId])
+  @@index([userId])
+  @@index([roleId])
+  @@index([workspaceId])
+  @@map("user_roles")
+}
+
+// AuditLog - Activity and security audit trail
+model AuditLog {
+  id              String   @id @default(cuid())
+  agencyId        String
+  userId          String?  // Null for system actions
+  action          String   // login, create, update, delete, approve, invite, etc.
+  entityType      String   // user, workspace, campaign, brandkit, etc.
+  entityId        String?
+  details         Json?    // Additional context
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  // Relations
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([agencyId])
+  @@index([userId])
+  @@index([action])
+  @@index([entityType])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Subscription - Billing and plan management
+model Subscription {
+  id                    String   @id @default(cuid())
+  agencyId              String   @unique
+  planId                String   // starter, professional, enterprise
+  planName              String   // Display name
+  status                String   // active, canceled, past_due, trial
+  seats                 Int      @default(1)
+  seatsUsed             Int      @default(0)
+  billingCycle          String   // monthly, annual
+  amount                Float    // Price per billing cycle
+  currency              String   @default("USD")
+  currentPeriodStart    DateTime
+  currentPeriodEnd      DateTime
+  cancelAtPeriodEnd     Boolean  @default(false)
+  trialEndsAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relations
+  agency                Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  invoices              Invoice[]
+
+  @@index([agencyId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+// Invoice - Billing invoice records
+model Invoice {
+  id              String   @id @default(cuid())
+  subscriptionId  String
+  invoiceNumber   String   @unique
+  amount          Float
+  currency        String   @default("USD")
+  status          String   // paid, pending, failed, refunded
+  description     String?
+  paidAt          DateTime?
+  dueDate         DateTime
+  invoiceUrl      String?  // PDF download URL
+  createdAt       DateTime @default(now())
+
+  // Relations
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@index([invoiceNumber])
+  @@map("invoices")
+}
+
+// Integration - Third-party integrations and API keys
+model Integration {
+  id              String   @id @default(cuid())
+  agencyId        String
+  type            String   // api_key, oauth, sso, webhook
+  provider        String   // instagram, facebook, zapier, google, etc.
+  name            String   // Display name
+  config          Json     // API keys, tokens, endpoints, scopes
+  isActive        Boolean  @default(true)
+  lastUsedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([provider])
+  @@map("integrations")
+}
+
+// FeatureFlag - Feature toggles and agency preferences
+model FeatureFlag {
+  id              String   @id @default(cuid())
+  agencyId        String
+  featureKey      String   // ai_captions, batch_export, white_label, etc.
+  isEnabled       Boolean  @default(true)
+  config          Json?    // Feature-specific configuration
+  updatedAt       DateTime @updatedAt
+  updatedBy       String?  // User ID who last updated
+
+  // Relations
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@unique([agencyId, featureKey])
+  @@index([agencyId])
+  @@index([featureKey])
+  @@map("feature_flags")
 }

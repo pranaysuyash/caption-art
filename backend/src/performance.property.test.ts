@@ -52,7 +52,8 @@ vi.mock('./services/imageRenderer', () => ({
 describe('Performance Properties', () => {
   let app: Express
   // Use a tiny, inlined data URI for image inputs to avoid network fetches
-  const tinyGif = 'data:image/gif;base64,R0lGODdhAQABAPAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw=='
+  const tinyGif =
+    'data:image/gif;base64,R0lGODdhAQABAPAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw=='
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -101,11 +102,16 @@ describe('Performance Properties', () => {
       (serverModule as any).default?.createServer
 
     // Default to non-verbose test logging unless explicitly set
-    process.env.TEST_VERBOSE_LOGGING = process.env.TEST_VERBOSE_LOGGING || 'false'
+    process.env.TEST_VERBOSE_LOGGING =
+      process.env.TEST_VERBOSE_LOGGING || 'false'
 
     // Create server without rate limiter for performance testing
     // Disable session to avoid SQLite file IO impacting timing
-    app = createServer({ enableRateLimiter: false, loadRoutes: true, enableSession: false })
+    app = createServer({
+      enableRateLimiter: false,
+      loadRoutes: true,
+      enableSession: false,
+    })
     // Ensure all routes are mounted before running tests to avoid 404s
     // due to route mounting race conditions.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -118,10 +124,15 @@ describe('Performance Properties', () => {
     const verbose = process.env.TEST_VERBOSE_LOGGING === 'true'
     if (verbose) {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { getRequestStats, clearRequestStats } = await import('./middleware/logger')
+      const { getRequestStats, clearRequestStats } =
+        await import('./middleware/logger')
       // The server created in beforeEach is in the module-level `app` var
       const stats = getRequestStats(app)
-      if (stats) console.info('Aggregated request stats:', JSON.stringify(stats, null, 2))
+      if (stats)
+        console.info(
+          'Aggregated request stats:',
+          JSON.stringify(stats, null, 2)
+        )
       clearRequestStats(app)
     } else {
       // Clear stats to avoid cross-test leakage
@@ -141,7 +152,11 @@ describe('Performance Properties', () => {
       // Create a minimal server instance for the health endpoint only once
       const serverModule = await import('./server')
       const createServerTable = (serverModule as any).createServer
-      const minimalApp = createServerTable({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
+      const minimalApp = createServerTable({
+        enableRateLimiter: false,
+        loadRoutes: false,
+        enableSession: false,
+      })
       // Mount the health router manually to avoid loading heavy routes and side-effects
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const healthRouter = require('./routes/health').default
@@ -244,7 +259,11 @@ describe('Performance Properties', () => {
       // Create minimal app once for the concurrent health tests
       const serverModule = await import('./server')
       const createServerTable = (serverModule as any).createServer
-      const minimalApp = createServerTable({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
+      const minimalApp = createServerTable({
+        enableRateLimiter: false,
+        loadRoutes: false,
+        enableSession: false,
+      })
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const healthRouter = require('./routes/health').default
       minimalApp.use('/api/health', healthRouter)
@@ -379,7 +398,11 @@ describe('Performance Properties', () => {
       // Create minimal app once to avoid dynamic imports in each property run
       const serverModule2 = await import('./server')
       const createServerFn = (serverModule2 as any).createServer
-      const minimalApp2 = createServerFn({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
+      const minimalApp2 = createServerFn({
+        enableRateLimiter: false,
+        loadRoutes: false,
+        enableSession: false,
+      })
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const healthRouter2 = require('./routes/health').default
       minimalApp2.use('/api/health', healthRouter2)
@@ -451,7 +474,9 @@ describe('Performance Properties', () => {
               const sStart = performance.now()
               const r = await request(app)
                 .get('/api/health')
-                .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+                .catch((err) => ({
+                  status: err.code === 'ECONNRESET' ? 503 : 500,
+                }))
               const sEnd = performance.now()
               sequentialTime += sEnd - sStart
               // Basic success check so the sequential run is valid
@@ -463,13 +488,17 @@ describe('Performance Properties', () => {
             const concurrentRequests = Array.from({ length: numRequests }, () =>
               request(app)
                 .get('/api/health')
-                .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+                .catch((err) => ({
+                  status: err.code === 'ECONNRESET' ? 503 : 500,
+                }))
             )
             const responses = await Promise.all(concurrentRequests)
             const concurrentTime = performance.now() - concurrentStart
 
             // At least one request should succeed
-            const successCount = responses.filter((r) => r.status === 200).length
+            const successCount = responses.filter(
+              (r) => r.status === 200
+            ).length
             expect(successCount).toBeGreaterThanOrEqual(1)
 
             // Verify concurrent time is significantly less than sequential time

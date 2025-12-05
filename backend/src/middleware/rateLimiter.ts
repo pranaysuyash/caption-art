@@ -32,7 +32,10 @@ export const rateLimiter = (req, res, next) => {
   const reqId = (req as any).requestId || 'no-req-id'
   return limitMiddleware(req, res, (err) => {
     const duration = Date.now() - start
-    log.debug({ requestId: reqId, middleware: 'rateLimiter', duration }, 'rateLimiter done')
+    log.debug(
+      { requestId: reqId, middleware: 'rateLimiter', duration },
+      'rateLimiter done'
+    )
     return next(err)
   })
 }

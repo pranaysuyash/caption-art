@@ -20,4 +20,6 @@ try {
 module.exports = {
   createServer: mod.createServer || (mod.default && mod.default.createServer),
   startServer: mod.startServer || (mod.default && mod.default.startServer),
+  waitForAppReady:
+    mod.waitForAppReady || (mod.default && mod.default.waitForAppReady),
 }

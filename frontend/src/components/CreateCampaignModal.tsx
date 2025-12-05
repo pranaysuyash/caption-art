@@ -56,10 +56,6 @@ export function CreateCampaignModal({
     e.preventDefault();
 
     try {
-      if (!payload.workspaceId) {
-        setError('Workspace required to create a campaign');
-        return;
-      }
       setLoading(true);
       setError(null);
       // Ensure required fields are present; add defaults if omitted
@@ -77,6 +73,13 @@ export function CreateCampaignModal({
         mustIncludePhrases: (formData.mustIncludePhrases || []).filter(Boolean),
         mustExcludePhrases: (formData.mustExcludePhrases || []).filter(Boolean),
       };
+
+      if (!payload.workspaceId) {
+        setError('Workspace required to create a campaign');
+        setLoading(false);
+        return;
+      }
+
       await campaignClient.createCampaign(payload);
       onCreated();
     } catch (err) {
@@ -408,7 +411,9 @@ export function CreateCampaignModal({
                     .filter(Boolean),
                 })
               }
-              placeholder={'One phrase per line\nBrand name must appear\nAlways mention free shipping'}
+              placeholder={
+                'One phrase per line\nBrand name must appear\nAlways mention free shipping'
+              }
               rows={3}
             />
           </div>
@@ -426,7 +431,9 @@ export function CreateCampaignModal({
                     .filter(Boolean),
                 })
               }
-              placeholder={'One phrase per line\nNo discounts language\nAvoid jargon'}
+              placeholder={
+                'One phrase per line\nNo discounts language\nAvoid jargon'
+              }
               rows={3}
             />
           </div>
@@ -543,7 +550,11 @@ export function CreateCampaignModal({
             >
               Cancel
             </button>
-            <button type='submit' className='btn btn-primary' disabled={loading}>
+            <button
+              type='submit'
+              className='btn btn-primary'
+              disabled={loading}
+            >
               {loading ? 'Creating...' : 'Create Campaign'}
             </button>
           </div>

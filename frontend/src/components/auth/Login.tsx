@@ -53,6 +53,10 @@ export function Login({ onLogin }: LoginProps) {
 
       // Let the parent re-validate session against the real backend
       await onLogin();
+
+      // Small delay to ensure auth state is updated
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       navigate('/agency/workspaces', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -97,16 +101,19 @@ export function Login({ onLogin }: LoginProps) {
               margin: 0,
             }}
           >
-            Caption Art
+            {isSignup ? 'Create Account' : 'Welcome Back'}
           </h1>
           <p
             style={{
-              color: '#1f2937',
+              color: '#6b7280',
               marginTop: '0.5rem',
               marginBottom: 0,
+              fontSize: '0.875rem',
             }}
           >
-            {isSignup ? 'Create your agency account' : 'Agency Creative Engine'}
+            {isSignup
+              ? 'Set up your agency account to get started'
+              : 'Sign in to access your creative workspace'}
           </p>
         </div>
 
@@ -120,29 +127,40 @@ export function Login({ onLogin }: LoginProps) {
                 style={{
                   display: 'block',
                   marginBottom: '0.5rem',
-                  fontWeight: '500',
-                  color: 'var(--color-text, #1f2937)',
+                  fontWeight: '600',
+                  color: '#0b1220',
+                  fontSize: '0.875rem',
                 }}
               >
-                Agency Name
+                Agency Name *
               </label>
               <input
                 type='text'
                 value={agencyName}
                 onChange={(e) => setAgencyName(e.target.value)}
-                placeholder='My Creative Agency'
+                placeholder='Enter your agency name'
                 autoComplete='organization'
                 className='input'
                 required={isSignup}
                 style={{
                   width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #94a3b8',
-                  borderRadius: '10px',
+                  padding: '0.875rem',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '8px',
                   fontSize: '1rem',
                   backgroundColor: '#ffffff',
                   color: '#0b1220',
                   caretColor: '#0b1220',
+                  transition: 'border-color 0.2s ease',
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#0ea5e9';
+                  e.target.style.boxShadow =
+                    '0 0 0 3px rgba(14, 165, 233, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#d1d5db';
+                  e.target.style.boxShadow = 'none';
                 }}
               />
             </div>
@@ -153,29 +171,39 @@ export function Login({ onLogin }: LoginProps) {
               style={{
                 display: 'block',
                 marginBottom: '0.5rem',
-                fontWeight: '500',
-                color: 'var(--color-text, #1f2937)',
+                fontWeight: '600',
+                color: '#0b1220',
+                fontSize: '0.875rem',
               }}
             >
-              Email
+              Email Address *
             </label>
             <input
               type='email'
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder='agency@example.com'
+              placeholder='Enter your email address'
               autoComplete='email'
               className='input'
               required
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #94a3b8',
-                borderRadius: '10px',
+                padding: '0.875rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
                 fontSize: '1rem',
                 backgroundColor: '#ffffff',
                 color: '#0b1220',
                 caretColor: '#0b1220',
+                transition: 'border-color 0.2s ease',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#0ea5e9';
+                e.target.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#d1d5db';
+                e.target.style.boxShadow = 'none';
               }}
             />
           </div>
@@ -185,29 +213,39 @@ export function Login({ onLogin }: LoginProps) {
               style={{
                 display: 'block',
                 marginBottom: '0.5rem',
-                fontWeight: '500',
-                color: 'var(--color-text, #1f2937)',
+                fontWeight: '600',
+                color: '#0b1220',
+                fontSize: '0.875rem',
               }}
             >
-              Password
+              Password *
             </label>
             <input
               type='password'
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder='••••••••'
+              placeholder='Enter your password'
               autoComplete='current-password'
               className='input'
               required
               style={{
                 width: '100%',
-                padding: '0.75rem',
-                border: '1px solid #94a3b8',
-                borderRadius: '10px',
+                padding: '0.875rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
                 fontSize: '1rem',
                 backgroundColor: '#ffffff',
                 color: '#0b1220',
                 caretColor: '#0b1220',
+                transition: 'border-color 0.2s ease',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#0ea5e9';
+                e.target.style.boxShadow = '0 0 0 3px rgba(14, 165, 233, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#d1d5db';
+                e.target.style.boxShadow = 'none';
               }}
             />
           </div>
@@ -287,13 +325,50 @@ export function Login({ onLogin }: LoginProps) {
 
         <div
           style={{
-            marginTop: '0.5rem',
+            marginTop: '1rem',
             textAlign: 'center',
-            fontSize: '0.75rem',
-            color: 'var(--color-text-secondary, #6b7280)',
+            fontSize: '0.875rem',
+            color: '#6b7280',
+            backgroundColor: '#f8fafc',
+            padding: '1rem',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
           }}
         >
-          Demo: Use test@example.com / testpassword123
+          <div
+            style={{
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '0.5rem',
+            }}
+          >
+            Demo Account
+          </div>
+          <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+            Email:{' '}
+            <code
+              style={{
+                backgroundColor: '#e5e7eb',
+                padding: '0.125rem 0.25rem',
+                borderRadius: '3px',
+                fontSize: '0.75rem',
+              }}
+            >
+              test@example.com
+            </code>
+            <br />
+            Password:{' '}
+            <code
+              style={{
+                backgroundColor: '#e5e7eb',
+                padding: '0.125rem 0.25rem',
+                borderRadius: '3px',
+                fontSize: '0.75rem',
+              }}
+            >
+              testpassword123
+            </code>
+          </div>
         </div>
       </div>
     </div>

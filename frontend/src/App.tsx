@@ -9,6 +9,7 @@ import { WorkspaceList } from './components/agency/WorkspaceList';
 import { CampaignList } from './components/agency/CampaignList';
 import { CampaignDetail } from './components/agency/CampaignDetail';
 import { ReviewGrid } from './components/agency/ReviewGrid';
+import { SettingsPage } from './components/agency/SettingsPage';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { Login } from './components/auth/Login';
 import { ToastContainer, useToast } from './components/Toast';
@@ -50,9 +51,27 @@ function useAuthState() {
   return { isAuthenticated, loading, login, logout };
 }
 
+import { WelcomeModal } from './components/WelcomeModal';
+import { safeLocalStorage } from './lib/storage/safeLocalStorage';
+
 export default function App() {
   const toast = useToast();
   const { isAuthenticated, loading, login, logout } = useAuthState();
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const hasSeen = safeLocalStorage.getItem('hasSeenWelcome');
+      if (!hasSeen) {
+        setShowWelcome(true);
+      }
+    }
+  }, [isAuthenticated]);
+
+  const handleCloseWelcome = () => {
+    safeLocalStorage.setItem('hasSeenWelcome', 'true');
+    setShowWelcome(false);
+  };
 
   if (loading) {
     return (
@@ -74,6 +93,7 @@ export default function App() {
     <ErrorBoundary>
       <DialogProvider>
         <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
+        {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
         <Router>
           <Routes>
             {/* Public routes */}
@@ -149,6 +169,9 @@ function AgencyRoutes({ onLogout }: { onLogout: () => void }) {
             path='/workspaces/:workspaceId/campaigns/:campaignId/review'
             element={<ReviewGrid />}
           />
+
+          {/* Settings */}
+          <Route path='/settings' element={<SettingsPage />} />
 
           {/* Default agency route */}
           <Route

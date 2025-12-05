@@ -16,8 +16,7 @@ process.env.CORS_ORIGIN = process.env.CORS_ORIGIN || '*'
 // For test environment ensure Prisma connects to a local SQLite DB
 // so tests are deterministic and do not require a Postgres instance.
 process.env.DATABASE_PROVIDER = process.env.DATABASE_PROVIDER || 'sqlite'
-process.env.DATABASE_URL =
-  process.env.DATABASE_URL || 'file:./app.sqlite'
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:./app.sqlite'
 
 // Provide global mocks for external AI/3rd-party libraries to avoid network calls during tests
 // These mocks ensure deterministic responses and let tests spyOn module exports as needed.
@@ -44,13 +43,20 @@ vi.mock('replicate', () => {
 // Additionally mock the service module by absolute path to ensure that any
 // require/import resolvers that resolve via absolute paths during lazy-loading
 // in createServer are intercepted in tests.
-vi.mock('/Users/pranay/Projects/caption-art/backend/src/services/replicate.ts', () => {
-  return {
-    generateBaseCaption: vi.fn().mockResolvedValue('A mock caption for testing'),
-    generateMask: vi.fn().mockResolvedValue('http://example.com/mask.png'),
-    generateImage: vi.fn().mockResolvedValue('http://example.com/generated.png'),
+vi.mock(
+  '/Users/pranay/Projects/caption-art/backend/src/services/replicate.ts',
+  () => {
+    return {
+      generateBaseCaption: vi
+        .fn()
+        .mockResolvedValue('A mock caption for testing'),
+      generateMask: vi.fn().mockResolvedValue('http://example.com/mask.png'),
+      generateImage: vi
+        .fn()
+        .mockResolvedValue('http://example.com/generated.png'),
+    }
   }
-})
+)
 
 // Mock the 'openai' npm package used by styleAnalyzer and multiFormatService
 vi.mock('openai', () => {

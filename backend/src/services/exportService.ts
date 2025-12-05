@@ -1,9 +1,11 @@
 import archiver from 'archiver'
 import fs from 'fs'
 import path from 'path'
-import { AuthModel, Caption, Asset, GeneratedAsset } from '../models/auth'
 import { log } from '../middleware/logger'
 import { MetricsService } from './MetricsService'
+import { getPrismaClient } from '../lib/prisma'
+
+const prisma = getPrismaClient()
 
 export interface ExportOptions {
   includeAssets: boolean
@@ -25,15 +27,21 @@ export class ExportService {
       format: 'zip',
     }
   ): Promise<{ zipFilePath: string; fileName: string }> {
-    const workspace = AuthModel.getWorkspaceById(workspaceId)
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
     if (!workspace) {
       throw new Error('Workspace not found')
     }
 
-    const approvedCaptions =
-      AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-    const approvedGeneratedAssets =
-      AuthModel.getApprovedGeneratedAssets(workspaceId)
+    const approvedCaptions = await prisma.caption.findMany({
+      where: { workspaceId, approvalStatus: 'approved' },
+      include: { variations: true, asset: true },
+    })
+
+    const approvedGeneratedAssets = await prisma.generatedAsset.findMany({
+      where: { workspaceId, approvalStatus: 'approved' },
+    })
 
     if (approvedCaptions.length === 0 && approvedGeneratedAssets.length === 0) {
       throw new Error('No approved content found for export')
@@ -48,6 +56,11 @@ export class ExportService {
     if (!fs.existsSync(exportsDir)) {
       fs.mkdirSync(exportsDir, { recursive: true })
     }
+
+    // Fetch brand kit first
+    const brandKit = await prisma.brandKit.findUnique({
+      where: { workspaceId },
+    })
 
     return new Promise((resolve, reject) => {
       const output = fs.createWriteStream(zipFilePath)
@@ -76,7 +89,7 @@ export class ExportService {
             generatedImages: approvedGeneratedAssets.length,
             assets: options.includeAssets ? approvedCaptions.length : 0,
           },
-          brandKit: AuthModel.getBrandKitByWorkspace(workspaceId),
+          brandKit,
         }
 
         archive.append(JSON.stringify(metadata, null, 2), {
@@ -87,13 +100,12 @@ export class ExportService {
           // Add captions as text file
           const captionsText = approvedCaptions
             .map((caption, index) => {
-              const asset = AuthModel.getAssetById(caption.assetId)
               return (
                 `=== Caption ${index + 1} ===\n` +
-                `Asset: ${asset?.originalName || 'Unknown'}\n` +
-                `Caption: ${caption.text}\n` +
-                `Generated: ${caption.generatedAt?.toISOString() || 'Unknown'}\n` +
-                `Approved: ${caption.approvedAt?.toISOString() || 'Unknown'}\n\n`
+                `Asset: ${caption.asset?.originalName || 'Unknown'}\n` +
+                `Caption: ${caption.baseCaption || caption.primaryText || caption.variations?.[0]?.text || ''}\n` +
+                `Generated: ${caption.generatedAt?.toISOString?.() || caption.generatedAt || 'Unknown'}\n` +
+                `Approved: ${caption.approvedAt?.toISOString?.() || caption.approvedAt || 'Unknown'}\n\n`
               )
             })
             .join('')
@@ -102,15 +114,19 @@ export class ExportService {
 
           // Add captions as JSON
           const enrichedCaptions = approvedCaptions.map((caption) => {
-            const asset = AuthModel.getAssetById(caption.assetId)
             return {
               ...caption,
               approved: caption.approvalStatus === 'approved',
-              asset: asset
+              captionText:
+                caption.baseCaption ||
+                caption.primaryText ||
+                caption.variations?.[0]?.text ||
+                '',
+              asset: caption.asset
                 ? {
-                    id: asset.id,
-                    originalName: asset.originalName,
-                    mimeType: asset.mimeType,
+                    id: caption.asset.id,
+                    originalName: caption.asset.originalName,
+                    mimeType: caption.asset.mimeType,
                   }
                 : null,
             }
@@ -127,10 +143,9 @@ export class ExportService {
 
           if (captionsWithAdCopy.length > 0) {
             const adCopyData = captionsWithAdCopy.map((caption) => {
-              const asset = AuthModel.getAssetById(caption.assetId)
               return {
                 assetId: caption.assetId,
-                assetName: asset?.originalName || 'Unknown',
+                assetName: caption.asset?.originalName || 'Unknown',
                 variations: caption.variations
                   .map((variation) => ({
                     id: variation.id,
@@ -149,9 +164,9 @@ export class ExportService {
 
             // Also create individual ad copy files per asset
             for (const caption of captionsWithAdCopy) {
-              const asset = AuthModel.getAssetById(caption.assetId)
               const fileName =
-                asset?.originalName.replace(/\.[^/.]+$/, '') || caption.assetId
+                caption.asset?.originalName?.replace(/\.[^/.]+$/, '') ||
+                caption.assetId
 
               const assetAdCopy = caption.variations
                 .filter((v) => v.adCopy)
@@ -176,11 +191,13 @@ export class ExportService {
         }
 
         if (options.includeAssets) {
-          // Create assets directory and add original files
+          // Create assets directory and add original files (if stored locally)
           for (const caption of approvedCaptions) {
-            const asset = AuthModel.getAssetById(caption.assetId)
-            if (asset && fs.existsSync(path.join(process.cwd(), asset.url))) {
-              const assetFilePath = path.join(process.cwd(), asset.url)
+            const asset = caption.asset
+            if (!asset) continue
+
+            const assetFilePath = path.join(process.cwd(), asset.url)
+            if (fs.existsSync(assetFilePath)) {
               const zipAssetPath = path.join(
                 'assets',
                 'originals',
@@ -192,15 +209,13 @@ export class ExportService {
         }
 
         if (options.includeGeneratedImages) {
-          // Create generated-images directory and add rendered images
+          // Add generated images if present locally
           for (const generatedAsset of approvedGeneratedAssets) {
-            if (
-              fs.existsSync(path.join(process.cwd(), generatedAsset.imageUrl))
-            ) {
-              const imageFilePath = path.join(
-                process.cwd(),
-                generatedAsset.imageUrl
-              )
+            const imageFilePath = path.join(
+              process.cwd(),
+              generatedAsset.imageUrl
+            )
+            if (fs.existsSync(imageFilePath)) {
               const zipImagePath = path.join(
                 'generated-images',
                 `${generatedAsset.format}`,
@@ -248,21 +263,21 @@ Thank you for using caption-art!
    * Process an export job asynchronously
    */
   static async processExportJob(jobId: string): Promise<void> {
-    const startTime = Date.now();
+    const startTime = Date.now()
 
     try {
-      const job = AuthModel.getExportJobById(jobId)
+      const job = await prisma.exportJob.findUnique({ where: { id: jobId } })
       if (!job) {
         throw new Error(`Export job ${jobId} not found`)
       }
 
       // Update job status to processing
-      AuthModel.updateExportJob(jobId, {
-        status: 'processing',
+      await prisma.exportJob.update({
+        where: { id: jobId },
+        data: { status: 'processing', startedAt: new Date() },
       })
 
       // Create the export
-      const durationBeforeExport = (Date.now() - startTime) / 1000;
       const { zipFilePath } = await this.createExport(job.workspaceId, {
         includeAssets: false, // Don't include original assets by default
         includeCaptions: true,
@@ -271,34 +286,35 @@ Thank you for using caption-art!
       })
 
       // Calculate total export duration including preparation time
-      const exportDurationSec = (Date.now() - startTime) / 1000;
-
       // Update job with completed status
-      AuthModel.updateExportJob(jobId, {
-        status: 'completed',
-        zipFilePath,
-        completedAt: new Date(),
+      await prisma.exportJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'completed',
+          downloadUrl: zipFilePath,
+          completedAt: new Date(),
+          itemsExported: job.itemsTotal,
+        },
       })
 
       // Track export metrics
-      MetricsService.trackExportJob(job.workspaceId, 'completed');
+      MetricsService.trackExportJob(job.workspaceId, 'completed')
     } catch (error) {
-      const exportDurationSec = (Date.now() - startTime) / 1000;
-
       log.error({ err: error, jobId }, `Error processing export job`)
 
       // Mark job as failed
-      AuthModel.updateExportJob(jobId, {
-        status: 'failed',
-        completedAt: new Date(),
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      await prisma.exportJob.update({
+        where: { id: jobId },
+        data: {
+          status: 'failed',
+          completedAt: new Date(),
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
+        },
       })
 
-      // Track failed export metrics
-      const job = AuthModel.getExportJobById(jobId);
-      if (job) {
-        MetricsService.trackExportJob(job.workspaceId, 'failed');
-      }
+      const job = await prisma.exportJob.findUnique({ where: { id: jobId } })
+      if (job) MetricsService.trackExportJob(job.workspaceId, 'failed')
     }
   }
 
@@ -308,22 +324,27 @@ Thank you for using caption-art!
   static async startExport(
     workspaceId: string
   ): Promise<{ jobId: string; message: string }> {
-    const approvedCaptions =
-      AuthModel.getApprovedCaptionsByWorkspace(workspaceId)
-    const approvedGeneratedAssets =
-      AuthModel.getApprovedGeneratedAssets(workspaceId)
+    const approvedCaptions = await prisma.caption.findMany({
+      where: { workspaceId, approvalStatus: 'approved' },
+    })
+    const approvedGeneratedAssets = await prisma.generatedAsset.findMany({
+      where: { workspaceId, approvalStatus: 'approved' },
+    })
 
     if (approvedCaptions.length === 0 && approvedGeneratedAssets.length === 0) {
       throw new Error('No approved content found for export')
     }
 
     // Create export job
-    const job = AuthModel.createExportJob(
-      workspaceId,
-      approvedCaptions.length + approvedGeneratedAssets.length,
-      approvedCaptions.length,
-      approvedGeneratedAssets.length
-    )
+    const job = await prisma.exportJob.create({
+      data: {
+        workspaceId,
+        status: 'pending',
+        itemsTotal: approvedCaptions.length + approvedGeneratedAssets.length,
+        itemsExported: 0,
+        format: 'zip',
+      },
+    })
 
     // Start processing in background
     this.processExportJob(job.id).catch((error) => {

@@ -763,10 +763,22 @@ export class AuthModel {
     const result = await prisma.$transaction(async (tx) => {
       const agency = await tx.agency.create({
         data: {
+          name: agencyName || "My Agency", // Use provided name
           billingActive: false,
           planType: 'free',
         },
       })
+
+      // Create Default Roles
+      const ownerRole = await tx.role.create({
+          data: { agencyId: agency.id, name: 'Owner', permissions: ["*"], description: "Full access" }
+      });
+      
+      // Create other roles
+      await tx.role.create({ data: { agencyId: agency.id, name: 'Admin', permissions: ["user.manage", "settings.manage", "billing.view"], description: "Administrator" } });
+      await tx.role.create({ data: { agencyId: agency.id, name: 'Member', permissions: ["campaign.create", "campaign.edit"], description: "Regular member" } });
+      await tx.role.create({ data: { agencyId: agency.id, name: 'Viewer', permissions: ["campaign.read"], description: "Read only" } });
+
 
       const user = await tx.user.create({
         data: {
@@ -774,6 +786,11 @@ export class AuthModel {
           password: hashedPassword,
           agencyId: agency.id,
         },
+      })
+
+      // Assign Owner Role
+      await tx.userRole.create({
+          data: { userId: user.id, roleId: ownerRole.id }
       })
 
       return { user, agency }

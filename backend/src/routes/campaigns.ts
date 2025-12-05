@@ -259,7 +259,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
 
-  const campaign = await prisma.campaign.findUnique({
+    const campaign = await prisma.campaign.findUnique({
       where: { id },
       include: {
         brandKit: true,
@@ -388,13 +388,22 @@ router.put(
         )
       if (validatedData.keywords)
         updateData.keywords = JSON.stringify(validatedData.keywords)
-      if (validatedData.objective || validatedData.launchType || validatedData.funnelStage) {
+      if (
+        validatedData.objective ||
+        validatedData.launchType ||
+        validatedData.funnelStage
+      ) {
         updateData.briefData = {
           ...(campaign.briefData as any),
-          objective: validatedData.objective || (campaign as any).briefData?.objective,
-          launchType: validatedData.launchType || (campaign as any).briefData?.launchType,
-          funnelStage: validatedData.funnelStage || (campaign as any).briefData?.funnelStage,
-          placements: validatedData.placements || (campaign as any).briefData?.placements,
+          objective:
+            validatedData.objective || (campaign as any).briefData?.objective,
+          launchType:
+            validatedData.launchType || (campaign as any).briefData?.launchType,
+          funnelStage:
+            validatedData.funnelStage ||
+            (campaign as any).briefData?.funnelStage,
+          placements:
+            validatedData.placements || (campaign as any).briefData?.placements,
           headlineMaxLength:
             validatedData.headlineMaxLength ??
             (campaign as any).briefData?.headlineMaxLength,

@@ -25,14 +25,17 @@ export interface Config {
 
 function requireEnv(name: string): string {
   const value = process.env[name]
-  if (!value) {
+  if (value === undefined || value === null) {
     throw new Error(`Missing required environment variable: ${name}`)
   }
   return value
 }
 
 export const config: Config = {
-  env: process.env.NODE_ENV || 'development',
+  env:
+    process.env.NODE_ENV && process.env.NODE_ENV.trim().length > 0
+      ? process.env.NODE_ENV
+      : 'development',
   port: parseInt(process.env.PORT || '3001', 10),
   replicate: {
     apiToken: requireEnv('REPLICATE_API_TOKEN'),
@@ -59,7 +62,11 @@ export const config: Config = {
     accessToken: process.env.GUMROAD_ACCESS_TOKEN,
   },
   waf: {
-    enable: (process.env.ENABLE_WAF || 'false') === 'true',
+    // In tests, enable WAF by default so security property tests run against
+    // the protective middleware. In non-test envs, allow explicit override.
+    enable:
+      (process.env.ENABLE_WAF ||
+        (process.env.NODE_ENV === 'test' ? 'true' : 'false')) === 'true',
   },
   cors: {
     origin: process.env.CORS_ORIGIN || '*',

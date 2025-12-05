@@ -184,25 +184,33 @@ export const UpdateWorkspaceSchema = z.object({
 /**
  * Schema for brand kit creation
  * Kept comprehensive to match Prisma + agency needs so we don't strip fields during validation.
+ * All fields are optional to support flexible minimal creation.
  */
 export const CreateBrandKitSchema = z.object({
   workspaceId: workspaceIdSchema,
   name: z.string().max(120).optional(),
-  colors: z.object({
-    primary: z
-      .string()
-      .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
-    secondary: z
-      .string()
-      .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
-    tertiary: z
-      .string()
-      .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format'),
-  }),
-  fonts: z.object({
-    heading: z.string().min(1, 'Heading font is required'),
-    body: z.string().min(1, 'Body font is required'),
-  }),
+  colors: z
+    .object({
+      primary: z
+        .string()
+        .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format')
+        .optional(),
+      secondary: z
+        .string()
+        .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format')
+        .optional(),
+      tertiary: z
+        .string()
+        .regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/, 'Invalid hex color format')
+        .optional(),
+    })
+    .optional(),
+  fonts: z
+    .object({
+      heading: z.string().min(1, 'Heading font is required').optional(),
+      body: z.string().min(1, 'Body font is required').optional(),
+    })
+    .optional(),
   logo: z
     .object({
       url: z.string().url('Logo must be a valid URL'),
@@ -216,7 +224,8 @@ export const CreateBrandKitSchema = z.object({
     .optional(),
   voicePrompt: z
     .string()
-    .min(10, 'Voice prompt must be at least 10 characters'),
+    .min(10, 'Voice prompt must be at least 10 characters')
+    .optional(),
   brandPersonality: z.string().optional(),
   targetAudience: z.string().optional(),
   valueProposition: z.string().optional(),
@@ -383,8 +392,8 @@ export const UpdateCampaignBriefSchema = z.object({
         placements: z.array(z.string()).optional(),
         formatPreferences: z.array(z.string()).optional(),
         postingSchedule: z.string().optional(),
-    })
-    .optional(),
+      })
+      .optional(),
     campaignDuration: z.string().optional(),
     seasonality: z.string().optional(),
     urgency: z.string().optional(),

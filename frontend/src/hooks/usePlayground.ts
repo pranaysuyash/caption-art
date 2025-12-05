@@ -125,11 +125,11 @@ export function usePlayground() {
         setCaptions(captions_);
 
         if (captions_.length === 0) {
-          toast.warn('No captions generated. Please try again.');
+          toast.info('No captions generated. Please try again.');
         }
       } catch (error) {
         console.warn('Caption generation failed:', error);
-        toast.warn(
+        toast.error(
           `Caption generation failed: ${
             error instanceof Error ? error.message : 'Unknown error'
           }`

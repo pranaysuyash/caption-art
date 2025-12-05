@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { CampaignBriefEditor } from '../CampaignBriefEditor';
 import '../CampaignBriefEditor.css';
 import apiFetch from '../../lib/api/httpClient';
+import { Breadcrumbs } from '../Breadcrumbs';
 
 export function CampaignDetail() {
   const { workspaceId, campaignId } = useParams<{
@@ -208,16 +209,57 @@ export function CampaignDetail() {
     typeof campaign?.qualityScore === 'number' || qualityBreakdown.length > 0;
 
   if (loading) {
-    return <div style={{ padding: '2rem' }}>Loading...</div>;
+    return (
+      <div className='page-container'>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '1rem',
+          }}
+        >
+          {Array.from({ length: 2 }).map((_, idx) => (
+            <div
+              key={idx}
+              className='card skeleton-card'
+              style={{
+                padding: '1.5rem',
+                border: '1px solid var(--color-border, #1f2937)',
+                background: 'var(--color-bg-secondary, #111827)',
+              }}
+            >
+              <div
+                className='skeleton-line'
+                style={{ width: '60%', height: '16px', marginBottom: '0.75rem' }}
+              />
+              <div
+                className='skeleton-line'
+                style={{ width: '90%', height: '14px', marginBottom: '0.5rem' }}
+              />
+              <div
+                className='skeleton-line'
+                style={{ width: '75%', height: '14px', marginBottom: '0.5rem' }}
+              />
+              <div
+                className='skeleton-line'
+                style={{ width: '50%', height: '14px' }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className='page-container'>
+      <Breadcrumbs />
+      
       <style>
         {`.brand-form-input {
-            background: #161616;
-            border: 1px solid #333;
-            color: #f5f5f5;
+            background: #0d0f12;
+            border: 1px solid #2b2f36;
+            color: #e5e7eb;
             padding: 0.75rem;
             border-radius: 6px;
             width: 100%;
@@ -225,12 +267,12 @@ export function CampaignDetail() {
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
           }
           .brand-form-input::placeholder {
-            color: #9ca3af;
+            color: #94a3b8;
           }
           .brand-form-input:focus {
             outline: none;
             border-color: #7c8cff;
-            box-shadow: 0 0 0 2px rgba(124, 140, 255, 0.2);
+            box-shadow: 0 0 0 2px rgba(124, 140, 255, 0.18);
           }`}
       </style>
       {hasQualityInsights && (
@@ -340,7 +382,7 @@ export function CampaignDetail() {
                       color: 'var(--color-text, #0f172a)',
                     }}
                   >
-                    {Math.round(value)}
+                    {Math.round(value as number)}
                   </strong>
                 </div>
               ))}
@@ -394,19 +436,19 @@ export function CampaignDetail() {
                     <input
                       type='color'
                       value={brandKit?.colors?.primary || '#000000'}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setBrandKit({
                           ...brandKit,
                           colors: {
                             ...brandKit.colors,
                             primary: e.target.value,
                           },
-                        })
+                        });
                         setBrandPreviewColors((prev) => ({
                           ...prev,
                           primary: e.target.value,
-                        }))
-                      }
+                        }));
+                      }}
                       style={{
                         width: '48px',
                         height: '48px',
@@ -435,19 +477,19 @@ export function CampaignDetail() {
                     <input
                       type='color'
                       value={brandKit?.colors?.secondary || '#000000'}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setBrandKit({
                           ...brandKit,
                           colors: {
                             ...brandKit.colors,
                             secondary: e.target.value,
                           },
-                        })
+                        });
                         setBrandPreviewColors((prev) => ({
                           ...prev,
                           secondary: e.target.value,
-                        }))
-                      }
+                        }));
+                      }}
                       style={{
                         width: '48px',
                         height: '48px',
@@ -476,19 +518,19 @@ export function CampaignDetail() {
                     <input
                       type='color'
                       value={brandKit?.colors?.tertiary || '#000000'}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setBrandKit({
                           ...brandKit,
                           colors: {
                             ...brandKit.colors,
                             tertiary: e.target.value,
                           },
-                        })
+                        });
                         setBrandPreviewColors((prev) => ({
                           ...prev,
                           tertiary: e.target.value,
-                        }))
-                      }
+                        }));
+                      }}
                       style={{
                         width: '48px',
                         height: '48px',
