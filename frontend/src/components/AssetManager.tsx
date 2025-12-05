@@ -7,7 +7,7 @@ import { useWorkspace } from '../contexts/WorkspaceContext';
 import { creativeEngineClient } from '../lib/api/creativeEngineClient';
 import { campaignClient } from '../lib/api/campaignClient';
 import apiFetch from '../lib/api/httpClient';
-import { safeLocalStorage } from '../lib/storage/safeLocalStorage';
+import { useToast } from './Toast';
 import './AssetManager.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
@@ -27,6 +27,7 @@ interface Asset {
 
 export function AssetManager() {
   const { activeWorkspace } = useWorkspace();
+  const { success, error: toastError } = useToast();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(
@@ -44,7 +45,6 @@ export function AssetManager() {
   const [variationCount, setVariationCount] = useState(3);
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -133,6 +133,7 @@ export function AssetManager() {
 
       await loadAssets();
       setSelectedFiles(null);
+      success('Assets uploaded successfully');
 
       // Reset file input
       const fileInput = document.getElementById(
@@ -141,6 +142,7 @@ export function AssetManager() {
       if (fileInput) fileInput.value = '';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
+      toastError('Failed to upload assets');
     } finally {
       setUploading(false);
     }
@@ -152,7 +154,6 @@ export function AssetManager() {
     try {
       setGenerating(true);
       setError(null);
-      setSuccessMessage(null);
       setProgressMessage('Starting caption generation...');
 
       // Get brandKitId from workspace (assuming first brand kit for now)
@@ -203,18 +204,15 @@ export function AssetManager() {
       if (result.success) {
         const totalVariations = result.result.summary.totalGenerated;
         const perAsset = Math.floor(totalVariations / assets.length);
-        setProgressMessage(null);
-        setSuccessMessage(
-          `Generated ${totalVariations} captions (${perAsset} per asset) in ${result.result.summary.processingTime}ms. Check the Approval tab!`
+        setProgressMessage(
+          `Generated ${totalVariations} captions (${perAsset} per asset) in ${result.result.summary.processingTime}ms. Review in Approvals.`
         );
-
-        // Auto-clear success message after 5 seconds
-        setTimeout(() => setSuccessMessage(null), 5000);
+        success('Captions generated. Review them in Approvals.');
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Caption generation failed'
-      );
+      const msg = err instanceof Error ? err.message : 'Caption generation failed';
+      setError(msg);
+      toastError(msg);
       setProgressMessage(null);
     } finally {
       setGenerating(false);
@@ -227,6 +225,53 @@ export function AssetManager() {
 
   return (
     <div className='page-container'>
+      {/* Loading Overlay */}
+      {generating && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="spinner-large"></div>
+            <h3>Generating Captions...</h3>
+            <p>{progressMessage || 'This may take a few moments'}</p>
+          </div>
+          <style>{`
+            .loading-overlay {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              bottom: 0;
+              background: rgba(0, 0, 0, 0.7);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 1000;
+              backdrop-filter: blur(4px);
+            }
+            .loading-content {
+              background: var(--color-bg-secondary, #1e293b);
+              padding: 2rem;
+              border-radius: 16px;
+              text-align: center;
+              box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+              border: 1px solid var(--color-border, #334155);
+              min-width: 300px;
+            }
+            .spinner-large {
+              width: 48px;
+              height: 48px;
+              border: 4px solid rgba(59, 130, 246, 0.3);
+              border-radius: 50%;
+              border-top-color: #3b82f6;
+              animation: spin 1s linear infinite;
+              margin: 0 auto 1rem;
+            }
+            @keyframes spin {
+              to { transform: rotate(360deg); }
+            }
+          `}</style>
+        </div>
+      )}
+
       <div className='page-header'>
         <div>
           <h1 className='page-title'>Assets</h1>
@@ -335,10 +380,6 @@ export function AssetManager() {
           {progressMessage}
         </div>
       )}
-      {successMessage && (
-        <div className='success-message'>{successMessage}</div>
-      )}
-
       {selectedFiles && selectedFiles.length > 0 && (
         <div className='upload-preview'>
           <div className='upload-info'>
