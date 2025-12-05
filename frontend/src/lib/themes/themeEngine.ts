@@ -80,6 +80,14 @@ export class ThemeEngine {
     this.setCSSVariable('--color-warning', colors.warning)
     this.setCSSVariable('--color-error', colors.error)
     this.setCSSVariable('--color-info', colors.info)
+
+    // Map theme colors to brand variables for backward compatibility
+    this.setCSSVariable('--color-brand-primary', colors.primary)
+    this.setCSSVariable('--color-brand-secondary', colors.secondary)
+    this.setCSSVariable('--color-brand-accent', colors.accent)
+    this.setCSSVariable('--color-brand-success', colors.success)
+    this.setCSSVariable('--color-brand-warning', colors.warning)
+    this.setCSSVariable('--color-brand-error', colors.error)
     
     // Border colors
     this.setCSSVariable('--color-border', colors.border)

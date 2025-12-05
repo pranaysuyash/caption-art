@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express'
 import { verifyLicense } from '../services/gumroad'
 import { VerifyRequest, VerifyResponse } from '../types/api'
 import { ExternalAPIError } from '../errors/AppError'
+import { log } from '../middleware/logger'
 
 const router = Router()
 
@@ -18,10 +19,15 @@ const router = Router()
  */
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const start = Date.now()
     const { licenseKey } = req.body as VerifyRequest
 
     // Validate input - check type first, then check for empty string
     if (typeof licenseKey !== 'string') {
+      log.debug(
+        { timing: Date.now() - start, requestId: (req as any).requestId },
+        'verify: validation failed - non-string licenseKey'
+      )
       return res.status(400).json({
         error: 'Invalid licenseKey',
         details: 'licenseKey must be a string',
@@ -29,6 +35,10 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     if (!licenseKey) {
+      log.debug(
+        { timing: Date.now() - start, requestId: (req as any).requestId },
+        'verify: validation failed - missing licenseKey'
+      )
       return res.status(400).json({
         error: 'License key required',
         details: 'Request body must include licenseKey field',
@@ -38,6 +48,13 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     // For tests, short-circuit verification to avoid external API/network overhead
     if (process.env.NODE_ENV === 'test') {
       const response: VerifyResponse = { valid: true, email: 'test@example.com' }
+      log.info(
+        {
+          requestId: (req as any).requestId,
+          timing: { total: Date.now() - start },
+        },
+        'verify: test short-circuit'
+      )
       return res.json(response)
     }
 
@@ -45,6 +62,13 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     let result
     try {
       result = await verifyLicense(licenseKey)
+      log.info(
+        {
+          requestId: (req as any).requestId,
+          timing: { verify: Date.now() - start },
+        },
+        'verify: verifyLicense completed'
+      )
     } catch (error) {
       throw new ExternalAPIError(
         error instanceof Error ? error.message : 'License verification failed',
@@ -58,6 +82,7 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     res.json(response)
+    log.info({ requestId: (req as any).requestId, timing: { total: Date.now() - start } }, 'verify: request complete')
   } catch (error) {
     // Pass error to error handler middleware
     next(error)

@@ -45,6 +45,7 @@ export function AssetManager() {
   const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [progressMessage, setProgressMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (activeWorkspace) {
@@ -152,6 +153,7 @@ export function AssetManager() {
       setGenerating(true);
       setError(null);
       setSuccessMessage(null);
+      setProgressMessage('Starting caption generation...');
 
       // Get brandKitId from workspace (assuming first brand kit for now)
       // In production, this would come from campaign or user selection
@@ -201,6 +203,7 @@ export function AssetManager() {
       if (result.success) {
         const totalVariations = result.result.summary.totalGenerated;
         const perAsset = Math.floor(totalVariations / assets.length);
+        setProgressMessage(null);
         setSuccessMessage(
           `Generated ${totalVariations} captions (${perAsset} per asset) in ${result.result.summary.processingTime}ms. Check the Approval tab!`
         );
@@ -212,23 +215,24 @@ export function AssetManager() {
       setError(
         err instanceof Error ? err.message : 'Caption generation failed'
       );
+      setProgressMessage(null);
     } finally {
       setGenerating(false);
     }
   };
 
   if (!activeWorkspace) {
-    return <div className='asset-manager-empty'>No workspace selected</div>;
+    return <div className='page-container'><div style={{ textAlign: 'center', padding: 'var(--space-3xl)' }}>No workspace selected</div></div>;
   }
 
   return (
-    <div className='asset-manager'>
-      <div className='asset-manager-header'>
+    <div className='page-container'>
+      <div className='page-header'>
         <div>
-          <h2>Assets</h2>
-          <p className='asset-count'>{assets.length} / 20 assets</p>
+          <h1 className='page-title'>Assets</h1>
+          <p className='page-subtitle'>{assets.length} / 20 assets</p>
         </div>
-        <div className='header-actions'>
+        <div className='stack-mobile' style={{ gap: 'var(--space-sm)' }}>
           {assets.length > 0 && (
             <>
               <div className='campaign-selector campaign-selector-right'>
@@ -301,7 +305,7 @@ export function AssetManager() {
               </div>
             </>
           )}
-          <label htmlFor='file-input' className='btn-upload'>
+          <label htmlFor='file-input' className='btn btn-primary'>
             + Upload Assets
             <input
               id='file-input'
@@ -315,7 +319,7 @@ export function AssetManager() {
           {assets.length > 0 && (
             <button
               onClick={handleGenerateCaptions}
-              className='btn-generate'
+              className='btn btn-success'
               disabled={loading || generating}
             >
               {generating ? 'Generating...' : 'Generate Captions'}
@@ -325,6 +329,12 @@ export function AssetManager() {
       </div>
 
       {error && <div className='error-message'>{error}</div>}
+      {progressMessage && (
+        <div className='info-message'>
+          <span className='inline-spinner' aria-hidden='true' />
+          {progressMessage}
+        </div>
+      )}
       {successMessage && (
         <div className='success-message'>{successMessage}</div>
       )}
@@ -353,9 +363,9 @@ export function AssetManager() {
           <p>Upload images or videos to generate captions</p>
         </div>
       ) : (
-        <div className='asset-grid'>
+        <div className='card-grid'>
           {assets.map((asset) => (
-            <div key={asset.id} className='asset-card'>
+            <div key={asset.id} className='card'>
               {asset.mimeType.startsWith('image/') ? (
                 <img
                   src={asset.thumbnailUrl || asset.url}

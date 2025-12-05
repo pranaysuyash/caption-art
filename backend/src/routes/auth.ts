@@ -146,6 +146,9 @@ router.get('/me', async (req, res) => {
 // Helper middleware function
 export function createAuthMiddleware() {
   return async (req: AuthenticatedRequest, res: Response, next: any) => {
+    const start = Date.now()
+    const reqId = (req as any).requestId || 'no-req-id'
+    log.debug({ requestId: reqId, middleware: 'auth' }, 'auth start')
     const userId = (req.session as any).userId
     const agencyId = (req.session as any).agencyId
 
@@ -164,6 +167,8 @@ export function createAuthMiddleware() {
 
     req.user = user
     req.agency = agency
+    const duration = Date.now() - start
+    log.debug({ requestId: reqId, middleware: 'auth', duration }, 'auth done')
     next()
   }
 }

@@ -9,7 +9,7 @@ import { CaptionGenerator } from '../services/captionGenerator'
 import { StartBatchSchema } from '../schemas/validation'
 
 const router = Router()
-const prisma = getPrismaClient()
+// Defer Prisma client acquisition to runtime
 const requireAuth = createAuthMiddleware() as any
 
 // POST /api/batch/generate - Start batch caption generation
@@ -18,6 +18,7 @@ router.post(
   requireAuth,
   validateRequest({ body: StartBatchSchema }),
   async (req, res) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { workspaceId, assetIds } = req.body
@@ -58,6 +59,7 @@ router.post(
 
 // GET /api/batch/jobs/:jobId - Get specific batch job status
 router.get('/jobs/:jobId', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { jobId } = req.params
@@ -111,6 +113,7 @@ router.get('/jobs/:jobId', requireAuth, async (req, res) => {
 
 // GET /api/batch/workspace/:workspaceId/jobs - Get all batch jobs for a workspace
 router.get('/workspace/:workspaceId/jobs', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { workspaceId } = req.params

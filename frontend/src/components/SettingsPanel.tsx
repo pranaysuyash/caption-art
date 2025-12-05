@@ -13,6 +13,8 @@ import { UserPreferences } from '../lib/preferences/types';
 import { preferencesManager } from '../lib/preferences/preferencesManager';
 import { accessibilityManager } from '../lib/preferences/accessibilityManager';
 import { DEFAULT_PREFERENCES } from '../lib/preferences/defaults';
+import { useToast } from './Toast';
+import { useConfirm } from '../contexts/DialogContext';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -34,6 +36,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   );
   const [activeTab, setActiveTab] = useState<'defaults' | 'keyboard' | 'accessibility' | 'ui'>('defaults');
   const [hasChanges, setHasChanges] = useState(false);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // Load preferences when panel opens
   useEffect(() => {
@@ -80,10 +84,18 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     onClose();
   };
 
-  const handleReset = () => {
-    if (window.confirm('Are you sure you want to reset all settings to defaults?')) {
+  const handleReset = async () => {
+    const confirmed = await confirm({
+      title: 'Reset Settings',
+      message: 'Are you sure you want to reset all settings to defaults?',
+      confirmLabel: 'Reset',
+      variant: 'warning',
+    });
+    
+    if (confirmed) {
       setPreferences({ ...DEFAULT_PREFERENCES });
       setHasChanges(true);
+      toast.info('Settings reset to defaults');
     }
   };
 
@@ -113,9 +125,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             const loaded = preferencesManager.load();
             setPreferences(loaded);
             setOriginalPreferences(loaded);
-            alert('Settings imported successfully!');
+            toast.success('Settings imported successfully!');
           } else {
-            alert('Failed to import settings. Please check the file format.');
+            toast.error('Failed to import settings. Please check the file format.');
           }
         };
         reader.readAsText(file);
@@ -444,23 +456,23 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         {/* Footer */}
         <div className="settings-footer">
           <div className="footer-left">
-            <button onClick={handleReset} className="reset-button">
+            <button onClick={handleReset} className="btn btn-ghost">
               Reset to Defaults
             </button>
-            <button onClick={handleExport} className="export-button">
+            <button onClick={handleExport} className="btn btn-ghost">
               Export
             </button>
-            <button onClick={handleImport} className="import-button">
+            <button onClick={handleImport} className="btn btn-ghost">
               Import
             </button>
           </div>
           <div className="footer-right">
-            <button onClick={handleCancel} className="cancel-button">
+            <button onClick={handleCancel} className="btn btn-secondary">
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="save-button"
+              className="btn btn-primary"
               disabled={!hasChanges}
             >
               Save

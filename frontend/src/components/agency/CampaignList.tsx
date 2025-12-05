@@ -8,7 +8,8 @@ interface Campaign {
   name: string;
   status: string;
   objective?: string;
-  lastUpdated: string;
+  lastUpdated?: string;
+  updatedAt?: string;
   qualityScore?: number;
   scoreBreakdown?: Record<string, number>;
 }
@@ -73,7 +74,9 @@ export function CampaignList() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const d = new Date(dateString);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -165,14 +168,39 @@ export function CampaignList() {
 
       {/* Campaigns Grid */}
       {loading ? (
+        <div className='card-grid'>
+          {Array.from({ length: 4 }).map((_, idx) => (
+            <div key={idx} className='card skeleton-card'>
+              <div className='skeleton skeleton-title' />
+              <div className='skeleton skeleton-subtitle' />
+              <div className='skeleton skeleton-bar' />
+            </div>
+          ))}
+        </div>
+      ) : campaigns.length === 0 ? (
         <div
           style={{
             textAlign: 'center',
             padding: '3rem',
             color: 'var(--color-text-secondary, #6b7280)',
+            border: '1px dashed var(--color-border, #d1d5db)',
+            borderRadius: '12px',
+            background: 'var(--color-bg-secondary, #0b0b0b)',
           }}
         >
-          Loading campaigns...
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🧭</div>
+          <div style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+            No campaigns yet
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            Create your first campaign to start generating captions.
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className='btn btn-primary'
+          >
+            + New Campaign
+          </button>
         </div>
       ) : (
         <div className='card-grid'>
@@ -200,6 +228,7 @@ export function CampaignList() {
             </label>
           </div>
           {campaigns.map((campaign) => {
+            const dateSource = campaign.updatedAt || campaign.lastUpdated;
             const qualityStatus = getQualityStatus(campaign.qualityScore);
             return (
               <Link
@@ -373,7 +402,7 @@ export function CampaignList() {
                       color: 'var(--color-text-secondary, #6b7280)',
                     }}
                   >
-                    Last updated {formatDate(campaign.lastUpdated)}
+                    Last updated {dateSource ? formatDate(dateSource) : '—'}
                   </div>
                 </div>
               </Link>

@@ -3,6 +3,7 @@ import { getThemeManager } from '../../lib/themes/themeManager';
 import { useEffect, useState } from 'react';
 import { Sun, Moon, LogOut, Sparkles } from 'lucide-react';
 import { Breadcrumbs } from '../Breadcrumbs';
+import { ThemeSwitcher } from '../ThemeSwitcher';
 
 interface AgencyHeaderProps {
   onLogout: () => void;
@@ -95,6 +96,8 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
         >
           Playground
         </Link>
+
+        <ThemeSwitcher />
 
         <button
           onClick={toggleTheme}

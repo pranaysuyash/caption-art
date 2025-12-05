@@ -16,7 +16,9 @@ import { sanitizeKeywords } from '../utils/sanitizers'
 import { ValidationError, ExternalAPIError } from '../errors/AppError'
 
 const router = Router()
-const prisma = getPrismaClient()
+// Defer Prisma client acquisition to runtime to avoid initializing
+// the client during module import which can cause side effects
+// such as signal handlers being registered in test environments.
 const requireAuth = createAuthMiddleware() as any
 
 /**
@@ -96,6 +98,7 @@ router.post(
   requireAuth,
   validateRequest({ body: BatchCaptionSchema }),
   async (req: Request, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as any
       const { workspaceId, assetIds, template } = req.body

@@ -10,6 +10,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { DEFAULT_KEYBOARD_SHORTCUTS } from '../lib/preferences/defaults';
+import { useToast } from './Toast';
+import { useConfirm } from '../contexts/DialogContext';
 import './KeyboardShortcutEditor.css';
 
 interface KeyboardShortcutEditorProps {
@@ -25,6 +27,8 @@ export const KeyboardShortcutEditor: React.FC<KeyboardShortcutEditorProps> = ({
   const [recordedKeys, setRecordedKeys] = useState<string>('');
   const [conflicts, setConflicts] = useState<Record<string, string[]>>({});
   const inputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // Requirement 3.1: Display all available shortcuts
   const shortcutCategories = {
@@ -125,8 +129,8 @@ export const KeyboardShortcutEditor: React.FC<KeyboardShortcutEditorProps> = ({
 
     if (conflictingActions.length > 0) {
       const actionNames = conflictingActions.map(formatActionName).join(', ');
-      alert(
-        `This shortcut is already used by: ${actionNames}\n\nPlease choose a different key combination.`
+      toast.error(
+        `This shortcut is already used by: ${actionNames}. Please choose a different key combination.`
       );
       return;
     }
@@ -137,6 +141,7 @@ export const KeyboardShortcutEditor: React.FC<KeyboardShortcutEditorProps> = ({
       [editingAction]: recordedKeys,
     };
     onChange(newShortcuts);
+    toast.success(`Shortcut updated for ${formatActionName(editingAction)}`);
     setEditingAction(null);
     setRecordedKeys('');
   };
@@ -147,9 +152,17 @@ export const KeyboardShortcutEditor: React.FC<KeyboardShortcutEditorProps> = ({
   };
 
   // Requirement 3.5: Reset shortcuts to defaults
-  const handleResetAll = () => {
-    if (window.confirm('Are you sure you want to reset all keyboard shortcuts to defaults?')) {
+  const handleResetAll = async () => {
+    const confirmed = await confirm({
+      title: 'Reset Keyboard Shortcuts',
+      message: 'Are you sure you want to reset all keyboard shortcuts to defaults?',
+      confirmLabel: 'Reset All',
+      variant: 'warning',
+    });
+    
+    if (confirmed) {
       onChange({ ...DEFAULT_KEYBOARD_SHORTCUTS });
+      toast.success('All keyboard shortcuts reset to defaults');
     }
   };
 

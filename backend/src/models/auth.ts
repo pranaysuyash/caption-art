@@ -735,8 +735,7 @@ const adCreatives = new Map<string, AdCreative>()
 const templates = new Map<string, Template>()
 const styleProfiles = new Map<string, StyleProfile>()
 
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
+import { getPrismaClient } from '../lib/prisma'
 
 export class AuthModel {
   private static saltRounds = 12
@@ -760,6 +759,7 @@ export class AuthModel {
     const hashedPassword = await this.hashPassword(password)
 
     // Transaction to create agency and user together
+    const prisma = getPrismaClient()
     const result = await prisma.$transaction(async (tx) => {
       const agency = await tx.agency.create({
         data: {
@@ -794,6 +794,7 @@ export class AuthModel {
   }
 
   static async findUserByEmail(email: string): Promise<User | undefined> {
+    const prisma = getPrismaClient()
     const user = await prisma.user.findUnique({
       where: { email },
     })
@@ -806,6 +807,7 @@ export class AuthModel {
   }
 
   static async getUserById(id: string): Promise<User | undefined> {
+    const prisma = getPrismaClient()
     const user = await prisma.user.findUnique({
       where: { id },
     })
@@ -818,6 +820,7 @@ export class AuthModel {
   }
 
   static async getAgencyById(id: string): Promise<Agency | undefined> {
+    const prisma = getPrismaClient()
     const agency = await prisma.agency.findUnique({
       where: { id },
     })
@@ -830,6 +833,7 @@ export class AuthModel {
   }
 
   static async updateUserLastLogin(userId: string): Promise<void> {
+    const prisma = getPrismaClient()
     await prisma.user.update({
       where: { id: userId },
       data: { lastLoginAt: new Date() },
@@ -837,6 +841,7 @@ export class AuthModel {
   }
 
   static async getAllUsers(): Promise<User[]> {
+    const prisma = getPrismaClient()
     const users = await prisma.user.findMany()
     return users.map((u) => ({
       ...u,
@@ -846,6 +851,7 @@ export class AuthModel {
   }
 
   static async getAllAgencies(): Promise<Agency[]> {
+    const prisma = getPrismaClient()
     const agencies = await prisma.agency.findMany()
     return agencies.map((a) => ({
       ...a,

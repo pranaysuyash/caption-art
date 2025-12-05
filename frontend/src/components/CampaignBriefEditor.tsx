@@ -725,10 +725,12 @@ export function CampaignBriefEditor({ initialData, onSave, onCancel, loading }: 
   }
 
   return (
-    <div className='campaign-brief-editor'>
-      <div className='brief-header'>
-        <h2>📋 Campaign Brief Builder</h2>
-        <p>Build a comprehensive campaign brief that will guide creative generation</p>
+    <div className='page-container'>
+      <div className='page-header'>
+        <div>
+          <h1 className='page-title'>📋 Campaign Brief Builder</h1>
+          <p className='page-subtitle'>Build a comprehensive campaign brief that will guide creative generation</p>
+        </div>
       </div>
 
       <div className='brief-layout'>
@@ -758,7 +760,7 @@ export function CampaignBriefEditor({ initialData, onSave, onCancel, loading }: 
           <button
             type='button'
             onClick={onCancel}
-            className='btn-secondary'
+            className='btn btn-secondary'
             disabled={loading}
           >
             Cancel
@@ -767,7 +769,7 @@ export function CampaignBriefEditor({ initialData, onSave, onCancel, loading }: 
         <button
           type='button'
           onClick={handleSave}
-          className='btn-primary'
+          className='btn btn-primary'
           disabled={loading}
         >
           {loading ? 'Saving...' : 'Save Campaign Brief'}

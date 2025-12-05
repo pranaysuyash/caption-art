@@ -156,34 +156,40 @@ export function BrandKitEditor() {
   };
 
   if (!activeWorkspace) {
-    return <div className='brand-kit-empty'>No workspace selected</div>;
+    return <div className='page-container'><div style={{ textAlign: 'center', padding: 'var(--space-3xl)' }}>No workspace selected</div></div>;
   }
 
   if (loading) {
-    return <div className='brand-kit-loading'>Loading brand kit...</div>;
+    return <div className='page-container'><div style={{ textAlign: 'center', padding: 'var(--space-3xl)' }}>Loading brand kit...</div></div>;
   }
 
   if (error && !brandKit) {
     return (
-      <div className='brand-kit-error'>
-        <div className='error-icon'>⚠️</div>
-        <h3>Brand Kit Not Found</h3>
-        <p>{error}</p>
+      <div className='page-container'>
+        <div className='brand-kit-error'>
+          <div className='error-icon'>⚠️</div>
+          <div className="panel-header"><h3 className="panel-title">Brand Kit Not Found</h3></div>
+          <p>{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className='brand-kit-editor'>
-      <div className='editor-header'>
-        <h2>Brand Kit</h2>
-        <span className='workspace-label'>{activeWorkspace.clientName}</span>
+    <div className='page-container'>
+      <div className='page-header'>
+        <div>
+          <h1 className='page-title'>Brand Kit</h1>
+          <p className='page-subtitle'>{activeWorkspace.clientName}</p>
+        </div>
       </div>
 
       <form onSubmit={handleSave} className='brand-kit-form'>
         {/* Colors Section */}
-        <div className='form-section'>
-          <h3>Brand Colors</h3>
+        <div className='panel'>
+          <div className='panel-header'>
+            <h3 className='panel-title'>Brand Colors</h3>
+          </div>
           <div className='color-inputs'>
             <div className='color-input-group'>
               <label>Primary Color</label>
@@ -275,8 +281,10 @@ export function BrandKitEditor() {
         </div>
 
         {/* Fonts Section */}
-        <div className='form-section'>
-          <h3>Typography</h3>
+        <div className='panel'>
+          <div className='panel-header'>
+            <h3 className='panel-title'>Typography</h3>
+          </div>
           <div className='font-inputs'>
             <div className='form-group'>
               <label>Heading Font</label>
@@ -319,8 +327,8 @@ export function BrandKitEditor() {
         </div>
 
         {/* Voice & Tone Section */}
-        <div className='form-section'>
-          <h3>Voice & Tone</h3>
+        <div className="panel">
+          <div className="panel-header"><h3 className="panel-title">Voice & Tone</h3></div>
           <div className='form-group'>
             <label>Brand Voice Instructions</label>
             <textarea
@@ -355,8 +363,8 @@ export function BrandKitEditor() {
         </div>
 
         {/* V2 Campaign Brain Section */}
-        <div className='form-section'>
-          <h3>🧠 Campaign Brain</h3>
+        <div className="panel">
+          <div className="panel-header"><h3 className="panel-title">🧠 Campaign Brain</h3></div>
           <p className='section-description'>
             Advanced brand intelligence for AI-powered creative generation
           </p>
@@ -513,7 +521,7 @@ export function BrandKitEditor() {
         {error && <div className='error-message'>{error}</div>}
 
         <div className='form-actions'>
-          <button type='submit' className='btn-save' disabled={saving}>
+          <button type='submit' className='btn btn-primary' disabled={saving}>
             {saving ? 'Saving...' : 'Save Brand Kit'}
           </button>
         </div>

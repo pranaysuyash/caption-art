@@ -457,7 +457,7 @@ export function CreateCampaignModal({
               <button
                 type='button'
                 onClick={addReferenceCaption}
-                className='btn-secondary'
+                className='btn btn-secondary btn-sm'
                 disabled={!newReferenceCaption.trim()}
               >
                 Add
@@ -538,12 +538,12 @@ export function CreateCampaignModal({
             <button
               type='button'
               onClick={onClose}
-              className='btn-secondary'
+              className='btn btn-secondary'
               disabled={loading}
             >
               Cancel
             </button>
-            <button type='submit' className='btn-primary' disabled={loading}>
+            <button type='submit' className='btn btn-primary' disabled={loading}>
               {loading ? 'Creating...' : 'Create Campaign'}
             </button>
           </div>

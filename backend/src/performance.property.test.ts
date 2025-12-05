@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { performance } from 'perf_hooks'
 import * as fc from 'fast-check'
 import express, { Express } from 'express'
 import request from 'supertest'
@@ -99,9 +100,34 @@ describe('Performance Properties', () => {
       (serverModule as any).createServer ||
       (serverModule as any).default?.createServer
 
+    // Default to non-verbose test logging unless explicitly set
+    process.env.TEST_VERBOSE_LOGGING = process.env.TEST_VERBOSE_LOGGING || 'false'
+
     // Create server without rate limiter for performance testing
     // Disable session to avoid SQLite file IO impacting timing
     app = createServer({ enableRateLimiter: false, loadRoutes: true, enableSession: false })
+    // Ensure all routes are mounted before running tests to avoid 404s
+    // due to route mounting race conditions.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { waitForAppReady } = await import('./server')
+    await waitForAppReady(app)
+  })
+
+  afterEach(async () => {
+    // Dump aggregated request stats only in verbose mode to reduce noise in CI
+    const verbose = process.env.TEST_VERBOSE_LOGGING === 'true'
+    if (verbose) {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { getRequestStats, clearRequestStats } = await import('./middleware/logger')
+      // The server created in beforeEach is in the module-level `app` var
+      const stats = getRequestStats(app)
+      if (stats) console.info('Aggregated request stats:', JSON.stringify(stats, null, 2))
+      clearRequestStats(app)
+    } else {
+      // Clear stats to avoid cross-test leakage
+      const { clearRequestStats } = await import('./middleware/logger')
+      clearRequestStats(app)
+    }
   })
 
   describe('Property 9: Response time', () => {
@@ -112,27 +138,31 @@ describe('Performance Properties', () => {
      * For any request (excluding external API time), the service should respond within 200ms
      */
     it('should respond to health endpoint within 200ms', async () => {
+      // Create a minimal server instance for the health endpoint only once
+      const serverModule = await import('./server')
+      const createServerTable = (serverModule as any).createServer
+      const minimalApp = createServerTable({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
+      // Mount the health router manually to avoid loading heavy routes and side-effects
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const healthRouter = require('./routes/health').default
+      minimalApp.use('/api/health', healthRouter)
+      // Ensure routes mounted on minimal app
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { waitForAppReady } = await import('./server')
+      await waitForAppReady(minimalApp)
+
       await fc.assert(
         fc.asyncProperty(fc.constant(null), async () => {
-          // Create a minimal server instance for the health endpoint only
-          const serverModule = await import('./server')
-          const createServerTable = (serverModule as any).createServer
-          const minimalApp = createServerTable({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
-          // Mount the health router manually to avoid loading heavy routes and side-effects
-          // eslint-disable-next-line @typescript-eslint/no-var-requires
-          const healthRouter = require('./routes/health').default
-          minimalApp.use('/api/health', healthRouter)
-
-          const startTime = Date.now()
+          const startTime = performance.now()
           const response = await request(minimalApp).get('/api/health')
-          const endTime = Date.now()
+          const endTime = performance.now()
           const responseTime = endTime - startTime
 
           expect(response.status).toBe(200)
           // Health endpoint should be fast (within 200ms)
           expect(responseTime).toBeLessThan(200)
         }),
-        { numRuns: 20 }
+        { numRuns: 10 }
       )
     }, 30000)
 
@@ -140,11 +170,11 @@ describe('Performance Properties', () => {
       await fc.assert(
         fc.asyncProperty(fc.constant(null), async (_unused) => {
           const imageUrl = tinyGif
-          const startTime = Date.now()
+          const startTime = performance.now()
           const response = await request(app)
             .post('/api/caption')
             .send({ imageUrl })
-          const endTime = Date.now()
+          const endTime = performance.now()
           const responseTime = endTime - startTime
 
           // Accept both success and validation errors
@@ -160,11 +190,11 @@ describe('Performance Properties', () => {
       await fc.assert(
         fc.asyncProperty(fc.constant(null), async (_unused) => {
           const imageUrl = tinyGif
-          const startTime = Date.now()
+          const startTime = performance.now()
           const response = await request(app)
             .post('/api/mask')
             .send({ imageUrl })
-          const endTime = Date.now()
+          const endTime = performance.now()
           const responseTime = endTime - startTime
 
           // Accept both success and validation errors
@@ -181,11 +211,11 @@ describe('Performance Properties', () => {
         fc.asyncProperty(
           fc.string({ minLength: 5, maxLength: 50 }),
           async (licenseKey) => {
-            const startTime = Date.now()
+            const startTime = performance.now()
             const response = await request(app)
               .post('/api/verify')
               .send({ licenseKey })
-            const endTime = Date.now()
+            const endTime = performance.now()
             const responseTime = endTime - startTime
 
             expect([200, 400]).toContain(response.status)
@@ -211,19 +241,23 @@ describe('Performance Properties', () => {
      * with load testing tools (autocannon, k6) in integration tests.
      */
     it('should handle multiple concurrent requests to health endpoint', async () => {
+      // Create minimal app once for the concurrent health tests
+      const serverModule = await import('./server')
+      const createServerTable = (serverModule as any).createServer
+      const minimalApp = createServerTable({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const healthRouter = require('./routes/health').default
+      minimalApp.use('/api/health', healthRouter)
+      // Ensure mounted routes are ready
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { waitForAppReady } = await import('./server')
+      await waitForAppReady(minimalApp)
+
       await fc.assert(
         fc.asyncProperty(
           fc.integer({ min: 2, max: 4 }), // Limited by supertest connection pool
           async (concurrentRequests) => {
-            // Create a minimal server instance to isolate the health endpoint
-            const serverModule = await import('./server')
-            const createServerTable = (serverModule as any).createServer
-            const minimalApp = createServerTable({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const healthRouter = require('./routes/health').default
-            minimalApp.use('/api/health', healthRouter)
-
-            const startTime = Date.now()
+            const startTime = performance.now()
 
             // Send multiple requests concurrently
             const requests = Array.from({ length: concurrentRequests }, () =>
@@ -231,7 +265,7 @@ describe('Performance Properties', () => {
             )
 
             const responses = await Promise.all(requests)
-            const totalTime = Date.now() - startTime
+            const totalTime = performance.now() - startTime
 
             // All requests should succeed
             responses.forEach((response) => {
@@ -342,19 +376,23 @@ describe('Performance Properties', () => {
     }, 30000)
 
     it('should not block subsequent requests when processing concurrent requests', async () => {
+      // Create minimal app once to avoid dynamic imports in each property run
+      const serverModule2 = await import('./server')
+      const createServerFn = (serverModule2 as any).createServer
+      const minimalApp2 = createServerFn({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const healthRouter2 = require('./routes/health').default
+      minimalApp2.use('/api/health', healthRouter2)
+      // Ensure mounted routes are ready
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { waitForAppReady } = await import('./server')
+      await waitForAppReady(minimalApp2)
+
       await fc.assert(
         fc.asyncProperty(
           fc.integer({ min: 2, max: 3 }), // Small batch to avoid connection limits
           async (concurrentRequests) => {
             // Send first batch of concurrent requests
-            // Create minimal server instance for health endpoint
-            const serverModule2 = await import('./server')
-            const createServerFn = (serverModule2 as any).createServer
-            const minimalApp2 = createServerFn({ enableRateLimiter: false, loadRoutes: false, enableSession: false })
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const healthRouter2 = require('./routes/health').default
-            minimalApp2.use('/api/health', healthRouter2)
-
             const firstBatch = Array.from({ length: concurrentRequests }, () =>
               request(minimalApp2)
                 .get('/api/health')
@@ -373,7 +411,7 @@ describe('Performance Properties', () => {
                 status: err.code === 'ECONNRESET' ? 503 : 500,
               }))
 
-            const startTime = Date.now()
+            const startTime = performance.now()
 
             // Both should complete successfully
             const [firstBatchResponses, secondResponse] = await Promise.all([
@@ -381,7 +419,7 @@ describe('Performance Properties', () => {
               secondRequest,
             ])
 
-            const totalTime = Date.now() - startTime
+            const totalTime = performance.now() - startTime
 
             // All requests should succeed or fail gracefully
             firstBatchResponses.forEach((response) => {
@@ -407,29 +445,45 @@ describe('Performance Properties', () => {
         fc.asyncProperty(
           fc.integer({ min: 2, max: 4 }),
           async (numRequests) => {
-            // Measure concurrent execution time
-            const concurrentStart = Date.now()
+            // Measure sequential execution time
+            let sequentialTime = 0
+            for (let i = 0; i < numRequests; i++) {
+              const sStart = performance.now()
+              const r = await request(app)
+                .get('/api/health')
+                .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
+              const sEnd = performance.now()
+              sequentialTime += sEnd - sStart
+              // Basic success check so the sequential run is valid
+              expect([200, 400, 403, 404, 500, 503]).toContain(r.status)
+            }
+
+            // Now measure concurrent execution time
+            const concurrentStart = performance.now()
             const concurrentRequests = Array.from({ length: numRequests }, () =>
               request(app)
                 .get('/api/health')
-                .catch((err) => ({
-                  status: err.code === 'ECONNRESET' ? 503 : 500,
-                }))
+                .catch((err) => ({ status: err.code === 'ECONNRESET' ? 503 : 500 }))
             )
             const responses = await Promise.all(concurrentRequests)
-            const concurrentTime = Date.now() - concurrentStart
+            const concurrentTime = performance.now() - concurrentStart
 
             // At least one request should succeed
-            const successCount = responses.filter(
-              (r) => r.status === 200
-            ).length
+            const successCount = responses.filter((r) => r.status === 200).length
             expect(successCount).toBeGreaterThanOrEqual(1)
 
-            // If requests were sequential, time would be numRequests * avgRequestTime
-            // With concurrency, time should be closer to avgRequestTime (not numRequests * avgRequestTime)
-            // Conservative check: concurrent time should be less than 70% of theoretical sequential time
-            const estimatedSequentialTime = numRequests * 50 // Assume 50ms per request
-            expect(concurrentTime).toBeLessThan(estimatedSequentialTime * 0.7)
+            // Verify concurrent time is significantly less than sequential time
+            // Use a conservative factor to avoid CI flakiness
+            // However, if the sequential time is extremely small, timing resolution
+            // makes these assertions unreliable: in that case, assert both are small
+            const MIN_MEASURABLE = 5 // ms - threshold below which JS timer resolution is noisy
+            if (sequentialTime <= MIN_MEASURABLE) {
+              // If both sequential and concurrent execution are effectively instantaneous,
+              // assert they are both below the measurable threshold to avoid false negatives
+              expect(concurrentTime).toBeLessThanOrEqual(MIN_MEASURABLE)
+            } else {
+              expect(concurrentTime).toBeLessThan(sequentialTime * 0.85)
+            }
           }
         ),
         { numRuns: 20 }

@@ -38,6 +38,8 @@ beforeEach(async () => {
   const serverModule = await import('./server')
   const createServer = (serverModule as any).createServer || (serverModule as any).default?.createServer
   app = createServer({ enableRateLimiter: false, loadRoutes: true })
+  const { waitForAppReady } = await import('./server')
+  await waitForAppReady(app)
   port = 3000 + Math.floor(Math.random() * 1000)
   await new Promise<void>((resolve) => (server = app!.listen(port, () => resolve())))
 })

@@ -1,4 +1,5 @@
 import rateLimit from 'express-rate-limit'
+import { log } from './logger'
 
 /**
  * Rate limiter middleware configuration
@@ -6,7 +7,7 @@ import rateLimit from 'express-rate-limit'
  * - Production: 5 requests per 15 minutes per IP (strict)
  * - Development: 1000 requests per minute per IP (lenient)
  */
-export const rateLimiter = rateLimit({
+const limitMiddleware = rateLimit({
   windowMs:
     process.env.NODE_ENV === 'production'
       ? 15 * 60 * 1000 // 15 minutes in production
@@ -25,3 +26,13 @@ export const rateLimiter = rateLimit({
     })
   },
 })
+
+export const rateLimiter = (req, res, next) => {
+  const start = Date.now()
+  const reqId = (req as any).requestId || 'no-req-id'
+  return limitMiddleware(req, res, (err) => {
+    const duration = Date.now() - start
+    log.debug({ requestId: reqId, middleware: 'rateLimiter', duration }, 'rateLimiter done')
+    return next(err)
+  })
+}

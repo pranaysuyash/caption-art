@@ -12,6 +12,8 @@
 import { useState, useEffect } from 'react';
 import { approvalClient, CaptionItem } from '../lib/api/approvalClient';
 import { ExportModal } from './ExportModal';
+import { useToast } from './Toast';
+import { useConfirm } from '../contexts/DialogContext';
 import './ApprovalGrid.css';
 
 export interface ApprovalGridProps {
@@ -46,6 +48,8 @@ export function ApprovalGrid({
   const [approvedCount, setApprovedCount] = useState(0);
   const [targetCount] = useState(30); // Target number of approved captions
   const [showExportModal, setShowExportModal] = useState(false);
+  const toast = useToast();
+  const confirm = useConfirm();
 
   // Load captions from backend
   useEffect(() => {
@@ -149,13 +153,16 @@ export function ApprovalGrid({
       .map((item) => item.id);
 
     if (highScoringIds.length === 0) {
-      alert('No pending captions with quality score >= 8 found');
+      toast.info('No pending captions with quality score >= 8 found');
       return;
     }
 
-    const confirmed = window.confirm(
-      `Auto-approve ${highScoringIds.length} high-scoring captions (score >= 8)?`
-    );
+    const confirmed = await confirm({
+      title: 'Auto-Approve High-Scoring Captions',
+      message: `Auto-approve ${highScoringIds.length} high-scoring captions (score >= 8)?`,
+      confirmLabel: 'Auto-Approve',
+      variant: 'default',
+    });
 
     if (!confirmed) return;
 
@@ -168,12 +175,13 @@ export function ApprovalGrid({
       // Clear selection
       setSelectedIds([]);
 
+      toast.success(`Successfully approved ${result.approved.length} captions`);
       onApprove?.(result.approved);
     } catch (err) {
       console.error('Auto-approve error:', err);
-      setError(
-        err instanceof Error ? err.message : 'Failed to auto-approve captions'
-      );
+      const errorMsg = err instanceof Error ? err.message : 'Failed to auto-approve captions';
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 

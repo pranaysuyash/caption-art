@@ -10,7 +10,7 @@ import { UploadAssetsSchema } from '../schemas/validation'
 import { safeValidateData } from '../middleware/validation'
 
 const router = Router()
-const prisma = getPrismaClient()
+// Defer Prisma client acquisition to runtime
 const requireAuth = createAuthMiddleware() as any
 
 // Configure multer for file uploads
@@ -64,6 +64,7 @@ router.post(
   requireAuth,
   upload.array('files', 10),
   async (req, res) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
 
@@ -143,6 +144,7 @@ router.post(
 
 // GET /api/assets/workspace/:workspaceId - Get all assets for a workspace
 router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { workspaceId } = req.params

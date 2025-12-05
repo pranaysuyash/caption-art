@@ -9,7 +9,9 @@ import { MaskingService } from '../services/maskingService'
 
 const router = Router()
 const requireAuth = createAuthMiddleware() as any
-const prisma = getPrismaClient()
+// Defer creation of Prisma client until request time to avoid creating
+// the client (and potentially registering signal handlers) during
+// module import. This reduces startup side effects in tests and dev.
 
 // Validation schemas
 const createBrandKitSchema = z.object({
@@ -81,6 +83,7 @@ router.post(
   requireAuth,
   validateRequest({ body: createBrandKitSchema }),
   async (req, res) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       let brandKitData = req.body
@@ -138,6 +141,7 @@ router.post(
 
 // GET /api/brand-kits/:id - Get specific brand kit
 router.get('/:id', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -170,6 +174,7 @@ router.put(
   requireAuth,
   validateRequest({ body: updateBrandKitSchema }),
   async (req, res) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { id } = req.params
@@ -236,6 +241,7 @@ router.put(
 
 // DELETE /api/brand-kits/:id - Delete brand kit
 router.delete('/:id', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -270,6 +276,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
 // GET /api/brand-kits/workspace/:workspaceId - Get brand kit by workspace
 router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { workspaceId } = req.params

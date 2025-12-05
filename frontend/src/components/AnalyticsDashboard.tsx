@@ -131,24 +131,10 @@ function formatMs(ms: number): string {
  */
 function MetricCard({ title, value, subtitle }: { title: string; value: string; subtitle?: string }) {
   return (
-    <div style={{
-      padding: '20px',
-      border: '2px solid #000',
-      borderRadius: '8px',
-      backgroundColor: '#fff',
-      boxShadow: '4px 4px 0 #000',
-    }}>
-      <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'normal', color: '#666' }}>
-        {title}
-      </h3>
-      <div style={{ fontSize: '32px', fontWeight: 'bold', margin: '10px 0' }}>
-        {value}
-      </div>
-      {subtitle && (
-        <div style={{ fontSize: '12px', color: '#999' }}>
-          {subtitle}
-        </div>
-      )}
+    <div className='stat-card'>
+      <div className='stat-label'>{title}</div>
+      <div className='stat-value'>{value}</div>
+      {subtitle && <div className='stat-change'>{subtitle}</div>}
     </div>
   );
 }
@@ -160,16 +146,10 @@ function FeatureUsageChart({ features }: { features: FeatureUsage[] }) {
   const maxCount = Math.max(...features.map(f => f.count));
   
   return (
-    <div style={{
-      padding: '20px',
-      border: '2px solid #000',
-      borderRadius: '8px',
-      backgroundColor: '#fff',
-      boxShadow: '4px 4px 0 #000',
-    }}>
-      <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 'bold' }}>
-        Feature Usage
-      </h3>
+    <div className='panel'>
+      <div className='panel-header'>
+        <h3 className='panel-title'>Feature Usage</h3>
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
         {features.map((feature) => (
           <div key={feature.feature}>
@@ -212,12 +192,7 @@ function ConversionFunnel({ metrics }: { metrics: ConversionMetrics }) {
   ];
   
   return (
-    <div style={{
-      padding: '20px',
-      border: '2px solid #000',
-      borderRadius: '8px',
-      backgroundColor: '#fff',
-      boxShadow: '4px 4px 0 #000',
+    <div className='panel'>
     }}>
       <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: 'bold' }}>
         Conversion Funnel
@@ -288,8 +263,8 @@ export function AnalyticsDashboard() {
 
   if (loading && !data) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <div role="status" aria-live="polite" aria-label="Loading analytics dashboard">
+      <div className='page-container'>
+        <div style={{ textAlign: 'center', padding: 'var(--space-3xl)' }}>
           Loading dashboard...
         </div>
       </div>
@@ -298,19 +273,21 @@ export function AnalyticsDashboard() {
 
   if (!data) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        <div>Failed to load dashboard data</div>
+      <div className='page-container'>
+        <div style={{ textAlign: 'center', padding: 'var(--space-3xl)' }}>
+          Failed to load dashboard data
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div className='page-container'>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <h1 style={{ margin: 0, fontSize: '32px', fontWeight: 'bold' }}>Analytics Dashboard</h1>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '14px' }}>
+      <div className='page-header'>
+        <h1 className='page-title'>Analytics Dashboard</h1>
+        <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
             <input
               type="checkbox"
               checked={autoRefresh}
@@ -320,15 +297,8 @@ export function AnalyticsDashboard() {
           </label>
           <button
             onClick={loadDashboardData}
+            className='btn btn-ghost'
             aria-label="Refresh analytics data"
-            style={{
-              padding: '8px 16px',
-              border: '2px solid #000',
-              borderRadius: '4px',
-              backgroundColor: '#fff',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-            }}
           >
             Refresh
           </button>
@@ -336,9 +306,9 @@ export function AnalyticsDashboard() {
       </div>
 
       {/* Key Metrics - Requirement 7.1 */}
-      <section style={{ marginBottom: '30px' }}>
-        <h2 style={{ marginBottom: '15px', fontSize: '20px', fontWeight: 'bold' }}>Key Metrics</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+      <section style={{ marginBottom: 'var(--space-2xl)' }}>
+        <h2 style={{ marginBottom: 'var(--space-lg)' }}>Key Metrics</h2>
+        <div className='stats-grid'>
           <MetricCard
             title="Daily Active Users"
             value={formatNumber(data.keyMetrics.dau)}

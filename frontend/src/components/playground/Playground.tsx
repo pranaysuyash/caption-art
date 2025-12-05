@@ -277,8 +277,8 @@ function PlaygroundContent() {
   return (
     <main
       role='main'
+      className='page-container'
       style={{
-        fontFamily: 'var(--font-body, system-ui, -apple-system, sans-serif)',
         minHeight: '100vh',
         backgroundColor: 'var(--color-bg)',
         color: 'var(--color-text)',
@@ -289,19 +289,21 @@ function PlaygroundContent() {
 
       <PlaygroundHeader />
 
-      <div style={{ padding: '2rem' }}>
-        <Controls exportImg={exportImg} videoExport={videoExport} />
+      <div className='two-column-layout stack-mobile'>
+        <div className='panel'>
+          <Controls exportImg={exportImg} videoExport={videoExport} />
+          <ProgressIndicator />
+          <CaptionList />
+        </div>
 
-        <ProgressIndicator />
-
-        <CaptionList />
-
-        <CanvasPreview
-          canvasRef={canvasRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-        />
+        <div className='panel'>
+          <CanvasPreview
+            canvasRef={canvasRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+          />
+        </div>
       </div>
     </main>
   );

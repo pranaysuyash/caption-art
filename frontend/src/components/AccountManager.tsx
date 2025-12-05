@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import { oauthHandler } from '../lib/social/oauthHandler';
 import { platformManager } from '../lib/social/platformManager';
+import { useConfirm } from '../contexts/DialogContext';
 import type { ShareablePlatform, AuthStatus } from '../lib/social/types';
 
 export interface AccountManagerProps {
@@ -23,6 +24,7 @@ export function AccountManager({
   const [connectingPlatform, setConnectingPlatform] = useState<ShareablePlatform | null>(
     null
   );
+  const confirm = useConfirm();
 
   const platforms: ShareablePlatform[] = ['instagram', 'twitter', 'facebook', 'pinterest'];
 
@@ -86,7 +88,14 @@ export function AccountManager({
    * Requirements: 6.2
    */
   const handleDisconnect = async (platform: ShareablePlatform) => {
-    if (!confirm(`Are you sure you want to disconnect your ${platform} account?`)) {
+    const confirmed = await confirm({
+      title: 'Disconnect Account',
+      message: `Are you sure you want to disconnect your ${platform} account?`,
+      confirmLabel: 'Disconnect',
+      variant: 'warning',
+    });
+    
+    if (!confirmed) {
       return;
     }
 

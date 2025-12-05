@@ -24,7 +24,7 @@ interface StoredThemeData {
 
 const STORAGE_KEY = 'caption-art-theme';
 const CUSTOM_THEMES_KEY = 'caption-art-custom-themes';
-const DEFAULT_THEME_ID = 'neobrutalism';
+const DEFAULT_THEME_ID = 'pastel';
 
 export class ThemeManager {
   private engine: ThemeEngine;

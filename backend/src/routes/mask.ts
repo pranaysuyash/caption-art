@@ -7,7 +7,9 @@ import { validateRequest } from '../middleware/validation'
 import { ValidationError, ExternalAPIError } from '../errors/AppError'
 
 const router = Router()
-const prisma = getPrismaClient()
+// Defer Prisma acquisition to runtime; this route currently doesn't
+// require prisma at import time. Keep imports but avoid top-level client
+// creation to prevent side effects during server setup/tests.
 
 /**
  * POST /api/mask

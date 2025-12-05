@@ -96,6 +96,9 @@ export function ReviewGrid() {
     () => exportJobs.find((j) => j.id === activeJobId),
     [exportJobs, activeJobId]
   );
+  const [processing, setProcessing] = useState<
+    Record<string, 'approve' | 'reject' | undefined>
+  >({});
 
   useEffect(() => {
     refreshAll();
@@ -193,6 +196,11 @@ export function ReviewGrid() {
     setSelectedCaptions((prev) =>
       prev.filter((id) => id !== updated.id)
     );
+    setProcessing((prev) => {
+      const next = { ...prev };
+      delete next[updated.id];
+      return next;
+    });
   };
 
   const refreshExportData = async () => {
@@ -202,6 +210,7 @@ export function ReviewGrid() {
   const approveCaption = async (captionId: string) => {
     try {
       setSubmitting(true);
+      setProcessing((p) => ({ ...p, [captionId]: 'approve' }));
       const variationId = selectedVariations[captionId];
       const res = await apiFetch(
         `/api/approval/captions/${captionId}/approve`,
@@ -221,6 +230,11 @@ export function ReviewGrid() {
       alert('Failed to approve caption. Please try again.');
     } finally {
       setSubmitting(false);
+      setProcessing((p) => {
+        const next = { ...p };
+        delete next[captionId];
+        return next;
+      });
     }
   };
 
@@ -228,6 +242,7 @@ export function ReviewGrid() {
     try {
       const reason = window.prompt('Add an optional reason?') || undefined;
       setSubmitting(true);
+      setProcessing((p) => ({ ...p, [captionId]: 'reject' }));
       const variationId = selectedVariations[captionId];
       const res = await apiFetch(
         `/api/approval/captions/${captionId}/reject`,
@@ -247,6 +262,11 @@ export function ReviewGrid() {
       alert('Failed to reject caption. Please try again.');
     } finally {
       setSubmitting(false);
+      setProcessing((p) => {
+        const next = { ...p };
+        delete next[captionId];
+        return next;
+      });
     }
   };
 
@@ -382,62 +402,98 @@ export function ReviewGrid() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          padding: '2rem',
-          textAlign: 'center',
-          color: 'var(--color-text-secondary, #6b7280)',
-          fontFamily: 'var(--font-body, sans-serif)',
-        }}
-      >
-        Loading approvals...
+      <div className='page-container'>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: 'var(--space-md)',
+          }}
+        >
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div
+              key={idx}
+              style={{
+                border: '1px solid var(--color-border, #1f2937)',
+                borderRadius: '12px',
+                padding: '1rem',
+                background: 'var(--color-bg-secondary, #111827)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.75rem',
+              }}
+            >
+              <div
+                style={{
+                  width: '100%',
+                  height: '140px',
+                  borderRadius: '10px',
+                  background: '#1f2937',
+                }}
+              />
+              <div
+                style={{
+                  width: '70%',
+                  height: '14px',
+                  borderRadius: '6px',
+                  background: '#1f2937',
+                }}
+              />
+              <div
+                style={{
+                  width: '90%',
+                  height: '12px',
+                  borderRadius: '6px',
+                  background: '#1f2937',
+                }}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '0.5rem',
+                }}
+              >
+                <div
+                  style={{
+                    flex: 1,
+                    height: '34px',
+                    borderRadius: '8px',
+                    background: '#1f2937',
+                  }}
+                />
+                <div
+                  style={{
+                    flex: 1,
+                    height: '34px',
+                    borderRadius: '8px',
+                    background: '#1f2937',
+                  }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      style={{
-        padding: '2rem',
-        fontFamily: 'var(--font-body, sans-serif)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '1.5rem',
-          gap: '1rem',
-        }}
-      >
+    <div className='page-container'>
+      <div className='page-header'>
         <div>
-          <h1
-            style={{
-              fontFamily: 'var(--font-heading, sans-serif)',
-              margin: 0,
-              fontSize: '1.8rem',
-            }}
-          >
-            Approval Grid
-          </h1>
+          <h1 className='page-title'>Approval Grid</h1>
           {stats && (
-            <p
-              style={{
-                margin: '0.25rem 0 0',
-                color: 'var(--color-text-secondary, #6b7280)',
-              }}
-            >
+            <p className='page-subtitle'>
               {stats.approved} approved • {stats.pending} pending •{' '}
               {stats.rejected} rejected
             </p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div className='stack-mobile' style={{ gap: 'var(--space-sm)' }}>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value as any)}
-            style={{ padding: '0.5rem', borderRadius: '8px' }}
+            style={{ padding: 'var(--space-sm)', borderRadius: 'var(--radius-md)' }}
           >
             <option value='all'>All statuses</option>
             <option value='pending'>Pending</option>
@@ -445,7 +501,7 @@ export function ReviewGrid() {
             <option value='rejected'>Rejected</option>
           </select>
           <button
-            className='btn btn-ghost'
+            className='btn btn-ghost btn-sm'
             onClick={toggleSelectAll}
             disabled={!filteredGrid.length}
           >
@@ -458,21 +514,21 @@ export function ReviewGrid() {
               : 'Select all'}
           </button>
           <button
-            className='btn btn-ghost'
+            className='btn btn-ghost btn-sm'
             onClick={loadGrid}
             disabled={submitting}
           >
             Refresh
           </button>
           <button
-            className='btn btn-primary'
+            className='btn btn-success'
             onClick={bulkApprove}
             disabled={!selectedCaptions.length || submitting}
           >
             Approve selected
           </button>
           <button
-            className='btn btn-secondary'
+            className='btn btn-danger'
             onClick={bulkReject}
             disabled={!selectedCaptions.length || submitting}
           >
@@ -482,52 +538,22 @@ export function ReviewGrid() {
       </div>
 
       {/* Export summary & actions */}
-      <div
-        style={{
-          marginBottom: '1rem',
-          padding: '1rem',
-          border: '1px solid var(--color-border, #e5e7eb)',
-          borderRadius: '12px',
-          background: 'var(--color-bg-secondary, #f8fafc)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-        }}
-      >
-        <div>
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: '1rem',
-              color: 'var(--color-text, #0f172a)',
-            }}
-          >
-            Export
+      <div className='panel' style={{ marginBottom: 'var(--space-xl)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--space-lg)', flexWrap: 'wrap' }}>
+          <div>
+            <h3 className='panel-title'>Export</h3>
+            <p style={{ color: 'var(--color-text-secondary)', marginTop: 'var(--space-xs)', marginBottom: 0 }}>
+              {exportSummary
+                ? `${exportSummary.totalApproved} approved • Estimated ${exportSummary.estimatedSize}`
+                : 'Loading export summary...'}
+              {exportError && (
+                <span style={{ display: 'block', marginTop: 'var(--space-xs)', color: 'var(--color-brand-error)', fontSize: 'var(--font-size-sm)' }}>
+                  {exportError}
+                </span>
+              )}
+            </p>
           </div>
-          <div
-            style={{
-              color: 'var(--color-text-secondary, #6b7280)',
-              marginTop: '0.25rem',
-            }}
-          >
-            {exportSummary
-              ? `${exportSummary.totalApproved} approved • Estimated ${exportSummary.estimatedSize}`
-              : 'Loading export summary...'}
-            {exportError && (
-              <div
-                style={{
-                  marginTop: '0.25rem',
-                  color: '#b91c1c',
-                  fontSize: '0.9rem',
-                }}
-              >
-                {exportError}
-              </div>
-            )}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <div className='stack-mobile' style={{ gap: 'var(--space-sm)' }}>
           <button
             className='btn btn-ghost'
             onClick={refreshExportData}
@@ -639,8 +665,8 @@ export function ReviewGrid() {
               </div>
               {job.status === 'completed' && (
                 <button
-                  className='btn btn-secondary'
-                  style={{ marginTop: '0.5rem' }}
+                  className='btn btn-secondary btn-sm'
+                  style={{ marginTop: 'var(--space-sm)' }}
                   onClick={() => downloadExport(job.id)}
                 >
                   Download ZIP
@@ -675,13 +701,7 @@ export function ReviewGrid() {
           No items found for this status.
         </div>
       ) : (
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: '1rem',
-          }}
-        >
+        <div className='card-grid'>
           {filteredGrid.map((item) => {
             const caption = item.caption;
             const selectedVariationId = caption
@@ -692,17 +712,7 @@ export function ReviewGrid() {
             );
 
             return (
-              <div
-                key={item.asset.id}
-                style={{
-                  border: '1px solid var(--color-border, #e5e7eb)',
-                  borderRadius: '12px',
-                  background: 'var(--color-bg-secondary, white)',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
+              <div key={item.asset.id} className='card'>
                 <div style={{ position: 'relative' }}>
                   <img
                     src={item.asset.url}
@@ -864,27 +874,26 @@ export function ReviewGrid() {
                 </div>
 
                 {caption && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: '0.5rem',
-                      padding: '0.75rem 1rem 1rem',
-                    }}
-                  >
+                  <div className='card-actions'>
                     <button
-                      className='btn btn-primary'
+                      className='btn btn-success'
                       onClick={() => approveCaption(caption.id)}
-                      disabled={submitting}
+                      disabled={submitting || processing[caption.id] !== undefined}
+                      title='Approve this caption'
                     >
-                      Approve
+                      {processing[caption.id] === 'approve'
+                        ? 'Approving...'
+                        : 'Approve'}
                     </button>
                     <button
-                      className='btn btn-secondary'
+                      className='btn btn-danger'
                       onClick={() => rejectCaption(caption.id)}
-                      disabled={submitting}
+                      disabled={submitting || processing[caption.id] !== undefined}
+                      title='Reject this caption'
                     >
-                      Reject
+                      {processing[caption.id] === 'reject'
+                        ? 'Rejecting...'
+                        : 'Reject'}
                     </button>
                   </div>
                 )}

@@ -15,6 +15,7 @@ import { Playground } from './components/playground/Playground';
 import { ToastContainer, useToast } from './components/Toast';
 import { AgencyHeader } from './components/layout/AgencyHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { DialogProvider } from './contexts/DialogContext';
 
 import apiFetch from './lib/api/httpClient';
 
@@ -72,55 +73,57 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
-      <Router>
-        <Routes>
-          {/* Public routes */}
-          <Route path='/login' element={<Login onLogin={login} />} />
+      <DialogProvider>
+        <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
+        <Router>
+          <Routes>
+            {/* Public routes */}
+            <Route path='/login' element={<Login onLogin={login} />} />
 
-          {/* Protected agency routes */}
-          <Route
-            path='/agency/*'
-            element={
-              <AuthGuard isAuthenticated={isAuthenticated} loading={loading}>
-                <AgencyRoutes onLogout={logout} />
-              </AuthGuard>
-            }
-          />
+            {/* Protected agency routes */}
+            <Route
+              path='/agency/*'
+              element={
+                <AuthGuard isAuthenticated={isAuthenticated} loading={loading}>
+                  <AgencyRoutes onLogout={logout} />
+                </AuthGuard>
+              }
+            />
 
-          {/* Legacy playground - moved from root */}
-          <Route 
-            path='/playground' 
-            element={
-              <ErrorBoundary>
-                <Playground />
-              </ErrorBoundary>
-            } 
-          />
+            {/* Legacy playground - moved from root */}
+            <Route 
+              path='/playground' 
+              element={
+                <ErrorBoundary>
+                  <Playground />
+                </ErrorBoundary>
+              } 
+            />
 
-          {/* Default redirect */}
-          <Route
-            path='/'
-            element={
-              <Navigate
-                to={isAuthenticated ? '/agency/workspaces' : '/playground'}
-                replace
-              />
-            }
-          />
+            {/* Default redirect */}
+            <Route
+              path='/'
+              element={
+                <Navigate
+                  to={isAuthenticated ? '/agency/workspaces' : '/playground'}
+                  replace
+                />
+              }
+            />
 
-          {/* Catch all */}
-          <Route
-            path='*'
-            element={
-              <Navigate
-                to={isAuthenticated ? '/agency/workspaces' : '/playground'}
-                replace
-              />
-            }
-          />
-        </Routes>
-      </Router>
+            {/* Catch all */}
+            <Route
+              path='*'
+              element={
+                <Navigate
+                  to={isAuthenticated ? '/agency/workspaces' : '/playground'}
+                  replace
+                />
+              }
+            />
+          </Routes>
+        </Router>
+      </DialogProvider>
     </ErrorBoundary>
   );
 }

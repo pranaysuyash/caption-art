@@ -20,22 +20,40 @@ export function getPrismaClient(): PrismaClient {
       log:
         process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
     })
-
-    // Handle graceful shutdown
-    process.on('SIGINT', async () => {
-      log.info('SIGINT received, shutting down Prisma client...')
-      await prisma.$disconnect()
-      process.exit(0)
-    })
-
-    process.on('SIGTERM', async () => {
-      log.info('SIGTERM received, shutting down Prisma client...')
-      await prisma.$disconnect()
-      process.exit(0)
-    })
   }
 
   return prisma
+}
+
+/**
+ * Register graceful shutdown handlers for Prisma. This is intentionally
+ * separate from `getPrismaClient()` to avoid attaching process-level
+ * handlers during test runs or during simple module imports. Call this
+ * from `startServer()` in environments where we actually run as the
+ * primary application process.
+ */
+export function registerPrismaSignalHandlers(): void {
+  if (process.env.NODE_ENV === 'test') return
+  if (!prisma) return
+
+  const handler = async (signal: string) => {
+    log.info(`${signal} received, shutting down Prisma client...`)
+    try {
+      await prisma.$disconnect()
+    } catch (err) {
+      log.error({ err }, 'Error while disconnecting Prisma client on shutdown')
+    }
+    // Only exit if this is the top-level process
+    try {
+      process.exit(0)
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // Register signal handlers - avoid duplicate registrations
+  process.once('SIGINT', () => handler('SIGINT'))
+  process.once('SIGTERM', () => handler('SIGTERM'))
 }
 
 /**

@@ -1,0 +1,132 @@
+/**
+ * PromptDialog Styles
+ */
+
+.prompt-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.prompt-dialog {
+  background: var(--color-background, #ffffff);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease-out;
+}
+
+.prompt-dialog-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.prompt-dialog-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text, #1f2937);
+}
+
+.prompt-dialog-body {
+  padding: 1.5rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.prompt-dialog-body p {
+  margin: 0 0 1rem 0;
+  color: var(--color-text-secondary, #6b7280);
+  line-height: 1.5;
+}
+
+.prompt-dialog-input-group {
+  margin-top: 1rem;
+}
+
+.prompt-dialog input[type="text"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid var(--color-border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.prompt-dialog input[type="text"]:focus {
+  outline: none;
+  border-color: var(--color-primary, #3b82f6);
+}
+
+.prompt-dialog input[type="text"]:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.prompt-dialog input[type="text"].input-error {
+  border-color: #dc2626;
+}
+
+.prompt-dialog-error {
+  margin-top: 0.5rem;
+  color: #dc2626;
+  font-size: 0.875rem;
+}
+
+.prompt-dialog-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border, #e5e7eb);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 640px) {
+  .prompt-dialog {
+    max-width: 100%;
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .prompt-dialog-footer {
+    flex-direction: column-reverse;
+  }
+
+  .prompt-dialog-footer button {
+    width: 100%;
+  }
+}

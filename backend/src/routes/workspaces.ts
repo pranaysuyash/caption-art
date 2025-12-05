@@ -8,7 +8,7 @@ import { AuthenticatedRequest } from '../types/auth'
 
 const router = Router()
 const requireAuth = createAuthMiddleware()
-const prisma = getPrismaClient()
+// Defer creation of Prisma client to runtime to avoid side effects on import
 
 // Validation schemas
 const createWorkspaceSchema = z.object({
@@ -24,6 +24,7 @@ const updateWorkspaceSchema = z.object({
 
 // GET /api/workspaces - List all workspaces for the authenticated agency
 router.get('/', requireAuth as any, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const workspaces = await prisma.workspace.findMany({
@@ -43,6 +44,7 @@ router.post(
   requireAuth as any,
   validateRequest({ body: createWorkspaceSchema }),
   async (req, res) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { clientName, industry } = req.body
@@ -99,6 +101,7 @@ router.post(
 
 // GET /api/workspaces/:id - Get specific workspace
 router.get('/:id', requireAuth as any, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -132,6 +135,7 @@ router.put(
     body: updateWorkspaceSchema,
   }),
   async (req, res) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { id } = req.params
@@ -167,6 +171,7 @@ router.put(
 
 // DELETE /api/workspaces/:id - Archive workspace (soft delete)
 router.delete('/:id', requireAuth as any, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params

@@ -14,6 +14,10 @@ const suspiciousPatterns = [
 export function wafMiddleware(req: Request, res: Response, next: NextFunction) {
   if (!config.waf || !config.waf.enable) return next()
 
+  const start = Date.now()
+  const reqId = (req as any).requestId || 'no-req-id'
+  log.debug({ requestId: reqId, middleware: 'waf' }, 'WAF start')
+
   try {
     const bodyString = JSON.stringify(req.body || '')
     for (const p of suspiciousPatterns) {
@@ -22,13 +26,21 @@ export function wafMiddleware(req: Request, res: Response, next: NextFunction) {
           { pattern: p.toString() },
           'WAF blocked request matching suspicious pattern'
         )
+        const duration = Date.now() - start
+        log.warn(
+          { requestId: reqId, pattern: p.toString(), duration },
+          'WAF blocked request matching suspicious pattern'
+        )
         return res.status(400).json({ error: 'Request blocked by WAF' })
       }
     }
   } catch (err) {
     // If body can't be stringified, skip WAF check
-    log.warn('WAF skip: body stringify failed')
+    const duration = Date.now() - start
+    log.warn({ requestId: reqId, duration }, 'WAF skip: body stringify failed')
   }
+  const duration = Date.now() - start
+  log.debug({ requestId: reqId, middleware: 'waf', duration }, 'WAF done')
   return next()
 }
 

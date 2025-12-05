@@ -4,6 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express'
+import { log } from './logger'
 import { z, ZodSchema } from 'zod'
 
 export interface ValidationOptions {
@@ -17,6 +18,9 @@ export interface ValidationOptions {
  */
 export function validateRequest(options: ValidationOptions) {
   return (req: Request, res: Response, next: NextFunction) => {
+    const start = Date.now()
+    const reqId = (req as any).requestId || 'no-req-id'
+    log.debug({ requestId: reqId, middleware: 'validateRequest' }, 'validateRequest start')
     try {
       // Validate body if schema provided
       if (options.body) {
@@ -43,6 +47,11 @@ export function validateRequest(options: ValidationOptions) {
       }
 
       next()
+      const duration = Date.now() - start
+      log.debug(
+        { requestId: reqId, middleware: 'validateRequest', duration },
+        'validateRequest done'
+      )
     } catch (error) {
       if (error instanceof z.ZodError) {
         // Format validation errors for response
@@ -59,6 +68,9 @@ export function validateRequest(options: ValidationOptions) {
       }
 
       // Handle other errors
+      const duration = Date.now() - start
+      log.debug({ requestId: reqId, middleware: 'validateRequest', duration }, 'validateRequest failed')
+
       return res.status(500).json({
         error: 'Internal server error during validation',
       })

@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 // Load environment variables before anything else
 dotenv.config()
 
-import express from 'express'
+import express, { Express } from 'express'
 import cookieParser from 'cookie-parser'
 import path from 'path'
 import { config } from './config'
@@ -11,6 +11,7 @@ import { requestIdMiddleware } from './middleware/requestId'
 import { wafMiddleware } from './middleware/waf'
 import { errorHandler } from './middleware/errorHandler'
 import { requestLogger, log } from './middleware/logger'
+import { registerPrismaSignalHandlers, initializePrisma } from './lib/prisma'
 // import { rateLimiter } from './middleware/rateLimiter'
 
 // Pre-declare exports as function stubs to avoid circular dependency issues
@@ -31,6 +32,38 @@ export function startServer(): void {
   return startServerImpl()
 }
 
+/**
+ * Helper for tests to wait until the express app has the router mounted
+ * and is ready to handle requests. This guards against race conditions
+ * where test code begins issuing requests before the server has finished
+ * mounting all routes.
+ */
+export async function waitForAppReady(
+  app: Express,
+  options: { timeoutMs?: number; minStackLength?: number } = {}
+): Promise<void> {
+  const { timeoutMs = 1000, minStackLength = 1 } = options
+  const start = Date.now()
+  return new Promise((resolve, reject) => {
+    const check = () => {
+      try {
+        const router = (app as any)._router || (app as any).router
+        const stack = router && Array.isArray(router.stack) ? router.stack : []
+        if (stack.length >= minStackLength) return resolve()
+        if (Date.now() - start >= timeoutMs) {
+          // Timeout: resolve anyway but warn to avoid brittle test failures
+          log.warn({ timeoutMs, stackLen: stack.length }, 'waitForAppReady timed out')
+          return resolve()
+        }
+      } catch (err) {
+        // ignore and retry
+      }
+      setTimeout(check, 10)
+    }
+    check()
+  })
+}
+
 if (process.env.NODE_ENV === 'test') {
   // eslint-disable-next-line no-console
   console.log(
@@ -45,6 +78,7 @@ if (process.env.NODE_ENV === 'test') {
 // ensure the properties are present immediately on module.exports.
 ;(module as any).exports.createServer = createServer
 ;(module as any).exports.startServer = startServer
+;(module as any).exports.waitForAppReady = waitForAppReady
 
 // Ensure module.exports contains named and default exports for all module
 // loaders (CommonJS and ESM interop). This helps in test environments that
@@ -52,6 +86,7 @@ if (process.env.NODE_ENV === 'test') {
 Object.assign((module as any).exports, {
   createServer,
   startServer,
+  waitForAppReady,
 })
 // Avoid explicitly touching module.exports.__esModule - it may be read-only
 // in some loaders (e.g., ts-node), and adding it can cause TypeError.
@@ -583,10 +618,15 @@ function startServerImpl(): void {
   const app = createServer()
   const port = config.port
 
-  app.listen(port, () => {
+  app.listen(port, async () => {
     // Initialize database
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-
+    try {
+      await initializePrisma()
+      registerPrismaSignalHandlers()
+    } catch (err) {
+      log.error({ err }, 'Failed to initialize Prisma on server start')
+    }
     // Seed test user
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { AuthModel } = require('./models/auth')

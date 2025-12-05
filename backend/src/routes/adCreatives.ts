@@ -15,7 +15,7 @@ import { log } from '../middleware/logger'
 import { AuthenticatedRequest } from '../types/auth'
 
 const router = Router()
-const prisma = getPrismaClient()
+// Defer prisma acquisition to runtime to avoid initializing DB connections at import time.
 const requireAuth = createAuthMiddleware() as any
 
 // Validation schemas
@@ -149,6 +149,7 @@ router.post(
   requireAuth,
   validateRequest(generateAdCreativeSchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const requestData = (req as any)
         .validatedData as AdCreativeGenerationRequest

@@ -8,7 +8,7 @@ import { CreateCampaignSchema } from '../schemas/validation'
 import { log } from '../middleware/logger'
 
 const router = Router()
-const prisma = getPrismaClient()
+// Defer prisma acquisition to runtime to avoid creating the client during module import
 log.info('Initializing campaigns router')
 const requireAuth = createAuthMiddleware() as any
 
@@ -48,6 +48,7 @@ router.post(
   requireAuth,
   validateRequest({ body: CreateCampaignSchema }),
   async (req, res) => {
+    const prisma = getPrismaClient()
     log.info('Creating campaign')
     console.log('Create campaign: req.body', JSON.stringify(req.body))
     log.info({ body: req.body }, 'Create campaign payload')
@@ -179,6 +180,7 @@ router.post(
 
 // GET /api/campaigns - List campaigns for agency
 router.get('/', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const workspaceId = req.query.workspaceId as string
@@ -252,6 +254,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 // GET /api/campaigns/:id - Get specific campaign
 router.get('/:id', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -318,6 +321,7 @@ router.put(
     body: CreateCampaignSchema.partial(),
   }),
   async (req, res) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { id } = req.params
@@ -428,6 +432,7 @@ router.put(
 
 // DELETE /api/campaigns/:id - Delete campaign
 router.delete('/:id', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -455,6 +460,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
 // POST /api/campaigns/:id/launch - Launch campaign (set status to active)
 router.post('/:id/launch', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -485,6 +491,7 @@ router.post('/:id/launch', requireAuth, async (req, res) => {
 
 // POST /api/campaigns/:id/pause - Pause campaign
 router.post('/:id/pause', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -515,6 +522,7 @@ router.post('/:id/pause', requireAuth, async (req, res) => {
 
 // POST /api/campaigns/:id/archive - Archive campaign (soft delete)
 router.post('/:id/archive', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -545,6 +553,7 @@ router.post('/:id/archive', requireAuth, async (req, res) => {
 
 // POST /api/campaigns/:id/unarchive - Unarchive campaign (restore to draft)
 router.post('/:id/unarchive', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params

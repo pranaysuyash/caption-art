@@ -18,6 +18,11 @@ export function CampaignDetail() {
   >('brand-kit');
   const [showBriefEditor, setShowBriefEditor] = useState(false);
   const [maskingModels, setMaskingModels] = useState<string[]>([]);
+  const [brandPreviewColors, setBrandPreviewColors] = useState<{
+    primary: string;
+    secondary: string;
+    tertiary: string;
+  }>({ primary: '#ff6b6b', secondary: '#38bdf8', tertiary: '#fbbf24' });
 
   useEffect(() => {
     loadCampaignData();
@@ -82,6 +87,11 @@ export function CampaignDetail() {
                 ? JSON.parse(bkData.brandKit.keyDifferentiators)
                 : [],
               maskingModel: bkData.brandKit.maskingModel || 'rembg-replicate',
+            });
+            setBrandPreviewColors({
+              primary: bkData.brandKit.primaryColor || '#ff6b6b',
+              secondary: bkData.brandKit.secondaryColor || '#38bdf8',
+              tertiary: bkData.brandKit.tertiaryColor || '#fbbf24',
             });
           }
         }
@@ -392,6 +402,10 @@ export function CampaignDetail() {
                             primary: e.target.value,
                           },
                         })
+                        setBrandPreviewColors((prev) => ({
+                          ...prev,
+                          primary: e.target.value,
+                        }))
                       }
                       style={{
                         width: '48px',
@@ -429,6 +443,10 @@ export function CampaignDetail() {
                             secondary: e.target.value,
                           },
                         })
+                        setBrandPreviewColors((prev) => ({
+                          ...prev,
+                          secondary: e.target.value,
+                        }))
                       }
                       style={{
                         width: '48px',
@@ -466,6 +484,10 @@ export function CampaignDetail() {
                             tertiary: e.target.value,
                           },
                         })
+                        setBrandPreviewColors((prev) => ({
+                          ...prev,
+                          tertiary: e.target.value,
+                        }))
                       }
                       style={{
                         width: '48px',
@@ -476,6 +498,90 @@ export function CampaignDetail() {
                         cursor: 'pointer',
                       }}
                     />
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  marginTop: '1rem',
+                  padding: '1rem',
+                  border: '1px solid var(--color-border, #262626)',
+                  borderRadius: '12px',
+                  background: '#0f1012',
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 600,
+                    marginBottom: '0.5rem',
+                    color: '#e5e7eb',
+                  }}
+                >
+                  Live Preview
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    gap: '0.75rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      borderRadius: '10px',
+                      padding: '0.75rem',
+                      background: brandPreviewColors.primary,
+                      color: '#0f1012',
+                      minHeight: '80px',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700 }}>Primary</div>
+                    <div style={{ opacity: 0.85 }}>
+                      Headings & CTA background
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: '10px',
+                      padding: '0.75rem',
+                      background: brandPreviewColors.secondary,
+                      color: '#0f1012',
+                      minHeight: '80px',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700 }}>Secondary</div>
+                    <div style={{ opacity: 0.85 }}>
+                      Buttons & accents
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: '10px',
+                      padding: '0.75rem',
+                      background: brandPreviewColors.tertiary,
+                      color: '#0f1012',
+                      minHeight: '80px',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700 }}>Tertiary</div>
+                    <div style={{ opacity: 0.85 }}>Highlights</div>
+                  </div>
+                  <div
+                    style={{
+                      borderRadius: '10px',
+                      padding: '0.75rem',
+                      background: '#111827',
+                      border: '1px solid #1f2937',
+                      color: '#e5e7eb',
+                    }}
+                  >
+                    <div style={{ fontWeight: 700 }}>
+                      {brandKit?.logo?.url ? 'Logo set' : 'Logo not set'}
+                    </div>
+                    <div style={{ opacity: 0.8 }}>
+                      {brandKit?.logo?.url || 'Add a logo URL'}
+                    </div>
                   </div>
                 </div>
               </div>
