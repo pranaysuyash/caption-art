@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import { TextRenderer } from './textRenderer';
+import { TextRenderer, type TextStyle } from './textRenderer';
 import type { StylePreset } from './types';
 
 describe('TextRenderer', () => {

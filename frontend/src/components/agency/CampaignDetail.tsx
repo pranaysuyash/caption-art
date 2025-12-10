@@ -1,21 +1,27 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
+import { Camera, FileText, ClipboardList } from 'lucide-react';
 import { CampaignBriefEditor } from '../CampaignBriefEditor';
 import '../CampaignBriefEditor.css';
 import apiFetch from '../../lib/api/httpClient';
 import { Breadcrumbs } from '../Breadcrumbs';
+import { Modal, ModalActions } from '../Modal';
+import { AssetUploader } from './AssetUploader';
+import { ApprovalGrid } from './ApprovalGrid';
+import { useToast } from '../Toast';
 
 export function CampaignDetail() {
   const { workspaceId, campaignId } = useParams<{
     workspaceId: string;
     campaignId: string;
   }>();
+  const { success, error: toastError } = useToast();
   const [campaign, setCampaign] = useState<any>(null);
   const [brandKit, setBrandKit] = useState<any>(null);
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    'brand-kit' | 'assets' | 'campaign-brief'
+    'brand-kit' | 'assets' | 'approvals' | 'campaign-brief'
   >('brand-kit');
   const [showBriefEditor, setShowBriefEditor] = useState(false);
   const [maskingModels, setMaskingModels] = useState<string[]>([]);
@@ -24,6 +30,8 @@ export function CampaignDetail() {
     secondary: string;
     tertiary: string;
   }>({ primary: '#ff6b6b', secondary: '#38bdf8', tertiary: '#fbbf24' });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
 
   useEffect(() => {
     loadCampaignData();
@@ -139,7 +147,14 @@ export function CampaignDetail() {
     if (!campaignId || !brandKit) return;
 
     try {
-      // Update Campaign
+      // Update Campaign - send all editable fields
+      const campaignUpdateData = {
+        name: campaign?.name,
+        description: campaign?.description,
+        primaryOffer: campaign?.primaryOffer,
+        status: campaign?.status,
+      };
+
       await apiFetch(
         `${
           import.meta.env.VITE_API_BASE || 'http://localhost:3001'
@@ -147,12 +162,41 @@ export function CampaignDetail() {
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(campaign),
+          body: JSON.stringify(campaignUpdateData),
         }
       );
 
-      // Update Brand Kit
+      // Update Brand Kit - send all editable fields
       if (brandKit.id) {
+        const brandKitUpdateData = {
+          // Colors
+          primaryColor: brandKit.colors?.primary,
+          secondaryColor: brandKit.colors?.secondary,
+          tertiaryColor: brandKit.colors?.tertiary,
+          // Fonts
+          headingFont: brandKit.fonts?.heading,
+          bodyFont: brandKit.fonts?.body,
+          // Logo
+          logoUrl: brandKit.logo?.url,
+          logoPosition: brandKit.logo?.position,
+          // Voice & Personality
+          voicePrompt: brandKit.voicePrompt,
+          brandPersonality: brandKit.brandPersonality,
+          targetAudience: brandKit.targetAudience,
+          valueProposition: brandKit.valueProposition,
+          toneStyle: brandKit.toneStyle,
+          toneOfVoice: brandKit.toneOfVoice,
+          // Phrases & Keywords
+          preferredPhrases: JSON.stringify(brandKit.preferredPhrases || []),
+          forbiddenPhrases: JSON.stringify(brandKit.forbiddenPhrases || []),
+          keywords: JSON.stringify(brandKit.keywords || []),
+          values: JSON.stringify(brandKit.values || []),
+          keyDifferentiators: JSON.stringify(brandKit.keyDifferentiators || []),
+          // Style
+          imageryStyle: brandKit.imageryStyle,
+          maskingModel: brandKit.maskingModel,
+        };
+
         await apiFetch(
           `${
             import.meta.env.VITE_API_BASE || 'http://localhost:3001'
@@ -160,32 +204,69 @@ export function CampaignDetail() {
           {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              colors: brandKit.colors,
-              fonts: brandKit.fonts,
-              logo: brandKit.logo,
-              voicePrompt: brandKit.voicePrompt,
-              brandPersonality: brandKit.brandPersonality,
-              targetAudience: brandKit.targetAudience,
-              valueProposition: brandKit.valueProposition,
-              toneStyle: brandKit.toneStyle,
-              toneOfVoice: brandKit.toneOfVoice,
-              preferredPhrases: brandKit.preferredPhrases,
-              forbiddenPhrases: brandKit.forbiddenPhrases,
-              keywords: brandKit.keywords,
-              values: brandKit.values,
-              keyDifferentiators: brandKit.keyDifferentiators,
-              imageryStyle: brandKit.imageryStyle,
-              maskingModel: brandKit.maskingModel,
-            }),
+            body: JSON.stringify(brandKitUpdateData),
           }
         );
       }
 
-      alert('Campaign data saved!');
+      success('Campaign data saved successfully!');
     } catch (error) {
       console.error('Error saving data:', error);
-      alert('Failed to save data');
+      toastError('Failed to save campaign data');
+    }
+  };
+
+  const handleGenerateOutputs = async () => {
+    if (!workspaceId || !campaignId || !brandKit?.id) {
+      setGenerationError('Missing required data: workspace, campaign, or brand kit');
+      return;
+    }
+
+    if (assets.length === 0) {
+      setGenerationError('No assets uploaded. Please upload assets first.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setGenerationError(null);
+
+    try {
+      const response = await apiFetch(
+        `${import.meta.env.VITE_API_BASE || 'http://localhost:3001'}/api/creative-engine/generate`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspaceId,
+            campaignId,
+            brandKitId: brandKit.id,
+            sourceAssets: assets.map((asset: any) => ({
+              id: asset.id,
+              url: asset.url,
+              name: asset.originalName || asset.name,
+              type: asset.mimeType || asset.type,
+            })),
+            outputCount: 3,
+            generateAdCopy: true,
+            generateVariations: true,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        success(`Successfully generated ${result.creatives?.length || 0} outputs!`);
+        // Switch to approvals tab to show results
+        setActiveTab('approvals');
+      } else {
+        const error = await response.json();
+        setGenerationError(error.error || 'Failed to generate outputs');
+      }
+    } catch (error) {
+      console.error('Error generating outputs:', error);
+      setGenerationError('Failed to generate outputs. Please try again.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -273,8 +354,71 @@ export function CampaignDetail() {
             outline: none;
             border-color: #7c8cff;
             box-shadow: 0 0 0 2px rgba(124, 140, 255, 0.18);
+          }
+          .campaign-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid var(--color-border, #e5e7eb);
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+          .campaign-tabs::-webkit-scrollbar {
+            display: none;
+          }
+          .campaign-tab {
+            padding: 0.75rem 1.5rem;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--color-text-secondary, #6b7280);
+            transition: all 0.2s;
+            margin-bottom: -2px;
+            white-space: nowrap;
+            min-width: max-content;
+          }
+          .campaign-tab:hover {
+            color: var(--color-text, #1f2937);
+            background: var(--color-bg-secondary, #f3f4f6);
+          }
+          .campaign-tab-active {
+            color: var(--color-primary, #3b82f6);
+            border-bottom-color: var(--color-primary, #3b82f6);
           }`}
       </style>
+      
+      {/* Tab Navigation */}
+      <div className="campaign-tabs">
+        <button 
+          className={`campaign-tab ${activeTab === 'brand-kit' ? 'campaign-tab-active' : ''}`}
+          onClick={() => setActiveTab('brand-kit')}
+        >
+          Brand Kit
+        </button>
+        <button 
+          className={`campaign-tab ${activeTab === 'assets' ? 'campaign-tab-active' : ''}`}
+          onClick={() => setActiveTab('assets')}
+        >
+          Assets
+        </button>
+        <button 
+          className={`campaign-tab ${activeTab === 'approvals' ? 'campaign-tab-active' : ''}`}
+          onClick={() => setActiveTab('approvals')}
+        >
+          Approvals
+        </button>
+        <button 
+          className={`campaign-tab ${activeTab === 'campaign-brief' ? 'campaign-tab-active' : ''}`}
+          onClick={() => setActiveTab('campaign-brief')}
+        >
+          Campaign Brief
+        </button>
+      </div>
       {hasQualityInsights && (
         <section
           style={{
@@ -393,7 +537,7 @@ export function CampaignDetail() {
 
       {/* Content */}
       {activeTab === 'brand-kit' && (
-        <div className='two-column-layout'>
+        <div className='responsive-grid'>
           {/* Brand Kit Editor */}
           <div className='panel'>
             <div className='panel-header'>
@@ -743,9 +887,7 @@ export function CampaignDetail() {
                 />
               </div>
 
-              <div
-                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
-              >
+              <div className="form-grid form-grid-2col">
                 <div>
                   <label
                     style={{
@@ -804,9 +946,7 @@ export function CampaignDetail() {
                 </div>
               </div>
 
-              <div
-                style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}
-              >
+              <div className="form-grid form-grid-2col">
                 <div>
                   <label
                     style={{
@@ -986,164 +1126,109 @@ export function CampaignDetail() {
       )}
 
       {activeTab === 'assets' && (
-        <div
-          style={{
-            backgroundColor: 'var(--color-bg-secondary, white)',
-            border: '1px solid var(--color-border, #e5e7eb)',
-            borderRadius: '12px',
-            padding: '1.5rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1.5rem',
-            }}
-          >
-            <h3
-              style={{
-                fontFamily: 'var(--font-heading, sans-serif)',
-                fontSize: '1.25rem',
-                fontWeight: '600',
-                color: 'var(--color-text, #1f2937)',
-                margin: 0,
-              }}
-            >
-              Campaign Assets
-            </h3>
-
-            <button className='btn btn-primary'>+ Upload Assets</button>
-          </div>
-
-          {assets.length === 0 ? (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '3rem',
-                border: '2px dashed var(--color-border, #d1d5db)',
-                borderRadius: '8px',
-                backgroundColor: 'var(--color-background, #f8fafc)',
-              }}
-            >
-              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📁</div>
-              <h4
-                style={{
-                  fontFamily: 'var(--font-heading, sans-serif)',
-                  fontSize: '1rem',
-                  color: 'var(--color-text, #1f2937)',
-                  margin: '0 0 0.5rem 0',
-                }}
-              >
-                No assets yet
-              </h4>
-              <p
-                style={{
-                  color: 'var(--color-text-secondary, #6b7280)',
-                  margin: 0,
-                  fontSize: '0.875rem',
-                }}
-              >
-                Upload images and videos to start generating creatives
+        <div className="panel">
+          <div className="panel-header" style={{ marginBottom: '1.5rem' }}>
+            <div>
+              <h3 className="panel-title">Assets</h3>
+              <p style={{ margin: '0.5rem 0 0', color: 'var(--color-text-secondary, #6b7280)', fontSize: '0.875rem' }}>
+                Upload raw photos and generate on-brand social posts
               </p>
             </div>
-          ) : (
-            <div
+            <button
+              onClick={handleGenerateOutputs}
+              disabled={isGenerating || assets.length === 0 || !brandKit?.id}
+              className="btn btn-primary"
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                gap: '1rem',
+                opacity: isGenerating || assets.length === 0 || !brandKit?.id ? 0.5 : 1,
+                cursor: isGenerating || assets.length === 0 || !brandKit?.id ? 'not-allowed' : 'pointer',
               }}
             >
-              {assets.map((asset) => (
-                <div
-                  key={asset.id}
-                  style={{
-                    backgroundColor: 'var(--color-background, #f8fafc)',
-                    border: '1px solid var(--color-border, #e5e7eb)',
-                    borderRadius: '8px',
-                    padding: '1rem',
-                    textAlign: 'center',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '60px',
-                      height: '60px',
-                      backgroundColor: 'var(--color-primary, #2563eb)',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 1rem',
-                      fontSize: '1.5rem',
-                      color: 'white',
-                    }}
-                  >
-                    🖼️
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.875rem',
-                      fontWeight: '500',
-                      color: 'var(--color-text, #1f2937)',
-                      marginBottom: '0.25rem',
-                    }}
-                  >
-                    {asset.filename}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: '0.75rem',
-                      color: 'var(--color-text-secondary, #6b7280)',
-                    }}
-                  >
-                    {asset.size} • {asset.type}
-                  </div>
-                </div>
-              ))}
+              {isGenerating ? 'Generating...' : 'Generate Outputs'}
+            </button>
+          </div>
+
+          {generationError && (
+            <div
+              style={{
+                padding: '1rem',
+                marginBottom: '1rem',
+                background: '#fee',
+                border: '1px solid #fcc',
+                borderRadius: '8px',
+                color: '#c00',
+              }}
+            >
+              {generationError}
             </div>
           )}
+
+          {assets.length === 0 && (
+            <div
+              style={{
+                padding: '2rem',
+                textAlign: 'center',
+                background: 'var(--color-bg-secondary, #f9fafb)',
+                borderRadius: '12px',
+                marginBottom: '1.5rem',
+              }}
+            >
+              <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+                <Camera size={48} strokeWidth={1.5} style={{ color: 'var(--color-text-secondary, #9ca3af)' }} />
+              </div>
+              <h4 style={{ margin: '0 0 0.5rem', color: 'var(--color-text, #1f2937)' }}>
+                No Assets Yet
+              </h4>
+              <p style={{ margin: 0, color: 'var(--color-text-secondary, #6b7280)' }}>
+                Upload photos below to get started
+              </p>
+            </div>
+          )}
+
+          {assets.length > 0 && (
+            <div
+              style={{
+                padding: '1rem',
+                marginBottom: '1.5rem',
+                background: 'var(--color-bg-secondary, #f0f9ff)',
+                border: '1px solid var(--color-border, #bfdbfe)',
+                borderRadius: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span style={{ fontSize: '1.25rem' }}>✓</span>
+                <strong>{assets.length} asset{assets.length !== 1 ? 's' : ''} uploaded</strong>
+              </div>
+              <p style={{ margin: '0.5rem 0 0', fontSize: '0.875rem', color: 'var(--color-text-secondary, #6b7280)' }}>
+                Ready to generate outputs. Click "Generate Outputs" above to create on-brand social posts.
+              </p>
+            </div>
+          )}
+
+          <AssetUploader 
+            workspaceId={workspaceId!}
+            campaignId={campaignId!}
+            onUploadComplete={loadCampaignData}
+          />
+        </div>
+      )}
+
+      {activeTab === 'approvals' && (
+        <div className="panel">
+          <ApprovalGrid 
+            workspaceId={workspaceId!}
+            campaignId={campaignId!}
+          />
         </div>
       )}
 
       {activeTab === 'campaign-brief' && (
-        <div
-          style={{
-            backgroundColor: 'var(--color-bg-secondary, white)',
-            border: '1px solid var(--color-border, #e5e7eb)',
-            borderRadius: '12px',
-            padding: '1.5rem',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '1.5rem',
-            }}
-          >
+        <div className="campaign-brief-panel">
+          <div className="campaign-brief-header">
             <div>
-              <h3
-                style={{
-                  fontFamily: 'var(--font-heading, sans-serif)',
-                  fontSize: '1.25rem',
-                  fontWeight: '600',
-                  color: 'var(--color-text, #1f2937)',
-                  margin: '0 0 0.5rem 0',
-                }}
-              >
+              <h3>
                 Campaign Brief
               </h3>
-              <p
-                style={{
-                  color: 'var(--color-text-secondary, #6b7280)',
-                  margin: 0,
-                  fontSize: '0.875rem',
-                }}
-              >
+              <p>
                 Define strategic requirements to guide creative generation
               </p>
             </div>
@@ -1187,80 +1272,32 @@ export function CampaignDetail() {
               onCancel={() => setShowBriefEditor(false)}
             />
           ) : (
-            <div
-              style={{
-                minHeight: '200px',
-                padding: '2rem',
-                border: '2px dashed var(--color-border, #d1d5db)',
-                borderRadius: '8px',
-                backgroundColor: 'var(--color-background, #f8fafc)',
-                textAlign: 'center',
-              }}
-            >
+            <div className="campaign-brief-display">
               {campaign?.brief ? (
-                <div>
-                  <div style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>
-                    📋
+                <div className="campaign-brief-complete">
+                  <div className="icon">
+                    <ClipboardList size={48} strokeWidth={1.5} />
                   </div>
-                  <h4
-                    style={{
-                      fontFamily: 'var(--font-heading, sans-serif)',
-                      fontSize: '1rem',
-                      color: 'var(--color-text, #1f2937)',
-                      margin: '0 0 0.5rem 0',
-                    }}
-                  >
+                  <h4>
                     Campaign Brief Complete
                   </h4>
-                  <p
-                    style={{
-                      color: 'var(--color-text-secondary, #6b7280)',
-                      margin: 0,
-                      fontSize: '0.875rem',
-                    }}
-                  >
+                  <p>
                     Strategic brief has been defined and is ready for creative
                     generation
                   </p>
-                  <div
-                    style={{
-                      marginTop: '1rem',
-                      padding: '1rem',
-                      backgroundColor: 'var(--color-surface, white)',
-                      borderRadius: '6px',
-                      border: '1px solid var(--color-border, #e5e7eb)',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: '0.875rem',
-                        color: 'var(--color-text-secondary, #6b7280)',
-                      }}
-                    >
+                  <div className="campaign-brief-summary">
+                    <div className="campaign-brief-summary-item">
                       <strong>Key Message:</strong>{' '}
                       {campaign.brief.keyMessage || 'Not defined'}
                     </div>
                     {campaign.brief.primaryKPI && (
-                      <div
-                        style={{
-                          fontSize: '0.875rem',
-                          color: 'var(--color-text-secondary, #6b7280)',
-                          marginTop: '0.5rem',
-                        }}
-                      >
+                      <div className="campaign-brief-summary-item">
                         <strong>Primary KPI:</strong>{' '}
                         {campaign.brief.primaryKPI}
                       </div>
                     )}
                     {campaign.brief.primaryAudience?.demographics && (
-                      <div
-                        style={{
-                          fontSize: '0.875rem',
-                          color: 'var(--color-text-secondary, #6b7280)',
-                          marginTop: '0.5rem',
-                        }}
-                      >
+                      <div className="campaign-brief-summary-item">
                         <strong>Target Audience:</strong>{' '}
                         {campaign.brief.primaryAudience.demographics}
                       </div>
@@ -1268,27 +1305,14 @@ export function CampaignDetail() {
                   </div>
                 </div>
               ) : (
-                <div>
-                  <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>
-                    📝
+                <div className="campaign-brief-empty">
+                  <div className="icon">
+                    <FileText size={48} strokeWidth={1.5} />
                   </div>
-                  <h4
-                    style={{
-                      fontFamily: 'var(--font-heading, sans-serif)',
-                      fontSize: '1rem',
-                      color: 'var(--color-text, #1f2937)',
-                      margin: '0 0 0.5rem 0',
-                    }}
-                  >
+                  <h4>
                     No Campaign Brief Yet
                   </h4>
-                  <p
-                    style={{
-                      color: 'var(--color-text-secondary, #6b7280)',
-                      margin: 0,
-                      fontSize: '0.875rem',
-                    }}
-                  >
+                  <p>
                     Create a comprehensive campaign brief to guide the AI
                     creative generation process
                   </p>

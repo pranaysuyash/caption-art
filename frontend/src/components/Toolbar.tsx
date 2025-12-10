@@ -4,6 +4,7 @@
  */
 
 import { useEffect, useState } from 'react'
+import { useConfirm } from '../contexts/DialogContext'
 import './Toolbar.css'
 
 export interface ToolbarProps {
@@ -32,7 +33,7 @@ export function Toolbar({
   recordingTime = 0
 }: ToolbarProps) {
   const [isMac, setIsMac] = useState(false)
-  const [showClearConfirmation, setShowClearConfirmation] = useState(false)
+  const confirm = useConfirm()
 
   useEffect(() => {
     setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0)
@@ -72,19 +73,17 @@ export function Toolbar({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [canUndo, canRedo, onUndo, onRedo, onExport, isMac])
 
-  const handleClearClick = () => {
-    setShowClearConfirmation(true)
-  }
-
-  const handleConfirmClear = () => {
-    if (onClearHistory) {
+  const handleClearClick = async () => {
+    const confirmed = await confirm({
+      title: 'Clear History?',
+      message: 'This will remove all undo/redo history. Your current state will be kept. This action cannot be undone.',
+      confirmLabel: 'Clear History',
+      variant: 'warning',
+    })
+    
+    if (confirmed && onClearHistory) {
       onClearHistory()
     }
-    setShowClearConfirmation(false)
-  }
-
-  const handleCancelClear = () => {
-    setShowClearConfirmation(false)
   }
 
   const formatTime = (seconds: number) => {
@@ -94,8 +93,7 @@ export function Toolbar({
   }
 
   return (
-    <>
-      <div className="toolbar">
+    <div className="toolbar">
         <button
           onClick={onUndo}
           disabled={!canUndo || disabled}
@@ -173,31 +171,5 @@ export function Toolbar({
           Press <kbd className="badge" style={{ padding: '2px 6px' }}>?</kbd> for shortcuts
         </div>
       </div>
-
-      {showClearConfirmation && (
-        <div className="history-confirmation-overlay" onClick={handleCancelClear}>
-          <div className="history-confirmation-dialog" onClick={(e) => e.stopPropagation()}>
-            <h3>Clear History?</h3>
-            <p>This will remove all undo/redo history. Your current state will be kept. This action cannot be undone.</p>
-            <div className="history-confirmation-buttons">
-              <button
-                onClick={handleConfirmClear}
-                className="button button-primary"
-                aria-label="Confirm clear history"
-              >
-                Clear History
-              </button>
-              <button
-                onClick={handleCancelClear}
-                className="button button-secondary"
-                aria-label="Cancel clear history"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
   )
 }

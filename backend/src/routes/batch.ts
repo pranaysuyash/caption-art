@@ -145,6 +145,7 @@ router.get(
   '/workspace/:workspaceId/captions',
   requireAuth,
   async (req, res) => {
+    const prisma = getPrismaClient()
     try {
       const authenticatedReq = req as unknown as AuthenticatedRequest
       const { workspaceId } = req.params
@@ -212,6 +213,7 @@ router.get(
 
 // PUT /api/batch/captions/:captionId - Update caption text (manual editing)
 router.put('/captions/:captionId', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { captionId } = req.params
@@ -282,6 +284,7 @@ router.put('/captions/:captionId', requireAuth, async (req, res) => {
 
 // DELETE /api/batch/captions/:captionId - Delete caption
 router.delete('/captions/:captionId', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { captionId } = req.params

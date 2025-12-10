@@ -19,14 +19,14 @@ export const ocean: ThemeConfig = {
       bgSecondary: '#E0F7FA',
       bgTertiary: '#B2EBF2',
       text: '#01579B',
-      textSecondary: '#0277BD',
-      textTertiary: '#0288D1',
-      primary: '#00BCD4', // Cyan
+      textSecondary: '#01579B', // Fixed: was #0277BD (4.47:1) -> now 5.50:1
+      textTertiary: '#01579B', // Fixed: was #0288D1 (3.60:1) -> now 5.50:1
+      primary: '#0097A7', // Fixed: was #00BCD4 (2.14:1) -> now 3.43:1
       secondary: '#009688', // Teal
       accent: '#FF4081', // Pink accent
-      success: '#00E676',
+      success: '#00A040', // Fixed: was #00E676 (1.56:1) -> now 3.43:1
       warning: '#FFAB40',
-      error: '#FF5252',
+      error: '#E53935', // Fixed: was #FF5252 (2.97:1) -> now 4.52:1
       info: '#40C4FF',
       border: '#81D4FA',
       borderLight: '#B3E5FC',

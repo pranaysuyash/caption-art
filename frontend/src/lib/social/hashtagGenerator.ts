@@ -195,19 +195,18 @@ export class HashtagGenerator {
       brown: '#brown',
     };
 
-    return colors
-      .map((color) => {
-        const tag = colorMap[color.toLowerCase()];
-        if (tag) {
-          return {
-            tag,
-            relevance: 0.6,
-            category: 'style' as const,
-          };
-        }
-        return null;
-      })
-      .filter((tag): tag is HashtagSuggestion => tag !== null);
+    const results: HashtagSuggestion[] = [];
+    for (const color of colors) {
+      const tag = colorMap[color.toLowerCase()];
+      if (tag) {
+        results.push({
+          tag,
+          relevance: 0.6,
+          category: 'style' as const,
+        });
+      }
+    }
+    return results;
   }
 
   /**
@@ -345,6 +344,61 @@ export class HashtagGenerator {
     } else {
       return hashtagString;
     }
+  }
+
+  /**
+   * Generate hashtags from image URL and caption
+   * Alias for generateSuggestions for simpler API
+   */
+  async generateHashtags(imageDataUrl?: string, caption?: string): Promise<string[]> {
+    const suggestions = await this.generateSuggestions({
+      caption,
+      imageAnalysis: imageDataUrl ? { mood: 'creative' } : undefined,
+    });
+    return suggestions.map(s => s.tag);
+  }
+
+  /**
+   * Validate hashtag and return object with validation result
+   * Requirements: 3.4
+   */
+  validateHashtag(hashtag: string): { isValid: boolean; error?: string } {
+    // Must start with #
+    if (!hashtag.startsWith('#')) {
+      return { isValid: false, error: 'Hashtag must start with #' };
+    }
+
+    // Remove the # for further validation
+    const tag = hashtag.slice(1);
+
+    // Must have at least one character after #
+    if (tag.length === 0) {
+      return { isValid: false, error: 'Hashtag must have at least one character after #' };
+    }
+
+    // Cannot contain spaces
+    if (tag.includes(' ')) {
+      return { isValid: false, error: 'Hashtag cannot contain spaces' };
+    }
+
+    // Cannot contain special characters except underscore
+    const validPattern = /^[a-zA-Z0-9_]+$/;
+    if (!validPattern.test(tag)) {
+      return { isValid: false, error: 'Hashtag can only contain letters, numbers, and underscores' };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
+   * Normalize a hashtag (ensure proper format)
+   */
+  normalizeHashtag(hashtag: string): string {
+    // If it already starts with #, just clean it
+    if (hashtag.startsWith('#')) {
+      return formatHashtag(hashtag.slice(1));
+    }
+    return formatHashtag(hashtag);
   }
 }
 

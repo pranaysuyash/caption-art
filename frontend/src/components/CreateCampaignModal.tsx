@@ -11,6 +11,7 @@ import {
   FunnelStage,
   Placement,
 } from '../lib/api/campaignClient';
+import { Modal, ModalActions } from './Modal';
 import './CreateCampaignModal.css';
 
 interface CreateCampaignModalProps {
@@ -147,16 +148,33 @@ export function CreateCampaignModal({
   };
 
   return (
-    <div className='modal-overlay' onClick={onClose}>
-      <div className='modal-content' onClick={(e) => e.stopPropagation()}>
-        <div className='modal-header'>
-          <h2>Create Campaign</h2>
-          <button className='close-button' onClick={onClose}>
-            ×
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title="Create Campaign"
+      size="lg"
+      footer={
+        <ModalActions align="right">
+          <button
+            type='button'
+            onClick={onClose}
+            className='btn btn-secondary'
+            disabled={loading}
+          >
+            Cancel
           </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className='campaign-form'>
+          <button
+            type='submit'
+            form='campaign-form'
+            className='btn btn-primary'
+            disabled={loading}
+          >
+            {loading ? 'Creating...' : 'Create Campaign'}
+          </button>
+        </ModalActions>
+      }
+    >
+      <form id='campaign-form' onSubmit={handleSubmit} className='campaign-form'>
           <div className='form-group'>
             <label>Campaign Name *</label>
             <input
@@ -540,26 +558,7 @@ export function CreateCampaignModal({
           </div>
 
           {error && <div className='error-message'>{error}</div>}
-
-          <div className='modal-actions'>
-            <button
-              type='button'
-              onClick={onClose}
-              className='btn btn-secondary'
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type='submit'
-              className='btn btn-primary'
-              disabled={loading}
-            >
-              {loading ? 'Creating...' : 'Create Campaign'}
-            </button>
-          </div>
         </form>
-      </div>
-    </div>
+      </Modal>
   );
 }

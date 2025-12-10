@@ -10,6 +10,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
+import { FolderOpen } from 'lucide-react'
 import { createDragDropHandler } from '../lib/upload/dragDropHandler'
 import { UploadError } from './UploadError'
 
@@ -151,7 +152,9 @@ export function UploadZone({
       {/* Empty state - Requirement 1.1, 1.2 */}
       {!currentFile && !loading && (
         <div className="upload-empty">
-          <div className="upload-icon" aria-hidden="true">📁</div>
+          <div className="upload-icon" aria-hidden="true">
+            <FolderOpen size={48} strokeWidth={1.5} />
+          </div>
           <div className="upload-text">
             <strong>Drop an image here</strong> or click to browse
           </div>

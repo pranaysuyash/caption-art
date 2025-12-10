@@ -14,12 +14,15 @@ import { CaptionGenerator as Generator } from '../lib/caption/captionGenerator'
 import { GenerationResult, CaptionStyle } from '../lib/caption/types'
 import { CaptionGrid } from './CaptionGrid'
 import { RegenerateButton } from './RegenerateButton'
+import { CaptionSelector, Caption } from './CaptionSelector'
 
 export interface CaptionGeneratorProps {
   imageDataUrl: string | null
   onCaptionSelect: (caption: string) => void
   replicateApiKey: string
   openaiApiKey: string
+  selectedCaption?: string
+  onHistorySave?: (action: string, caption: string) => void
 }
 
 export interface CaptionGeneratorHandle {
@@ -36,7 +39,9 @@ export const CaptionGenerator = forwardRef<CaptionGeneratorHandle, CaptionGenera
   imageDataUrl,
   onCaptionSelect,
   replicateApiKey,
-  openaiApiKey
+  openaiApiKey,
+  selectedCaption,
+  onHistorySave
 }, ref) => {
   const [generator] = useState(() => new Generator({
     replicateApiKey,
@@ -48,6 +53,8 @@ export const CaptionGenerator = forwardRef<CaptionGeneratorHandle, CaptionGenera
   const [result, setResult] = useState<GenerationResult | null>(null)
   const [progress, setProgress] = useState(0)
   const [isOnline, setIsOnline] = useState(navigator.onLine)
+  const [selectedCaptionId, setSelectedCaptionId] = useState<string | undefined>(undefined)
+  const [hoveredCaption, setHoveredCaption] = useState<Caption | null>(null)
 
   // Expose prefetch method via ref - Requirements: 3.1, 3.2, 3.3
   useImperativeHandle(ref, () => ({
@@ -69,6 +76,24 @@ export const CaptionGenerator = forwardRef<CaptionGeneratorHandle, CaptionGenera
       window.removeEventListener('offline', handleOffline)
     }
   }, [])
+
+  // Sync selectedCaptionId with selectedCaption prop - Requirements: 2.2, 2.5
+  useEffect(() => {
+    if (!result || !selectedCaption) {
+      setSelectedCaptionId(undefined)
+      return
+    }
+
+    // Find matching caption ID
+    if (result.baseCaption === selectedCaption) {
+      setSelectedCaptionId('base')
+    } else {
+      const variantIndex = result.variants.findIndex(v => v.text === selectedCaption)
+      if (variantIndex !== -1) {
+        setSelectedCaptionId(`variant-${variantIndex}`)
+      }
+    }
+  }, [selectedCaption, result])
 
   // Prefetch and generate captions when image changes
   useEffect(() => {
@@ -210,7 +235,7 @@ export const CaptionGenerator = forwardRef<CaptionGeneratorHandle, CaptionGenera
         </div>
       )}
 
-      {/* Caption results - Requirements: 1.5, 5.1, 5.2, 5.3, 5.4, 5.5, 7.2 */}
+      {/* Caption results - Requirements: 1.5, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6 */}
       {result && !loading && (
         <div className="caption-results">
           <div className="caption-header">
@@ -221,22 +246,37 @@ export const CaptionGenerator = forwardRef<CaptionGeneratorHandle, CaptionGenera
             />
           </div>
 
-          {/* Use CaptionGrid component - Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 7.2 */}
-          <CaptionGrid
+          {/* Use CaptionSelector component - Requirements: 2.1, 2.2, 2.5, 2.6 */}
+          <CaptionSelector
             captions={[
               {
+                id: 'base',
                 text: result.baseCaption,
-                style: 'base' as const,
-                label: 'Original Description'
+                style: 'Original Description'
               },
-              ...result.variants.map(variant => ({
+              ...result.variants.map((variant, index) => ({
+                id: `variant-${index}`,
                 text: variant.text,
-                style: variant.style,
-                label: variant.style.charAt(0).toUpperCase() + variant.style.slice(1)
+                style: variant.style.charAt(0).toUpperCase() + variant.style.slice(1)
               }))
             ]}
-            onSelect={onCaptionSelect}
-            loading={false}
+            selectedCaptionId={selectedCaptionId}
+            onSelect={(caption) => {
+              // Requirements: 2.1, 2.3, 2.4
+              setSelectedCaptionId(caption.id)
+              onCaptionSelect(caption.text)
+              
+              // Save to history - Requirement: 2.4
+              if (onHistorySave) {
+                onHistorySave('Apply Caption', caption.text)
+              }
+            }}
+            onHover={(caption) => {
+              // Requirement: 2.6 - Hover preview without application
+              setHoveredCaption(caption)
+            }}
+            disabled={loading}
+            showConfidence={false}
           />
 
           <div className="generation-time">

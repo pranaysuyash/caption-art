@@ -113,7 +113,11 @@ describe('Final Integration Tests - Image Segmentation System', () => {
       const imageData = await extractImageData(maskWithGlass);
 
       // Validate mask - glass masks should have alpha channel
-      const validation = await MaskProcessor.validate(maskWithGlass);
+      // Convert canvas to image for validation
+      const imageFromCanvas = new Image();
+      imageFromCanvas.src = maskWithGlass.toDataURL();
+      await new Promise(resolve => { imageFromCanvas.onload = resolve; });
+      const validation = await MaskProcessor.validate(imageFromCanvas);
       // Glass effect creates semi-transparent pixels, which should be detected
       expect(validation).toBeDefined();
 
@@ -141,7 +145,11 @@ describe('Final Integration Tests - Image Segmentation System', () => {
       const imageData = await extractImageData(multiSubjectMask);
 
       // Validate mask - multi-subject masks should be valid
-      const validation = await MaskProcessor.validate(multiSubjectMask);
+      // Convert canvas to image for validation
+      const imageFromCanvas2 = new Image();
+      imageFromCanvas2.src = multiSubjectMask.toDataURL();
+      await new Promise(resolve => { imageFromCanvas2.onload = resolve; });
+      const validation = await MaskProcessor.validate(imageFromCanvas2);
       expect(validation).toBeDefined();
 
       // Verify the mask was created with correct dimensions
@@ -178,8 +186,13 @@ describe('Final Integration Tests - Image Segmentation System', () => {
   describe('19.3 Preview Mode Testing', () => {
     it('should render overlay mode correctly with various images', async () => {
       const canvas = document.createElement('canvas');
-      const originalImage = createSimulatedPersonImage(200, 200);
+      const originalImageCanvas = createSimulatedPersonImage(200, 200);
       const maskImage = createMaskWithFineDetails(200, 200, 'hair');
+
+      // Convert canvas to image
+      const originalImage = new Image();
+      originalImage.src = originalImageCanvas.toDataURL();
+      await new Promise(resolve => { originalImage.onload = resolve; });
 
       const options: PreviewOptions = {
         mode: 'overlay',
@@ -203,8 +216,13 @@ describe('Final Integration Tests - Image Segmentation System', () => {
 
     it('should render side-by-side mode correctly', async () => {
       const canvas = document.createElement('canvas');
-      const originalImage = createSimulatedObjectImage(200, 200);
+      const originalImageCanvas = createSimulatedObjectImage(200, 200);
       const maskImage = createMaskWithFineDetails(200, 200, 'glass');
+
+      // Convert canvas to image
+      const originalImage = new Image();
+      originalImage.src = originalImageCanvas.toDataURL();
+      await new Promise(resolve => { originalImage.onload = resolve; });
 
       expect(() => {
         MaskPreview.renderSideBySide(canvas, originalImage, maskImage);
@@ -219,8 +237,13 @@ describe('Final Integration Tests - Image Segmentation System', () => {
       const canvas = document.createElement('canvas');
       const maskImage = createMaskWithFineDetails(200, 200, 'shadows');
 
+      // Convert mask canvas to image
+      const maskImg = new Image();
+      maskImg.src = maskImage.toDataURL();
+      await new Promise(resolve => { maskImg.onload = resolve; });
+
       expect(() => {
-        MaskPreview.renderCheckerboard(canvas, maskImage);
+        MaskPreview.renderCheckerboard(canvas, maskImg);
       }).not.toThrow();
 
       // Canvas should match mask dimensions
@@ -234,8 +257,17 @@ describe('Final Integration Tests - Image Segmentation System', () => {
 
     it('should verify all visualizations are correct', async () => {
       const canvas = document.createElement('canvas');
-      const originalImage = createSimulatedAnimalImage(150, 150);
-      const maskImage = createMaskWithFineDetails(150, 150, 'hair');
+      const originalImageCanvas = createSimulatedAnimalImage(150, 150);
+      const maskImageCanvas = createMaskWithFineDetails(150, 150, 'hair');
+
+      // Convert canvases to images
+      const originalImage = new Image();
+      originalImage.src = originalImageCanvas.toDataURL();
+      await new Promise(resolve => { originalImage.onload = resolve; });
+
+      const maskImage = new Image();
+      maskImage.src = maskImageCanvas.toDataURL();
+      await new Promise(resolve => { maskImage.onload = resolve; });
 
       // Test all three modes
       const modes: Array<'overlay' | 'side-by-side' | 'checkerboard'> = [
@@ -267,8 +299,17 @@ describe('Final Integration Tests - Image Segmentation System', () => {
    */
   describe('19.4 Text-Behind Effect Testing', () => {
     it('should composite text behind subject with various masks', async () => {
-      const backgroundImage = createSimulatedPersonImage(200, 200);
-      const maskImage = createMaskWithFineDetails(200, 200, 'hair');
+      const backgroundImageCanvas = createSimulatedPersonImage(200, 200);
+      const maskImageCanvas = createMaskWithFineDetails(200, 200, 'hair');
+
+      // Convert canvases to images
+      const backgroundImage = new Image();
+      backgroundImage.src = backgroundImageCanvas.toDataURL();
+      await new Promise(resolve => { backgroundImage.onload = resolve; });
+
+      const maskImage = new Image();
+      maskImage.src = maskImageCanvas.toDataURL();
+      await new Promise(resolve => { maskImage.onload = resolve; });
       const canvas = document.createElement('canvas');
 
       // Create compositor with text-behind enabled
@@ -382,8 +423,17 @@ describe('Final Integration Tests - Image Segmentation System', () => {
     });
 
     it('should toggle text-behind effect correctly', async () => {
-      const backgroundImage = createSimulatedPersonImage(200, 200);
-      const maskImage = createMaskWithFineDetails(200, 200, 'hair');
+      const backgroundImageCanvas = createSimulatedPersonImage(200, 200);
+      const maskImageCanvas = createMaskWithFineDetails(200, 200, 'hair');
+
+      // Convert canvases to images
+      const backgroundImage = new Image();
+      backgroundImage.src = backgroundImageCanvas.toDataURL();
+      await new Promise(resolve => { backgroundImage.onload = resolve; });
+
+      const maskImage = new Image();
+      maskImage.src = maskImageCanvas.toDataURL();
+      await new Promise(resolve => { maskImage.onload = resolve; });
       const canvas = document.createElement('canvas');
 
       const compositor = new Compositor({

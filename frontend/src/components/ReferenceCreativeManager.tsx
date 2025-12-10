@@ -3,6 +3,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Modal, ModalActions } from './Modal';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import './ReferenceCreativeManager.css';
 import apiFetch from '../lib/api/httpClient';
@@ -337,31 +338,44 @@ export function ReferenceCreativeManager() {
       )}
 
       {/* Upload Modal */}
-      {showUploadModal && (
-        <div
-          className='modal-overlay'
-          onClick={() => setShowUploadModal(false)}
-        >
-          <div
-            className='modal-content enhanced'
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className='modal-header'>
-              <div>
-                <h2>🎨 Add Reference Creative</h2>
-                <p>
-                  Upload an image to analyze and learn its style characteristics
-                </p>
-              </div>
-              <button
-                className='close-button'
-                onClick={() => setShowUploadModal(false)}
-              >
-                ×
-              </button>
-            </div>
-
-            <form onSubmit={handleUpload} className='upload-form enhanced'>
+      <Modal
+        isOpen={showUploadModal}
+        onClose={() => setShowUploadModal(false)}
+        title="🎨 Add Reference Creative"
+        size="lg"
+        footer={
+          <ModalActions align="right">
+            <button
+              type="button"
+              onClick={() => setShowUploadModal(false)}
+              className="btn btn-secondary"
+              disabled={uploading || analyzing}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="upload-form"
+              className="btn btn-primary"
+              disabled={
+                uploading ||
+                analyzing ||
+                (!uploadForm.file && !uploadForm.imageUrl)
+              }
+            >
+              {uploading
+                ? 'Uploading...'
+                : analyzing
+                ? 'Analyzing...'
+                : 'Add Reference'}
+            </button>
+          </ModalActions>
+        }
+      >
+        <p style={{ marginBottom: '1rem', color: 'var(--color-text-secondary)' }}>
+          Upload an image to analyze and learn its style characteristics
+        </p>
+        <form onSubmit={handleUpload} id="upload-form" className='upload-form enhanced'>
               <div className='form-group'>
                 <label>Reference Name *</label>
                 <input
@@ -452,57 +466,31 @@ export function ReferenceCreativeManager() {
               )}
 
               {error && <div className='error-message'>{error}</div>}
-
-              <div className='modal-actions'>
-                <button
-                  type='button'
-                  onClick={() => setShowUploadModal(false)}
-                  className='btn-secondary'
-                  disabled={uploading || analyzing}
-                >
-                  Cancel
-                </button>
-                <button
-                  type='submit'
-                  className='btn-primary'
-                  disabled={
-                    uploading ||
-                    analyzing ||
-                    (!uploadForm.file && !uploadForm.imageUrl)
-                  }
-                >
-                  {uploading
-                    ? 'Uploading...'
-                    : analyzing
-                    ? 'Analyzing...'
-                    : 'Add Reference'}
-                </button>
-              </div>
             </form>
-          </div>
-        </div>
-      )}
+      </Modal>
 
       {/* Style Analysis Modal */}
-      {showStyleModal && selectedReference && (
-        <div className='modal-overlay' onClick={() => setShowStyleModal(false)}>
-          <div
-            className='modal-content style-modal'
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className='modal-header'>
-              <div>
-                <h2>🔍 Style Analysis</h2>
-                <p>{selectedReference.name}</p>
-              </div>
-              <button
-                className='close-button'
-                onClick={() => setShowStyleModal(false)}
-              >
-                ×
-              </button>
-            </div>
-
+      <Modal
+        isOpen={showStyleModal && selectedReference !== null}
+        onClose={() => setShowStyleModal(false)}
+        title="🔍 Style Analysis"
+        size="lg"
+        footer={
+          <ModalActions align="right">
+            <button
+              onClick={() => setShowStyleModal(false)}
+              className='btn btn-primary'
+            >
+              Close
+            </button>
+          </ModalActions>
+        }
+      >
+        {selectedReference && (
+          <>
+            <p style={{ marginBottom: '1rem', color: 'var(--color-text-secondary)' }}>
+              {selectedReference.name}
+            </p>
             <div className='style-analysis-content'>
               <div className='analysis-preview'>
                 <img
@@ -571,18 +559,9 @@ export function ReferenceCreativeManager() {
                 )}
               </div>
             </div>
-
-            <div className='modal-actions'>
-              <button
-                onClick={() => setShowStyleModal(false)}
-                className='btn-primary'
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

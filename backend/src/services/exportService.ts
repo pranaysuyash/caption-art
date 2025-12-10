@@ -170,16 +170,19 @@ export class ExportService {
 
               const assetAdCopy = caption.variations
                 .filter((v) => v.adCopy)
-                .map((v) => ({
-                  variationId: v.id,
-                  caption: v.text,
-                  headline: v.adCopy?.headline,
-                  subheadline: v.adCopy?.subheadline,
-                  bodyText: v.adCopy?.bodyText,
-                  ctaText: v.adCopy?.ctaText,
-                  qualityScore: v.qualityScore,
-                  scoreBreakdown: v.scoreBreakdown,
-                }))
+                .map((v) => {
+                  const adCopyData = v.adCopy as { headline?: string; subheadline?: string; bodyText?: string; ctaText?: string } | null
+                  return {
+                    variationId: v.id,
+                    caption: v.text,
+                    headline: adCopyData?.headline,
+                    subheadline: adCopyData?.subheadline,
+                    bodyText: adCopyData?.bodyText,
+                    ctaText: adCopyData?.ctaText,
+                    qualityScore: v.qualityScore,
+                    scoreBreakdown: v.scoreBreakdown,
+                  }
+                })
 
               if (assetAdCopy.length > 0) {
                 archive.append(JSON.stringify(assetAdCopy, null, 2), {

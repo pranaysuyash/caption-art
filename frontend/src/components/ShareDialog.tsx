@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Modal, ModalActions } from './Modal';
 import { PlatformSelector } from './PlatformSelector';
 import { HashtagSelector } from './HashtagSelector';
 import { SchedulePicker } from './SchedulePicker';
@@ -195,123 +196,93 @@ export function ShareDialog({
       case 'select':
         return (
           <>
-            <div className="dialog-body">
-              <PlatformSelector
-                selectedPlatforms={selectedPlatforms}
-                onSelectionChange={setSelectedPlatforms}
-                multiSelect={true}
-                showAuthStatus={true}
+            <PlatformSelector
+              selectedPlatforms={selectedPlatforms}
+              onSelectionChange={setSelectedPlatforms}
+              multiSelect={true}
+              showAuthStatus={true}
+            />
+
+            <HashtagSelector
+              imageDataUrl={imageDataUrl}
+              caption={caption}
+              selectedHashtags={hashtags}
+              onHashtagsChange={setHashtags}
+            />
+
+            <div className="caption-input-group">
+              <label htmlFor="caption-input" className="caption-label">
+                Caption
+              </label>
+              <textarea
+                id="caption-input"
+                className="caption-input"
+                placeholder="Write a caption for your post..."
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                rows={4}
               />
-
-              <HashtagSelector
-                imageDataUrl={imageDataUrl}
-                caption={caption}
-                selectedHashtags={hashtags}
-                onHashtagsChange={setHashtags}
-              />
-
-              <div className="caption-input-group">
-                <label htmlFor="caption-input" className="caption-label">
-                  Caption
-                </label>
-                <textarea
-                  id="caption-input"
-                  className="caption-input"
-                  placeholder="Write a caption for your post..."
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  rows={4}
-                />
-              </div>
-
-              <SchedulePicker
-                scheduledTime={scheduledTime}
-                onScheduleChange={setScheduledTime}
-                enabled={scheduleEnabled}
-                onEnabledChange={setScheduleEnabled}
-              />
-
-              {error && <div className="dialog-error">{error}</div>}
             </div>
 
-            <div className="dialog-footer">
-              <button className="btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button
-                className="btn-primary"
-                onClick={handleContinueToPreview}
-                disabled={selectedPlatforms.length === 0}
-              >
-                Continue to Preview
-              </button>
-            </div>
+            <SchedulePicker
+              scheduledTime={scheduledTime}
+              onScheduleChange={setScheduledTime}
+              enabled={scheduleEnabled}
+              onEnabledChange={setScheduleEnabled}
+            />
+
+            {error && <div className="dialog-error">{error}</div>}
           </>
         );
 
       case 'preview':
         return (
           <>
-            <div className="dialog-body">
-              {previewData && (
-                <SocialPostPreview
-                  previewData={previewData}
-                  onCaptionEdit={setCaption}
-                  onHashtagsEdit={setHashtags}
-                  editable={true}
-                />
-              )}
+            {previewData && (
+              <SocialPostPreview
+                previewData={previewData}
+                onCaptionEdit={setCaption}
+                onHashtagsEdit={setHashtags}
+                editable={true}
+              />
+            )}
 
-              {selectedPlatforms.length > 1 && (
-                <div className="multi-platform-notice">
-                  📢 Posting to {selectedPlatforms.length} platforms:{' '}
-                  {selectedPlatforms.join(', ')}
-                </div>
-              )}
+            {selectedPlatforms.length > 1 && (
+              <div className="multi-platform-notice">
+                📢 Posting to {selectedPlatforms.length} platforms:{' '}
+                {selectedPlatforms.join(', ')}
+              </div>
+            )}
 
-              {scheduleEnabled && scheduledTime && (
-                <div className="schedule-notice">
-                  📅 Scheduled for {scheduledTime.toLocaleString()}
-                </div>
-              )}
+            {scheduleEnabled && scheduledTime && (
+              <div className="schedule-notice">
+                📅 Scheduled for {scheduledTime.toLocaleString()}
+              </div>
+            )}
 
-              {error && <div className="dialog-error">{error}</div>}
-            </div>
-
-            <div className="dialog-footer">
-              <button className="btn-secondary" onClick={() => setStep('select')}>
-                Back
-              </button>
-              <button className="btn-primary" onClick={handlePost} disabled={posting}>
-                {scheduleEnabled ? 'Schedule Post' : 'Post Now'}
-              </button>
-            </div>
+            {error && <div className="dialog-error">{error}</div>}
           </>
         );
 
       case 'posting':
         return (
-          <div className="dialog-body">
-            <div className="posting-status">
-              <div className="posting-spinner">⏳</div>
-              <h3>Posting to platforms...</h3>
-              <p>Please wait while we share your content</p>
-            </div>
+          <div className="posting-status">
+            <div className="posting-spinner">⏳</div>
+            <h3>Posting to platforms...</h3>
+            <p>Please wait while we share your content</p>
           </div>
         );
 
       case 'summary':
         return (
           <>
-            <div className="dialog-body">
-              {postResult && (
-                <MultiPlatformPostSummary
-                  result={postResult}
-                  onClose={onClose}
-                  onRetry={handleRetry}
-                />
-              )}
-            </div>
+            {postResult && (
+              <MultiPlatformPostSummary
+                result={postResult}
+                onClose={onClose}
+                onRetry={handleRetry}
+              />
+            )}
           </>
         );
 
@@ -320,87 +291,80 @@ export function ShareDialog({
     }
   };
 
+  /**
+   * Get modal title based on step
+   */
+  const getTitle = () => {
+    switch (step) {
+      case 'select':
+        return 'Share to Social Media';
+      case 'preview':
+        return 'Preview Your Post';
+      case 'posting':
+        return 'Posting...';
+      case 'summary':
+        return 'Post Summary';
+      default:
+        return 'Share to Social Media';
+    }
+  };
+
+  /**
+   * Get modal footer based on step
+   */
+  const getFooter = () => {
+    switch (step) {
+      case 'select':
+        return (
+          <ModalActions align="right">
+            <button className="btn btn-secondary" onClick={onClose}>
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleContinueToPreview}
+              disabled={selectedPlatforms.length === 0}
+            >
+              Continue to Preview
+            </button>
+          </ModalActions>
+        );
+      case 'preview':
+        return (
+          <ModalActions align="right">
+            <button className="btn btn-secondary" onClick={() => setStep('select')}>
+              Back
+            </button>
+            <button className="btn btn-primary" onClick={handlePost} disabled={posting}>
+              {scheduleEnabled ? 'Schedule Post' : 'Post Now'}
+            </button>
+          </ModalActions>
+        );
+      case 'posting':
+      case 'summary':
+        return null;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="share-dialog-overlay" onClick={onClose}>
-      <div className="share-dialog" onClick={(e) => e.stopPropagation()}>
-        <div className="dialog-header">
-          <h2>Share to Social Media</h2>
-          <button className="dialog-close" onClick={onClose} aria-label="Close">
-            ×
-          </button>
-        </div>
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={getTitle()}
+      size="lg"
+      footer={getFooter()}
+      closeOnOverlayClick={step !== 'posting'}
+      closeOnEscape={step !== 'posting'}
+    >
+      {renderContent()}
 
-        {renderContent()}
-
-        <style>{`
-          .share-dialog-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            padding: 1rem;
-          }
-
-          .share-dialog {
-            background: white;
-            border-radius: 12px;
-            max-width: 800px;
-            width: 100%;
-            max-height: 90vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-          }
-
-          .dialog-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 1.5rem;
-            border-bottom: 2px solid #e5e7eb;
-          }
-
-          .dialog-header h2 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin: 0;
-          }
-
-          .dialog-close {
-            width: 2rem;
-            height: 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
-            background: #f3f4f6;
-            border-radius: 50%;
-            font-size: 1.5rem;
-            cursor: pointer;
-            transition: background 0.2s;
-          }
-
-          .dialog-close:hover {
-            background: #e5e7eb;
-          }
-
-          .dialog-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 1.5rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-          }
+      <style>{`
 
           .caption-input-group {
             width: 100%;
+            margin-bottom: 1rem;
           }
 
           .caption-label {
@@ -408,13 +372,13 @@ export function ShareDialog({
             font-size: 0.875rem;
             font-weight: 500;
             margin-bottom: 0.5rem;
-            color: #374151;
+            color: var(--color-text, #374151);
           }
 
           .caption-input {
             width: 100%;
             padding: 0.75rem;
-            border: 2px solid #e5e7eb;
+            border: 2px solid var(--color-border, #e5e7eb);
             border-radius: 6px;
             font-size: 0.875rem;
             font-family: inherit;
@@ -424,7 +388,7 @@ export function ShareDialog({
 
           .caption-input:focus {
             outline: none;
-            border-color: #3b82f6;
+            border-color: var(--color-primary, #3b82f6);
           }
 
           .multi-platform-notice,
@@ -435,6 +399,7 @@ export function ShareDialog({
             border-radius: 8px;
             font-size: 0.875rem;
             color: #1e40af;
+            margin-bottom: 1rem;
           }
 
           .dialog-error {
@@ -444,6 +409,7 @@ export function ShareDialog({
             border-radius: 8px;
             color: #991b1b;
             font-size: 0.875rem;
+            margin-bottom: 1rem;
           }
 
           .posting-status {
@@ -474,23 +440,15 @@ export function ShareDialog({
             font-size: 1.25rem;
             font-weight: 600;
             margin-bottom: 0.5rem;
+            color: var(--color-text, #1f2937);
           }
 
           .posting-status p {
-            color: #6b7280;
+            color: var(--color-text-secondary, #6b7280);
             font-size: 0.875rem;
           }
 
-          .dialog-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 1rem;
-            padding: 1.5rem;
-            border-top: 2px solid #e5e7eb;
-          }
-
-          .btn-primary,
-          .btn-secondary {
+          .btn {
             padding: 0.75rem 1.5rem;
             border: none;
             border-radius: 6px;
@@ -501,12 +459,12 @@ export function ShareDialog({
           }
 
           .btn-primary {
-            background: #3b82f6;
+            background: var(--color-primary, #3b82f6);
             color: white;
           }
 
           .btn-primary:hover:not(:disabled) {
-            background: #2563eb;
+            background: var(--color-primary-hover, #2563eb);
           }
 
           .btn-primary:disabled {
@@ -515,31 +473,14 @@ export function ShareDialog({
           }
 
           .btn-secondary {
-            background: #f3f4f6;
-            color: #374151;
+            background: var(--color-bg-secondary, #f3f4f6);
+            color: var(--color-text, #374151);
           }
 
           .btn-secondary:hover {
-            background: #e5e7eb;
-          }
-
-          @media (max-width: 640px) {
-            .share-dialog {
-              max-height: 100vh;
-              border-radius: 0;
-            }
-
-            .dialog-footer {
-              flex-direction: column-reverse;
-            }
-
-            .btn-primary,
-            .btn-secondary {
-              width: 100%;
-            }
+            background: var(--color-bg-tertiary, #e5e7eb);
           }
         `}</style>
-      </div>
-    </div>
+    </Modal>
   );
 }

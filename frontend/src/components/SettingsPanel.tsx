@@ -15,18 +15,21 @@ import { accessibilityManager } from '../lib/preferences/accessibilityManager';
 import { DEFAULT_PREFERENCES } from '../lib/preferences/defaults';
 import { useToast } from './Toast';
 import { useConfirm } from '../contexts/DialogContext';
+import { Modal, ModalActions } from './Modal';
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onSave?: (preferences: UserPreferences) => void;
+  onRestartOnboarding?: () => void;
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   isOpen,
   onClose,
   onSave,
+  onRestartOnboarding,
 }) => {
   const [preferences, setPreferences] = useState<UserPreferences>(
     preferencesManager.load()
@@ -136,22 +139,41 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     input.click();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="settings-panel-overlay" onClick={handleCancel}>
-      <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="settings-header">
-          <h2>Settings</h2>
-          <button
-            className="close-button"
-            onClick={handleCancel}
-            aria-label="Close settings"
-          >
-            ×
-          </button>
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleCancel}
+      title="Settings"
+      size="lg"
+      footer={
+        <ModalActions align="space-between">
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={handleReset} className="btn btn-ghost">
+              Reset to Defaults
+            </button>
+            <button onClick={handleExport} className="btn btn-ghost">
+              Export
+            </button>
+            <button onClick={handleImport} className="btn btn-ghost">
+              Import
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={handleCancel} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              className="btn btn-primary"
+              disabled={!hasChanges}
+            >
+              Save
+            </button>
+          </div>
+        </ModalActions>
+      }
+    >
+      <div className="settings-panel-content">
 
         {/* Requirement 5.2: Organize preferences into categories */}
         <div className="settings-tabs">
@@ -180,9 +202,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             UI
           </button>
         </div>
-
-        {/* Content */}
-        <div className="settings-content">
           {activeTab === 'defaults' && (
             <div className="settings-section">
               <h3>Default Preferences</h3>
@@ -449,37 +468,30 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <option value="ja">日本語</option>
                 </select>
               </div>
+
+              {/* Onboarding restart - Requirement: 4.6 */}
+              {onRestartOnboarding && (
+                <div className="setting-item" style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid var(--color-border, #e5e7eb)' }}>
+                  <label>Onboarding Tour</label>
+                  <p className="setting-description">
+                    Restart the onboarding tour to learn about Caption Art features again.
+                  </p>
+                  <button
+                    onClick={() => {
+                      onRestartOnboarding();
+                      onClose();
+                      toast.success('Onboarding tour restarted!');
+                    }}
+                    className="btn btn-secondary"
+                    style={{ marginTop: '0.5rem' }}
+                  >
+                    Restart Onboarding Tour
+                  </button>
+                </div>
+              )}
             </div>
           )}
-        </div>
-
-        {/* Footer */}
-        <div className="settings-footer">
-          <div className="footer-left">
-            <button onClick={handleReset} className="btn btn-ghost">
-              Reset to Defaults
-            </button>
-            <button onClick={handleExport} className="btn btn-ghost">
-              Export
-            </button>
-            <button onClick={handleImport} className="btn btn-ghost">
-              Import
-            </button>
-          </div>
-          <div className="footer-right">
-            <button onClick={handleCancel} className="btn btn-secondary">
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="btn btn-primary"
-              disabled={!hasChanges}
-            >
-              Save
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 };

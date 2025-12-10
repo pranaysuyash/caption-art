@@ -99,7 +99,7 @@ export class AccountService {
 
     // 3. Assign role
     const role = await this.prisma.role.findFirst({
-        where: { agencyId, name: { equals: roleName, mode: 'insensitive' } }
+        where: { agencyId, name: roleName }
     }) || await this.prisma.role.findFirst({
         where: { agencyId, name: 'Member' } // Fallback
     }) || await this.prisma.role.findFirst({
@@ -132,7 +132,7 @@ export class AccountService {
 
     // Find the new role
     const role = await this.prisma.role.findFirst({
-        where: { agencyId: user.agencyId, name: { equals: roleName, mode: 'insensitive' } }
+        where: { agencyId: user.agencyId, name: roleName }
     });
 
     if (!role) throw new Error(`Role ${roleName} not found`);
@@ -245,7 +245,7 @@ export class AccountService {
       if (!sub) return [];
       return this.prisma.invoice.findMany({
           where: { subscriptionId: sub.id },
-          orderBy: { date: 'desc' }
+          orderBy: { createdAt: 'desc' }
       });
   }
 
@@ -361,6 +361,72 @@ export class AccountService {
       return this.prisma.brandKit.findMany({
           where: { agencyId }
       });
+  }
+
+  static async createBrandKit(agencyId: string, workspaceId: string, data: any) {
+      return this.prisma.brandKit.create({
+          data: {
+              agencyId,
+              workspaceId,
+              name: data.name,
+              primaryColor: data.primaryColor,
+              secondaryColor: data.secondaryColor,
+              tertiaryColor: data.tertiaryColor,
+              headingFont: data.headingFont,
+              bodyFont: data.bodyFont,
+              voicePrompt: data.voicePrompt,
+              preferredPhrases: data.preferredPhrases,
+              forbiddenPhrases: data.forbiddenPhrases,
+              targetAudience: data.targetAudience,
+          }
+      });
+  }
+
+  static async updateBrandKit(id: string, data: any) {
+      return this.prisma.brandKit.update({
+          where: { id },
+          data: {
+              name: data.name,
+              primaryColor: data.primaryColor,
+              secondaryColor: data.secondaryColor,
+              tertiaryColor: data.tertiaryColor,
+              headingFont: data.headingFont,
+              bodyFont: data.bodyFont,
+              voicePrompt: data.voicePrompt,
+              preferredPhrases: data.preferredPhrases,
+              forbiddenPhrases: data.forbiddenPhrases,
+              targetAudience: data.targetAudience,
+              updatedAt: new Date(),
+          }
+      });
+  }
+
+  static async deleteBrandKit(id: string) {
+      return this.prisma.brandKit.delete({ where: { id } });
+  }
+
+  // Audit Log Export
+  static async exportAuditLogs(agencyId: string, filters: any, format: 'csv' | 'json') {
+      const logs = await this.getAuditLogs(agencyId, { ...filters, limit: 10000 });
+      
+      if (format === 'json') {
+          return JSON.stringify(logs, null, 2);
+      }
+      
+      // CSV format
+      if (logs.length === 0) return 'timestamp,user,action,entityType,entityId,details\n';
+      
+      const headers = ['timestamp', 'user', 'action', 'entityType', 'entityId', 'details'];
+      const rows = logs.map((log: any) => [
+          log.createdAt?.toISOString() || '',
+          log.user?.email || log.userId || '',
+          log.action || '',
+          log.entityType || '',
+          log.entityId || '',
+          JSON.stringify(log.details || {})
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+      
+      return [headers.join(','), ...rows].join('\n');
   }
 
   // Settings

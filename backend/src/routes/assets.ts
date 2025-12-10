@@ -142,7 +142,40 @@ router.post(
   }
 )
 
-// GET /api/assets/workspace/:workspaceId - Get all assets for a workspace
+// GET /api/assets - Get all assets (supports query param ?workspaceId=...)
+router.get('/', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
+  try {
+    const authenticatedReq = req as unknown as AuthenticatedRequest
+    const { workspaceId } = req.query
+
+    if (!workspaceId || typeof workspaceId !== 'string') {
+      return res.status(400).json({ error: 'workspaceId query parameter is required' })
+    }
+
+    // Verify workspace belongs to current agency
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    })
+    if (!workspace) {
+      return res.status(404).json({ error: 'Workspace not found' })
+    }
+
+    if (workspace.agencyId !== authenticatedReq.agency.id) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
+
+    const assets = await prisma.asset.findMany({
+      where: { workspaceId },
+    })
+    res.json({ assets })
+  } catch (error) {
+    log.error({ err: error }, 'Get assets by workspace error')
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
+// GET /api/assets/workspace/:workspaceId - Get all assets for a workspace (alternative route)
 router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
   const prisma = getPrismaClient()
   try {
@@ -173,6 +206,7 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
 
 // GET /api/assets/:id - Get specific asset
 router.get('/:id', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params
@@ -201,6 +235,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 // DELETE /api/assets/:id - Delete asset
 router.delete('/:id', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params

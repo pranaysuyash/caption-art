@@ -187,6 +187,7 @@ router.post(
 
 // GET /api/caption/batch/:jobId - Get batch job status
 router.get('/batch/:jobId', requireAuth, async (req: Request, res: any) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as any
     const { jobId } = req.params

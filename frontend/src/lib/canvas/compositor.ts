@@ -3,7 +3,7 @@
  * Orchestrates rendering of background, text, and mask layers
  */
 
-import { LayerManager, Layer } from './layerManager';
+import { LayerManager } from './layerManager';
 import { TextRenderer, type AdvancedTextLayer } from './textRenderer';
 import { TransformController } from './transformController';
 import type { TextLayer, Transform } from './types';
@@ -13,6 +13,7 @@ import {
   scoreGridCells,
   findContiguousRegions,
 } from './autoPlacement';
+import { MaskingEngine, type MaskingMode, type MaskingConfig } from '../masking/MaskingEngine';
 
 /**
  * Configuration for the Compositor
@@ -26,6 +27,8 @@ export interface CompositorConfig {
   maskImage?: HTMLImageElement | HTMLCanvasElement;
   /** Whether text-behind effect is enabled (default: true) */
   textBehindEnabled?: boolean;
+  /** Masking mode to use (default: 'full-behind') */
+  maskingMode?: MaskingMode;
   /** Maximum dimension for scaling (default: 1080px) */
   maxDimension: number;
 }
@@ -39,9 +42,11 @@ export class Compositor {
   private backgroundImage: HTMLImageElement | HTMLCanvasElement;
   private maskImage?: HTMLImageElement | HTMLCanvasElement;
   private textBehindEnabled: boolean;
+  private maskingMode: MaskingMode;
   private maxDimension: number;
   private layerManager: LayerManager;
   private scaleFactor: number;
+  private maskingEngine: MaskingEngine;
   
   // Layer caching for performance - Requirements: 8.3
   private cachedBackgroundLayer: HTMLCanvasElement | null = null;
@@ -85,8 +90,11 @@ export class Compositor {
       throw new Error('Background image must be an HTMLImageElement or HTMLCanvasElement');
     }
     
-    if (isImage && (!config.backgroundImage.complete || config.backgroundImage.naturalWidth === 0)) {
-      throw new Error('Background image is not loaded or is invalid');
+    if (isImage) {
+      const imgElement = config.backgroundImage as HTMLImageElement;
+      if (!imgElement.complete || imgElement.naturalWidth === 0) {
+        throw new Error('Background image is not loaded or is invalid');
+      }
     }
     
     if (isCanvas && (config.backgroundImage.width === 0 || config.backgroundImage.height === 0)) {
@@ -102,8 +110,11 @@ export class Compositor {
         throw new Error('Mask image must be an HTMLImageElement or HTMLCanvasElement');
       }
       
-      if (isMaskImage && (!config.maskImage.complete || config.maskImage.naturalWidth === 0)) {
-        throw new Error('Mask image is not loaded or is invalid');
+      if (isMaskImage) {
+        const maskImgElement = config.maskImage as HTMLImageElement;
+        if (!maskImgElement.complete || maskImgElement.naturalWidth === 0) {
+          throw new Error('Mask image is not loaded or is invalid');
+        }
       }
       
       if (isMaskCanvas && (config.maskImage.width === 0 || config.maskImage.height === 0)) {
@@ -115,8 +126,10 @@ export class Compositor {
     this.backgroundImage = config.backgroundImage;
     this.maskImage = config.maskImage;
     this.textBehindEnabled = config.textBehindEnabled ?? true;
+    this.maskingMode = config.maskingMode ?? 'full-behind';
     this.maxDimension = config.maxDimension;
     this.layerManager = new LayerManager();
+    this.maskingEngine = MaskingEngine.getInstance();
 
     const ctx = this.canvas.getContext('2d');
     if (!ctx) {
@@ -296,6 +309,8 @@ export class Compositor {
       preset: textLayer.preset,
       fontSize: textLayer.fontSize,
       transform: textLayer.transform,
+      maskingMode: this.maskingMode,
+      textBehindEnabled: this.textBehindEnabled,
     });
   }
 
@@ -440,6 +455,8 @@ export class Compositor {
       alignment: textLayer.alignment,
       effects: textLayer.effects,
       transform: textLayer.transform,
+      maskingMode: this.maskingMode,
+      textBehindEnabled: this.textBehindEnabled,
     });
   }
 
@@ -461,6 +478,16 @@ export class Compositor {
 
       // Render using advanced text renderer
       TextRenderer.renderAdvanced(ctx, textLayer, canvas.width, canvas.height);
+
+      // Apply masking if mask is available and text-behind is enabled
+      // Requirements: 7.1-7.8
+      if (this.maskImage && this.textBehindEnabled) {
+        const maskCanvas = this.createMaskLayer();
+        const maskingConfig: MaskingConfig = {
+          mode: this.maskingMode,
+        };
+        return this.maskingEngine.applyMask(canvas, maskCanvas, maskingConfig);
+      }
 
       return canvas;
     } catch (error) {
@@ -507,6 +534,16 @@ export class Compositor {
 
       // Restore context state
       ctx.restore();
+
+      // Apply masking if mask is available and text-behind is enabled
+      // Requirements: 7.1-7.8
+      if (this.maskImage && this.textBehindEnabled) {
+        const maskCanvas = this.createMaskLayer();
+        const maskingConfig: MaskingConfig = {
+          mode: this.maskingMode,
+        };
+        return this.maskingEngine.applyMask(canvas, maskCanvas, maskingConfig);
+      }
 
       return canvas;
     } catch (error) {
@@ -621,6 +658,34 @@ export class Compositor {
    */
   getTextBehindEnabled(): boolean {
     return this.textBehindEnabled;
+  }
+
+  /**
+   * Set the masking mode
+   * Invalidates cached text layer - Requirements: 7.1, 7.8
+   * @param mode - Masking mode to use
+   */
+  setMaskingMode(mode: MaskingMode): void {
+    this.maskingMode = mode;
+    // Invalidate cached text layer when masking mode changes
+    this.cachedTextLayer = null;
+    this.lastTextLayerKey = null;
+  }
+
+  /**
+   * Get the current masking mode
+   * @returns Current masking mode
+   */
+  getMaskingMode(): MaskingMode {
+    return this.maskingMode;
+  }
+
+  /**
+   * Get all available masking modes
+   * @returns Array of masking mode information
+   */
+  static getMaskingModes() {
+    return MaskingEngine.getModes();
   }
 
   /**

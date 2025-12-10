@@ -124,6 +124,10 @@ export function useToast() {
     return show({ message, type: 'loading', duration: 0 })
   }
 
+  const warn = (message: string, action?: ToastProps['action']) => {
+    return show({ message, type: 'info', duration: 5000, action })
+  }
+
   return {
     toasts,
     show,
@@ -131,7 +135,8 @@ export function useToast() {
     success,
     error,
     info,
-    loading
+    loading,
+    warn
   }
 }
 

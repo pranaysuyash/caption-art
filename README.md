@@ -26,7 +26,7 @@ Upload images, get AI-powered caption suggestions, place styled text behind subj
 
 ### **Access the Application**
 
-- **Frontend**: http://localhost:5174/
+- **Frontend**: http://localhost:5173/
 - **Backend**: http://localhost:3001
 
 ### **Test Credentials**
@@ -52,7 +52,7 @@ cd frontend
 npm install
 npm run dev
 
-# Open browser to http://localhost:5174/
+# Open browser to http://localhost:5173/
 # Login with test@example.com / testpassword123
 ```
 
@@ -501,7 +501,7 @@ Current specs:
 **📋 Testing Information:**
 
 - Test credentials: test@example.com / testpassword123
-- Quick start: Clone repo → npm install → npm run dev → http://localhost:5174
+- Quick start: Clone repo → npm install → npm run dev → http://localhost:5173
 - All features working and ready for review
 
 ### Technical Notes

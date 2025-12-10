@@ -178,6 +178,24 @@ export class ThemeManager {
   }
 
   /**
+   * Create a custom theme from an existing preset
+   */
+  createCustomThemeFromPreset(presetId: string, name: string): ThemeConfig {
+    const preset = this.findTheme(presetId);
+    if (!preset) {
+      throw new Error(`Theme preset not found: ${presetId}`);
+    }
+
+    // Create a copy of the preset with a new ID and custom category
+    return this.createCustomTheme({
+      ...preset,
+      id: `custom-${Date.now()}`,
+      name: name || `Custom ${preset.name}`,
+      category: 'custom',
+    });
+  }
+
+  /**
    * Update an existing custom theme
    */
   updateCustomTheme(themeId: string, updates: Partial<ThemeConfig>): void {

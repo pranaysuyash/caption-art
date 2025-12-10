@@ -139,6 +139,23 @@ router.post(
   }
 )
 
+// GET /api/brand-kits/masking-models - Get available masking models (MUST be before /:id route)
+router.get('/masking-models', (req, res) => {
+  try {
+    const models = MaskingService.getAvailableModels()
+    const defaultModel = MaskingService.getDefaultModel()
+
+    res.json({
+      models,
+      defaultModel,
+      count: Object.keys(models).length,
+    })
+  } catch (error) {
+    log.error({ err: error }, 'Get masking models error')
+    res.status(500).json({ error: 'Internal server error' })
+  }
+})
+
 // GET /api/brand-kits/:id - Get specific brand kit
 router.get('/:id', requireAuth, async (req, res) => {
   const prisma = getPrismaClient()
@@ -307,25 +324,9 @@ router.get('/workspace/:workspaceId', requireAuth, async (req, res) => {
   }
 })
 
-// GET /api/brand-kits/masking-models - Get available masking models
-router.get('/masking-models', (req, res) => {
-  try {
-    const models = MaskingService.getAvailableModels()
-    const defaultModel = MaskingService.getDefaultModel()
-
-    res.json({
-      models,
-      defaultModel,
-      count: Object.keys(models).length,
-    })
-  } catch (error) {
-    log.error({ err: error }, 'Get masking models error')
-    res.status(500).json({ error: 'Internal server error' })
-  }
-})
-
 // PUT /api/brand-kits/:id/masking-model - Update brand kit masking model
 router.put('/:id/masking-model', requireAuth, async (req, res) => {
+  const prisma = getPrismaClient()
   try {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const { id } = req.params

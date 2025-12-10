@@ -28,7 +28,7 @@ describe('FilenameGenerator', () => {
 
       const filename = FilenameGenerator.generate(options);
 
-      expect(filename).toEndWith('.png');
+      expect(filename).toMatch(/\.png$/);
     });
 
     it('should use JPG extension for JPEG format', () => {
@@ -39,7 +39,7 @@ describe('FilenameGenerator', () => {
 
       const filename = FilenameGenerator.generate(options);
 
-      expect(filename).toEndWith('.jpg');
+      expect(filename).toMatch(/\.jpg$/);
     });
 
     it('should include caption-art prefix', () => {
@@ -50,7 +50,7 @@ describe('FilenameGenerator', () => {
 
       const filename = FilenameGenerator.generate(options);
 
-      expect(filename).toStartWith('caption-art-');
+      expect(filename).toMatch(/^caption-art-/);
     });
   });
 
@@ -354,7 +354,7 @@ describe('FilenameGenerator', () => {
 
       const result = FilenameGenerator.ensureUnique(filename, existing);
 
-      expect(result).toEndWith('.jpg');
+      expect(result).toMatch(/\.jpg$/);
     });
 
     it('should handle filenames without extension', () => {

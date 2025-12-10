@@ -705,7 +705,7 @@ describe('Browser Compatibility Tests', () => {
 
   describe('Cross-Browser Error Handling', () => {
     it('should handle canvas conversion errors gracefully', async () => {
-      const canvas = createTestCanvas(800, 600, false);
+      const canvas = createTestCanvas(800, 600);
       const config: ExportConfig = {
         format: 'png',
         quality: 0.92,

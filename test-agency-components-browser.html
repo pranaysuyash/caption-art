@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agency Components Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #333;
+    }
+    .status {
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-weight: 500;
+      display: inline-block;
+      margin-bottom: 10px;
+    }
+    .status.pending { background: #fef3c7; color: #92400e; }
+    .status.success { background: #dcfce7; color: #166534; }
+    .status.error { background: #fee2e2; color: #991b1b; }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover { background: #2563eb; }
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    .log {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 12px;
+      font-family: 'Monaco', 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .summary {
+      background: #f0f9ff;
+      border-left: 4px solid #3b82f6;
+      padding: 15px;
+      margin-top: 20px;
+    }
+    input[type="file"] {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Agency Components Test Suite</h1>
+  
+  <div class="test-section">
+    <h2>Setup</h2>
+    <div id="auth-status" class="status pending">Not authenticated</div>
+    <div>
+      <button onclick="checkAuth()">Check Auth</button>
+      <button onclick="createTestAccount()">Create Test Account</button>
+      <button onclick="login()">Login</button>
+    </div>
+    <div class="log" id="auth-log">Waiting for authentication...</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 1: WorkspaceContext</h2>
+    <div id="workspace-status" class="status pending">Not tested</div>
+    <div>
+      <button onclick="testWorkspaceContext()" id="test-workspace-btn" disabled>Run Test</button>
+    </div>
+    <div class="log" id="workspace-log">Test not started</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 2: AssetUploader</h2>
+    <div id="asset-status" class="status pending">Not tested</div>
+    <div>
+      <input type="file" id="test-file" accept="image/*">
+      <button onclick="testAssetUploader()" id="test-asset-btn" disabled>Upload Test File</button>
+    </div>
+    <div class="log" id="asset-log">Test not started</div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test 3: ApprovalGrid</h2>
+    <div id="approval-status" class="status pending">Not tested</div>
+    <div>
+      <button onclick="testApprovalGrid()" id="test-approval-btn" disabled>Run Test</button>
+    </div>
+    <div class="log" id="approval-log">Test not started</div>
+  </div>
+
+  <div class="summary">
+    <h3>Test Summary</h3>
+    <div id="summary">No tests run yet</div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3001';
+    let testData = {
+      authenticated: false,
+      workspaceId: null,
+      assetId: null,
+      captionId: null
+    };
+
+    function log(section, message, isError = false) {
+      const logEl = document.getElementById(`${section}-log`);
+      const timestamp = new Date().toLocaleTimeString();
+      logEl.textContent += `[${timestamp}] ${message}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+      
+      if (isError) {
+        console.error(message);
+      } else {
+        console.log(message);
+      }
+    }
+
+    function setStatus(section, status) {
+      const statusEl = document.getElementById(`${section}-status`);
+      statusEl.className = `status ${status}`;
+      statusEl.textContent = status === 'success' ? '✅ Passed' : 
+                             status === 'error' ? '❌ Failed' : 
+                             '⏳ Testing...';
+    }
+
+    async function checkAuth() {
+      log('auth', 'Checking authentication...');
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/me`, {
+          credentials: 'include'
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          testData.authenticated = true;
+          testData.agencyId = data.agency.id;
+          log('auth', `✓ Authenticated as ${data.user.email}`);
+          log('auth', `✓ Agency: ${data.agency.id}`);
+          setStatus('auth', 'success');
+          enableTests();
+        } else {
+          log('auth', '✗ Not authenticated', true);
+          setStatus('auth', 'error');
+        }
+      } catch (error) {
+        log('auth', `✗ Error: ${error.message}`, true);
+        setStatus('auth', 'error');
+      }
+    }
+
+    async function createTestAccount() {
+      log('auth', 'Creating test account...');
+      const email = `test-${Date.now()}@example.com`;
+      const password = 'TestPassword123!';
+      
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            email,
+            password,
+            agencyName: 'Test Agency'
+          })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          testData.authenticated = true;
+          testData.agencyId = data.agency.id;
+          log('auth', `✓ Account created: ${email}`);
+          log('auth', `✓ Agency ID: ${data.agency.id}`);
+          setStatus('auth', 'success');
+          enableTests();
+        } else {
+          const error = await res.text();
+          log('auth', `✗ Failed: ${error}`, true);
+          setStatus('auth', 'error');
+        }
+      } catch (error) {
+        log('auth', `✗ Error: ${error.message}`, true);
+        setStatus('auth', 'error');
+      }
+    }
+
+    async function login() {
+      const email = prompt('Email:');
+      const password = prompt('Password:');
+      
+      if (!email || !password) return;
+      
+      log('auth', 'Logging in...');
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ email, password })
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          testData.authenticated = true;
+          testData.agencyId = data.agency.id;
+          log('auth', `✓ Logged in as ${email}`);
+          setStatus('auth', 'success');
+          enableTests();
+        } else {
+          log('auth', '✗ Login failed', true);
+          setStatus('auth', 'error');
+        }
+      } catch (error) {
+        log('auth', `✗ Error: ${error.message}`, true);
+        setStatus('auth', 'error');
+      }
+    }
+
+    function enableTests() {
+      document.getElementById('test-workspace-btn').disabled = false;
+      document.getElementById('test-asset-btn').disabled = false;
+      document.getElementById('test-approval-btn').disabled = false;
+    }
+
+    async function testWorkspaceContext() {
+      log('workspace', '=== Starting WorkspaceContext Test ===');
+      setStatus('workspace', 'pending');
+      
+      try {
+        // List workspaces
+        log('workspace', 'Fetching workspaces...');
+        const listRes = await fetch(`${API_BASE}/api/workspaces`, {
+          credentials: 'include'
+        });
+        
+        if (!listRes.ok) {
+          throw new Error(`Failed to fetch workspaces: ${listRes.status}`);
+        }
+        
+        let workspaces = await listRes.json();
+        log('workspace', `✓ Found ${workspaces.length} workspaces`);
+        
+        // Create workspace if none exist
+        if (workspaces.length === 0) {
+          log('workspace', 'Creating test workspace...');
+          const createRes = await fetch(`${API_BASE}/api/workspaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              clientName: 'Test Client',
+              industry: 'Technology',
+              description: 'Test workspace'
+            })
+          });
+          
+          if (!createRes.ok) {
+            throw new Error('Failed to create workspace');
+          }
+          
+          const newWorkspace = await createRes.json();
+          workspaces = [newWorkspace];
+          log('workspace', `✓ Created workspace: ${newWorkspace.id}`);
+        }
+        
+        // Fetch specific workspace
+        const workspace = workspaces[0];
+        testData.workspaceId = workspace.id;
+        
+        log('workspace', `Fetching workspace ${workspace.id}...`);
+        const detailRes = await fetch(`${API_BASE}/api/workspaces/${workspace.id}`, {
+          credentials: 'include'
+        });
+        
+        if (!detailRes.ok) {
+          throw new Error('Failed to fetch workspace details');
+        }
+        
+        const details = await detailRes.json();
+        log('workspace', `✓ Workspace: ${details.clientName}`);
+        log('workspace', `✓ Industry: ${details.industry || 'N/A'}`);
+        
+        setStatus('workspace', 'success');
+        log('workspace', '=== WorkspaceContext Test PASSED ===');
+        
+      } catch (error) {
+        log('workspace', `✗ Test failed: ${error.message}`, true);
+        setStatus('workspace', 'error');
+      }
+    }
+
+    async function testAssetUploader() {
+      log('asset', '=== Starting AssetUploader Test ===');
+      setStatus('asset', 'pending');
+      
+      if (!testData.workspaceId) {
+        log('asset', '✗ No workspace ID - run WorkspaceContext test first', true);
+        setStatus('asset', 'error');
+        return;
+      }
+      
+      const fileInput = document.getElementById('test-file');
+      if (!fileInput.files || fileInput.files.length === 0) {
+        log('asset', '✗ No file selected', true);
+        setStatus('asset', 'error');
+        return;
+      }
+      
+      try {
+        const file = fileInput.files[0];
+        log('asset', `Uploading ${file.name} (${file.size} bytes)...`);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('workspaceId', testData.workspaceId);
+        
+        const uploadRes = await fetch(`${API_BASE}/api/assets/upload`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData
+        });
+        
+        if (!uploadRes.ok) {
+          const error = await uploadRes.text();
+          throw new Error(`Upload failed: ${error}`);
+        }
+        
+        const result = await uploadRes.json();
+        testData.assetId = result.id;
+        
+        log('asset', `✓ Upload successful!`);
+        log('asset', `✓ Asset ID: ${result.id}`);
+        log('asset', `✓ Original name: ${result.originalName}`);
+        log('asset', `✓ MIME type: ${result.mimeType}`);
+        
+        setStatus('asset', 'success');
+        log('asset', '=== AssetUploader Test PASSED ===');
+        
+      } catch (error) {
+        log('asset', `✗ Test failed: ${error.message}`, true);
+        setStatus('asset', 'error');
+      }
+    }
+
+    async function testApprovalGrid() {
+      log('approval', '=== Starting ApprovalGrid Test ===');
+      setStatus('approval', 'pending');
+      
+      if (!testData.workspaceId) {
+        log('approval', '✗ No workspace ID - run WorkspaceContext test first', true);
+        setStatus('approval', 'error');
+        return;
+      }
+      
+      try {
+        // Test 1: GET approval grid
+        log('approval', 'Fetching approval grid...');
+        const gridRes = await fetch(
+          `${API_BASE}/api/approval/workspace/${testData.workspaceId}/grid`,
+          { credentials: 'include' }
+        );
+        
+        if (!gridRes.ok) {
+          throw new Error(`Failed to fetch grid: ${gridRes.status}`);
+        }
+        
+        const gridData = await gridRes.json();
+        log('approval', `✓ Grid loaded: ${gridData.grid.length} items`);
+        log('approval', `✓ Stats: ${JSON.stringify(gridData.stats)}`);
+        
+        // Find items with captions
+        const itemsWithCaptions = gridData.grid.filter(item => item.caption);
+        log('approval', `✓ Items with captions: ${itemsWithCaptions.length}`);
+        
+        if (itemsWithCaptions.length === 0) {
+          log('approval', '⚠️  No captions to test approval actions');
+          log('approval', '✓ Grid fetch works, but no captions available');
+          setStatus('approval', 'success');
+          return;
+        }
+        
+        // Test 2: Approve a caption
+        const testCaption = itemsWithCaptions[0].caption;
+        log('approval', `Testing approve on caption ${testCaption.id}...`);
+        
+        const approveRes = await fetch(
+          `${API_BASE}/api/approval/captions/${testCaption.id}/approve`,
+          {
+            method: 'PUT',
+            credentials: 'include'
+          }
+        );
+        
+        if (!approveRes.ok) {
+          throw new Error('Approve failed');
+        }
+        
+        const approveResult = await approveRes.json();
+        log('approval', `✓ Caption approved: ${approveResult.caption.approvalStatus}`);
+        
+        // Test 3: Reject a caption
+        log('approval', `Testing reject on caption ${testCaption.id}...`);
+        
+        const rejectRes = await fetch(
+          `${API_BASE}/api/approval/captions/${testCaption.id}/reject`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ reason: 'Test rejection' })
+          }
+        );
+        
+        if (!rejectRes.ok) {
+          throw new Error('Reject failed');
+        }
+        
+        const rejectResult = await rejectRes.json();
+        log('approval', `✓ Caption rejected: ${rejectResult.caption.approvalStatus}`);
+        
+        // Test 4: Bulk operations (if multiple captions)
+        if (itemsWithCaptions.length > 1) {
+          const captionIds = itemsWithCaptions.slice(0, 2).map(item => item.caption.id);
+          
+          log('approval', `Testing bulk approve on ${captionIds.length} captions...`);
+          const bulkApproveRes = await fetch(
+            `${API_BASE}/api/approval/batch-approve`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ captionIds })
+            }
+          );
+          
+          if (bulkApproveRes.ok) {
+            const bulkResult = await bulkApproveRes.json();
+            log('approval', `✓ Bulk approve: ${bulkResult.approved} captions`);
+          }
+        }
+        
+        // Verify final state
+        log('approval', 'Verifying final grid state...');
+        const finalRes = await fetch(
+          `${API_BASE}/api/approval/workspace/${testData.workspaceId}/grid`,
+          { credentials: 'include' }
+        );
+        
+        const finalData = await finalRes.json();
+        log('approval', `✓ Final stats: ${JSON.stringify(finalData.stats)}`);
+        
+        setStatus('approval', 'success');
+        log('approval', '=== ApprovalGrid Test PASSED ===');
+        
+      } catch (error) {
+        log('approval', `✗ Test failed: ${error.message}`, true);
+        setStatus('approval', 'error');
+      }
+    }
+
+    // Auto-check auth on load
+    window.addEventListener('load', () => {
+      checkAuth();
+    });
+  </script>
+</body>
+</html>

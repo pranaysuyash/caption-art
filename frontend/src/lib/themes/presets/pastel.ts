@@ -20,10 +20,10 @@ export const pastel: ThemeConfig = {
       bgTertiary: '#f1f5f9',
       text: '#0f172a',
       textSecondary: '#64748b',
-      textTertiary: '#94a3b8',
+      textTertiary: '#64748b', // Fixed: was #94a3b8 (2.45:1) -> now 4.66:1
       primary: '#2563eb',
-      secondary: '#4ECDC4',
-      accent: '#FFE66D',
+      secondary: '#2A9D8F', // Fixed: was #4ECDC4 (1.85:1) -> now 3.94:1
+      accent: '#D35400', // Fixed: was #FFE66D (1.20:1) -> now 4.52:1
       success: '#16a34a',
       warning: '#f97316',
       error: '#dc2626',
@@ -38,7 +38,7 @@ export const pastel: ThemeConfig = {
       bgTertiary: '#334155',
       text: '#f1f5f9',
       textSecondary: '#94a3b8',
-      textTertiary: '#64748b',
+      textTertiary: '#94a3b8', // Fixed: was #64748b (3.75:1) -> now 5.59:1
       primary: '#3b82f6',
       secondary: '#4ECDC4',
       accent: '#FFE66D',

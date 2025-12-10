@@ -29,9 +29,20 @@ router.get('/', requireAuth as any, async (req, res) => {
     const authenticatedReq = req as unknown as AuthenticatedRequest
     const workspaces = await prisma.workspace.findMany({
       where: { agencyId: authenticatedReq.agency.id },
-      include: { brandKit: true },
+      include: { 
+        brandKit: true,
+        _count: {
+          select: { campaigns: true }
+        }
+      },
     })
-    res.json({ workspaces })
+    // Transform to include campaignCount at top level for frontend
+    const transformed = workspaces.map(w => ({
+      ...w,
+      campaignCount: w._count?.campaigns ?? 0,
+      _count: undefined
+    }))
+    res.json({ workspaces: transformed })
   } catch (error) {
     log.error({ err: error }, 'Failed to fetch workspaces')
     res.status(500).json({ error: 'Internal server error' })

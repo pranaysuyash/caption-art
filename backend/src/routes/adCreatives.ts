@@ -239,6 +239,7 @@ router.post(
  * List all ad creatives for the agency
  */
 router.get('/', requireAuth, async (req: AuthenticatedRequest, res: any) => {
+  const prisma = getPrismaClient()
   try {
     const { campaignId, status, platform, page = 1, limit = 20 } = req.query
 
@@ -316,6 +317,7 @@ router.get(
   requireAuth,
   validateRequest(adCreativeIdSchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const { adCreativeId } = (req as any).validatedData
 
@@ -362,6 +364,7 @@ router.put(
   requireAuth,
   validateRequest(updateAdCreativeSchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const { adCreativeId } = req.params
       const updateData = (req as any).validatedData
@@ -450,6 +453,7 @@ router.delete(
   requireAuth,
   validateRequest(adCreativeIdSchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const { adCreativeId } = (req as any).validatedData
 
@@ -503,6 +507,7 @@ router.post(
   requireAuth,
   validateRequest(adCreativeIdSchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const { adCreativeId } = (req as any).validatedData
 
@@ -572,6 +577,7 @@ router.post(
   requireAuth,
   validateRequest(adCreativeIdSchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const { adCreativeId } = (req as any).validatedData
 
@@ -691,6 +697,7 @@ router.post(
   requireAuth,
   validateRequest(generateAdCopySchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const requestData = (req as any).validatedData as AdCopyGenerationRequest
 
@@ -790,6 +797,7 @@ router.post(
   requireAuth,
   validateRequest(generateMultipleAdCopySchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const requestData = (req as any).validatedData
 
@@ -934,6 +942,7 @@ router.post(
   requireAuth,
   validateRequest(analyzeCampaignContextSchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const { campaignId, brandKitId } = (req as any).validatedData
 
@@ -1035,6 +1044,7 @@ router.post(
   requireAuth,
   validateRequest(analyzeCampaignContextSchema) as any,
   async (req: AuthenticatedRequest, res: any) => {
+    const prisma = getPrismaClient()
     try {
       const { campaignId, brandKitId } = (req as any).validatedData
       const { assetDescription, variationType, platforms, contentType } =

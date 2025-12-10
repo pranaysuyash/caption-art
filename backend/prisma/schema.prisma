@@ -2,12 +2,9 @@
 // Defines the database schema for Caption Art platform
 
 datasource db {
-  // Provider and url are now configurable via environment variables.
-  // This allows running SQLite locally (provider=sqlite) and Postgres in
-  // production (provider=postgresql) without editing the schema file.
-  // NOTE: env() is not supported for provider, defaulting to sqlite for now.
+  // Provider and connection url are configured via prisma.config.ts for v7+
+  // This allows running SQLite locally and Postgres in production
   provider = "sqlite"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -258,6 +255,19 @@ model CaptionVariation {
   tone              String?  // default | witty | inspirational | formal
   format            String?  // social media format (ig-feed, tiktok, linkedin, etc.)
   approvalStatus    String   @default("pending") // pending | approved | rejected
+  
+  // Quality metrics
+  qualityScore      Float?   // 1-10 quality score
+  scoreBreakdown    Json?    // Stores breakdown as JSON
+  
+  // Ad copy content (for ad creative generation)
+  adCopy            Json?    // Stores { headline, subheadline, bodyText, ctaText }
+  
+  // Approval timestamps
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  errorMessage      String?  // Rejection reason
+  
   createdAt         DateTime @default(now())
 
   // Relations

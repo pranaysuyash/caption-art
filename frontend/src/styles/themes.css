@@ -1,29 +1,8 @@
 /* frontend/src/styles/themes.css */
 
-.theme-light {
-  --color-background: var(--color-background-light);
-  --color-primary: var(--color-primary-light);
-  --color-secondary: var(--color-secondary-light);
-  --color-accent: var(--color-accent-light);
-  --color-text: var(--color-text-light);
-  --color-surface: var(--color-surface-light);
-  --color-border: var(--color-border-light);
+/* Import base theme CSS variables and font definitions */
+@import './themes/base.css';
 
-  background-color: var(--color-background);
-  color: var(--color-text);
-  transition: background-color var(--transition-timing-base) var(--transition-ease-smooth), color var(--transition-timing-base) var(--transition-ease-smooth);
-}
-
-.theme-dark {
-  --color-background: var(--color-background-dark);
-  --color-primary: var(--color-primary-dark);
-  --color-secondary: var(--color-secondary-dark);
-  --color-accent: var(--color-accent-dark);
-  --color-text: var(--color-text-dark);
-  --color-surface: var(--color-surface-dark);
-  --color-border: var(--color-border-dark);
-
-  background-color: var(--color-background);
-  color: var(--color-text);
-  transition: background-color var(--transition-timing-base) var(--transition-ease-smooth), color var(--transition-timing-base) var(--transition-ease-smooth);
-}
+/* Theme system is now managed by ThemeEngine via CSS variables */
+/* The ThemeEngine applies theme colors directly to :root */
+/* No additional CSS classes needed - themes work via data-theme-mode attribute */

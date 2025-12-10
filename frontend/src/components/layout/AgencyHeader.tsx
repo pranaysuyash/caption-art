@@ -93,6 +93,21 @@ export function AgencyHeader({ onLogout }: AgencyHeaderProps) {
         <ThemeSwitcher />
 
         <Link
+          to='/agency/editor'
+          className='btn btn-primary btn-sm'
+          title='Canvas Editor'
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-xs)',
+            textDecoration: 'none',
+          }}
+        >
+          <Sparkles size={16} />
+          <span className="hide-mobile">Editor</span>
+        </Link>
+
+        <Link
           to='/agency/settings'
           className='btn btn-ghost btn-sm'
           title='Settings'

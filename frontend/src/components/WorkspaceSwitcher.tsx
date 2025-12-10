@@ -51,7 +51,7 @@ export function WorkspaceSwitcher() {
                       {workspace.clientName}
                     </div>
                     <div className='workspace-item-meta'>
-                      {workspace.campaigns.length} campaigns
+                      {workspace.campaigns?.length || 0} campaigns
                     </div>
                   </div>
                   {workspace.id === activeWorkspace.id && (

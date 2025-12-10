@@ -16,6 +16,7 @@ import { ToastContainer, useToast } from './components/Toast';
 import { AgencyHeader } from './components/layout/AgencyHeader';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { DialogProvider } from './contexts/DialogContext';
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
 
 import apiFetch from './lib/api/httpClient';
 
@@ -53,11 +54,18 @@ function useAuthState() {
 
 import { WelcomeModal } from './components/WelcomeModal';
 import { safeLocalStorage } from './lib/storage/safeLocalStorage';
+import { useOnboarding } from './hooks/useOnboarding';
+import { OnboardingOverlay } from './components/OnboardingOverlay';
+import { CanvasEditorPage } from './components/CanvasEditorPage';
+import { CanvasEditorDemo } from './components/CanvasEditorDemo';
 
 export default function App() {
   const toast = useToast();
   const { isAuthenticated, loading, login, logout } = useAuthState();
   const [showWelcome, setShowWelcome] = useState(false);
+
+  // Onboarding integration - Requirements: 4.1, 4.6
+  const onboarding = useOnboarding({ autoStart: true });
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -92,9 +100,25 @@ export default function App() {
   return (
     <ErrorBoundary>
       <DialogProvider>
-        <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
-        {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
-        <Router>
+        <WorkspaceProvider>
+          <ToastContainer toasts={toast.toasts} onDismiss={toast.dismiss} />
+          {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
+          
+          {/* Onboarding overlay - Requirements: 4.1, 4.2, 4.3, 4.7 */}
+          {onboarding.state.isActive && onboarding.currentStep && (
+            <OnboardingOverlay
+              step={onboarding.currentStep}
+              currentStepIndex={onboarding.state.currentStepIndex}
+              totalSteps={onboarding.totalSteps}
+              onNext={onboarding.next}
+              onPrevious={onboarding.previous}
+              onSkip={onboarding.skip}
+              hasPrevious={onboarding.hasPrevious}
+              hasNext={onboarding.hasNext}
+            />
+          )}
+          
+          <Router>
           <Routes>
             {/* Public routes */}
             <Route path='/login' element={<Login onLogin={login} />} />
@@ -104,7 +128,7 @@ export default function App() {
               path='/agency/*'
               element={
                 <AuthGuard isAuthenticated={isAuthenticated} loading={loading}>
-                  <AgencyRoutes onLogout={logout} />
+                  <AgencyRoutes onLogout={logout} onRestartOnboarding={onboarding.restart} />
                 </AuthGuard>
               }
             />
@@ -132,12 +156,13 @@ export default function App() {
             />
           </Routes>
         </Router>
+        </WorkspaceProvider>
       </DialogProvider>
     </ErrorBoundary>
   );
 }
 
-function AgencyRoutes({ onLogout }: { onLogout: () => void }) {
+function AgencyRoutes({ onLogout, onRestartOnboarding }: { onLogout: () => void; onRestartOnboarding: () => void }) {
   return (
     <div
       style={{
@@ -171,7 +196,11 @@ function AgencyRoutes({ onLogout }: { onLogout: () => void }) {
           />
 
           {/* Settings */}
-          <Route path='/settings' element={<SettingsPage />} />
+          <Route path='/settings' element={<SettingsPage onRestartOnboarding={onRestartOnboarding} />} />
+
+          {/* Canvas Editor */}
+          <Route path='/editor' element={<CanvasEditorPage />} />
+          <Route path='/editor/demo' element={<CanvasEditorDemo />} />
 
           {/* Default agency route */}
           <Route

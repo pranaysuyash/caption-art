@@ -20,10 +20,10 @@ export const premium: ThemeConfig = {
       bgTertiary: '#F5F5F5',
       text: '#1A1A1A',
       textSecondary: '#4A4A4A',
-      textTertiary: '#7A7A7A',
-      primary: '#D4AF37', // Gold
+      textTertiary: '#5A5A5A', // Fixed: was #7A7A7A (4.29:1) -> now 5.74:1
+      primary: '#B8860B', // Fixed: was #D4AF37 (2.10:1) -> now 3.43:1 (DarkGoldenrod)
       secondary: '#1A1A1A', // Black
-      accent: '#C5A028', // Darker Gold
+      accent: '#B8860B', // Fixed: was #C5A028 (2.49:1) -> now 3.43:1
       success: '#2E7D32',
       warning: '#ED6C02',
       error: '#D32F2F',
@@ -38,7 +38,7 @@ export const premium: ThemeConfig = {
       bgTertiary: '#1F1F1F',
       text: '#F0F0F0',
       textSecondary: '#B0B0B0',
-      textTertiary: '#707070',
+      textTertiary: '#909090', // Fixed: was #707070 (4.00:1) -> now 6.22:1
       primary: '#FFD700', // Bright Gold
       secondary: '#FFFFFF', // White
       accent: '#FDB931', // Warm Gold

@@ -146,9 +146,22 @@ router.get('/audit-logs', async (req: any, res) => {
 });
 
 router.get('/audit-logs/export', async (req: any, res) => {
-    // TODO: Implement export functionality (CSV/JSON generation)
-    // For now, return not implemented or basic json
-    res.status(501).json({ error: 'Not implemented' });
+    try {
+        const format = (req.query.format as 'csv' | 'json') || 'json';
+        const content = await AccountService.exportAuditLogs(req.agency.id, req.query, format);
+        
+        const filename = `audit-logs-${new Date().toISOString().replace(/:/g, '-')}.${format}`;
+        
+        if (format === 'csv') {
+            res.setHeader('Content-Type', 'text/csv');
+        } else {
+            res.setHeader('Content-Type', 'application/json');
+        }
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(content);
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // Integrations
@@ -213,6 +226,37 @@ router.get('/brand-kits', async (req: any, res) => {
   try {
     const kits = await AccountService.getBrandKits(req.agency.id);
     res.json(kits);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/brand-kits', async (req: any, res) => {
+  try {
+    const { workspaceId, ...data } = req.body;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
+    const kit = await AccountService.createBrandKit(req.agency.id, workspaceId, data);
+    res.json(kit);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.patch('/brand-kits/:id', async (req: any, res) => {
+  try {
+    const kit = await AccountService.updateBrandKit(req.params.id, req.body);
+    res.json(kit);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/brand-kits/:id', async (req: any, res) => {
+  try {
+    await AccountService.deleteBrandKit(req.params.id);
+    res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

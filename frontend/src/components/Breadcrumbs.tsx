@@ -1,5 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronRight, Home } from 'lucide-react';
+import { useEffect } from 'react';
+import { useWorkspace } from '../contexts/WorkspaceContext';
 import '../styles/components.css';
 
 interface BreadcrumbItem {
@@ -10,6 +12,17 @@ interface BreadcrumbItem {
 
 export function Breadcrumbs() {
   const location = useLocation();
+  const { currentWorkspace, setCurrentWorkspaceId, loading } = useWorkspace();
+  
+  // Extract workspaceId from URL
+  const workspaceId = location.pathname.match(/workspaces\/([^/]+)/)?.[1];
+  
+  // Load workspace data when workspaceId changes
+  useEffect(() => {
+    if (workspaceId) {
+      setCurrentWorkspaceId(workspaceId);
+    }
+  }, [workspaceId, setCurrentWorkspaceId]);
   
   const getBreadcrumbs = (): BreadcrumbItem[] => {
     const pathParts = location.pathname.split('/').filter(Boolean);
@@ -26,9 +39,14 @@ export function Breadcrumbs() {
         const workspaceId = relevantParts[workspaceIndex + 1];
         
         if (workspaceId) {
+          // Show workspace name if loaded, otherwise show loading or generic label
+          const workspaceLabel = loading 
+            ? 'Loading...' 
+            : currentWorkspace?.clientName || 'Workspace';
+          
           breadcrumbs.push({
-            label: 'Workspaces',
-            path: '/agency/workspaces'
+            label: workspaceLabel,
+            path: `/agency/workspaces/${workspaceId}/campaigns`
           });
           
           if (campaignIndex >= 0) {
@@ -58,7 +76,11 @@ export function Breadcrumbs() {
             breadcrumbs[breadcrumbs.length - 1].active = true;
           }
         } else {
-          breadcrumbs[breadcrumbs.length - 1].active = true;
+          breadcrumbs.push({
+            label: 'Workspaces',
+            path: '/agency/workspaces',
+            active: true
+          });
         }
       }
     } else if (pathParts[0] === 'playground') {

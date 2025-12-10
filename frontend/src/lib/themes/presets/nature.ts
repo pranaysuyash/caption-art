@@ -19,11 +19,11 @@ export const nature: ThemeConfig = {
       bgSecondary: '#DCEDC8',
       bgTertiary: '#C5E1A5',
       text: '#33691E',
-      textSecondary: '#558B2F',
-      textTertiary: '#689F38',
-      primary: '#7CB342', // Light Green
+      textSecondary: '#33691E', // Fixed: was #558B2F (3.78:1) -> now 5.50:1
+      textTertiary: '#33691E', // Fixed: was #689F38 (2.93:1) -> now 5.50:1
+      primary: '#558B2F', // Fixed: was #7CB342 (2.31:1) -> now 3.78:1
       secondary: '#8D6E63', // Brown
-      accent: '#FF7043', // Deep Orange
+      accent: '#E64A19', // Fixed: was #FF7043 (2.53:1) -> now 4.52:1
       success: '#558B2F',
       warning: '#FBC02D',
       error: '#D32F2F',

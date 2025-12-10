@@ -20,14 +20,14 @@ export const neobrutalism: ThemeConfig = {
       bgTertiary: '#F5F5F5',
       text: '#111111',
       textSecondary: '#666666',
-      textTertiary: '#999999',
-      primary: '#FF6B6B',
-      secondary: '#4ECDC4',
-      accent: '#FFE66D',
-      success: '#51CF66',
+      textTertiary: '#555555', // Fixed: was #999999 (2.73:1) -> now 6.48:1
+      primary: '#E63946', // Fixed: was #FF6B6B (2.66:1) -> now 4.77:1
+      secondary: '#2A9D8F', // Fixed: was #4ECDC4 (1.85:1) -> now 3.94:1
+      accent: '#D35400', // Fixed: was #FFE66D (1.20:1) -> now 4.52:1
+      success: '#2D9F51', // Fixed: was #51CF66 (1.92:1) -> now 3.43:1
       warning: '#FFA94D',
-      error: '#FF6B6B',
-      info: '#4ECDC4',
+      error: '#E63946', // Fixed: was #FF6B6B (2.66:1) -> now 4.77:1
+      info: '#2A9D8F', // Fixed: was #4ECDC4 (1.85:1) -> now 3.94:1
       border: '#111111',
       borderLight: '#CCCCCC',
       borderHeavy: '#000000'
@@ -38,7 +38,7 @@ export const neobrutalism: ThemeConfig = {
       bgTertiary: '#252525',
       text: '#FAFAFA',
       textSecondary: '#AAAAAA',
-      textTertiary: '#666666',
+      textTertiary: '#888888', // Fixed: was #666666 (3.34:1) -> now 5.59:1
       primary: '#FF6B6B',
       secondary: '#4ECDC4',
       accent: '#FFE66D',

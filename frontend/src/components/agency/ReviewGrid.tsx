@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import apiFetch from '../../lib/api/httpClient';
 import { formatDate } from '../../lib/utils/dateUtils';
 import { useToast } from '../Toast';
+import { PromptDialog } from '../PromptDialog';
 
 type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
@@ -104,6 +105,8 @@ export function ReviewGrid() {
   const [processing, setProcessing] = useState<
     Record<string, 'approve' | 'reject' | undefined>
   >({});
+  const [rejectCaptionId, setRejectCaptionId] = useState<string | null>(null);
+  const [bulkRejectMode, setBulkRejectMode] = useState(false);
 
   useEffect(() => {
     refreshAll();
@@ -251,9 +254,8 @@ export function ReviewGrid() {
     }
   };
 
-  const rejectCaption = async (captionId: string) => {
+  const rejectCaption = async (captionId: string, reason?: string) => {
     try {
-      const reason = window.prompt('Add an optional reason?') || undefined;
       setSubmitting(true);
       setProcessing((p) => ({ ...p, [captionId]: 'reject' }));
       const variationId = selectedVariations[captionId];
@@ -271,6 +273,7 @@ export function ReviewGrid() {
       updateCaptionInState(data.caption);
       refreshExportData();
       success('Caption rejected');
+      setRejectCaptionId(null);
     } catch (error) {
       console.error(error);
       toastError('Failed to reject caption');
@@ -304,9 +307,8 @@ export function ReviewGrid() {
     }
   };
 
-  const bulkReject = async () => {
+  const bulkReject = async (reason?: string) => {
     if (!selectedCaptions.length) return;
-    const reason = window.prompt('Optional rejection reason?') || undefined;
     try {
       setSubmitting(true);
       const res = await apiFetch('/api/approval/batch-reject', {
@@ -317,6 +319,7 @@ export function ReviewGrid() {
       await loadGrid();
       await refreshExportData();
       success(`Rejected ${selectedCaptions.length} captions`);
+      setBulkRejectMode(false);
     } catch (error) {
       console.error(error);
       toastError('Bulk reject failed');
@@ -546,7 +549,7 @@ export function ReviewGrid() {
           </button>
           <button
             className='btn btn-danger'
-            onClick={bulkReject}
+            onClick={() => setBulkRejectMode(true)}
             disabled={!selectedCaptions.length || submitting}
           >
             Reject selected
@@ -980,7 +983,7 @@ export function ReviewGrid() {
                     </button>
                     <button
                       className='btn btn-danger'
-                      onClick={() => rejectCaption(caption.id)}
+                      onClick={() => setRejectCaptionId(caption.id)}
                       disabled={submitting || processing[caption.id] !== undefined}
                       title='Reject this caption'
                     >
@@ -995,6 +998,36 @@ export function ReviewGrid() {
           })}
         </div>
       )}
+
+      {/* Reject Caption Dialog */}
+      <PromptDialog
+        isOpen={rejectCaptionId !== null}
+        title="Reject Caption"
+        message="Add an optional reason for rejecting this caption:"
+        placeholder="e.g., Doesn't match brand voice, too generic, etc."
+        confirmLabel="Reject"
+        cancelLabel="Cancel"
+        onConfirm={async (reason) => {
+          if (rejectCaptionId) {
+            await rejectCaption(rejectCaptionId, reason || undefined);
+          }
+        }}
+        onCancel={() => setRejectCaptionId(null)}
+      />
+
+      {/* Bulk Reject Dialog */}
+      <PromptDialog
+        isOpen={bulkRejectMode}
+        title="Reject Selected Captions"
+        message={`Add an optional reason for rejecting ${selectedCaptions.length} caption${selectedCaptions.length !== 1 ? 's' : ''}:`}
+        placeholder="e.g., Doesn't match brand voice, too generic, etc."
+        confirmLabel="Reject All"
+        cancelLabel="Cancel"
+        onConfirm={async (reason) => {
+          await bulkReject(reason || undefined);
+        }}
+        onCancel={() => setBulkRejectMode(false)}
+      />
     </div>
   );
 }

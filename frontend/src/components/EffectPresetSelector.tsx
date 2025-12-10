@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { useConfirm } from '../contexts/DialogContext';
 import type { TextEffects } from '../lib/text/textEffects';
 import { PresetManager } from '../lib/text/presetManager';
 
@@ -35,6 +36,7 @@ export function EffectPresetSelector({
   const [newPresetName, setNewPresetName] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const confirmDialog = useConfirm();
 
   // Load preset names on mount
   useEffect(() => {
@@ -91,7 +93,14 @@ export function EffectPresetSelector({
   };
 
   const handleDeletePreset = async (name: string) => {
-    if (!confirm(`Are you sure you want to delete preset "${name}"?`)) {
+    const confirmed = await confirmDialog({
+      title: 'Delete Preset',
+      message: `Are you sure you want to delete preset "${name}"?`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+
+    if (!confirmed) {
       return;
     }
 

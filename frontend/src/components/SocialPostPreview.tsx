@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Modal, ModalActions } from './Modal';
 import { ShareablePlatform } from '../lib/social/types';
 import { PostPreviewData, postPreviewManager } from '../lib/social/postPreview';
 
@@ -317,105 +318,29 @@ export function SocialPostPreviewDialog({
     onPost(previewData.caption, previewData.hashtags);
   };
 
-  const overlayStyle: React.CSSProperties = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: '20px',
-  };
-
-  const dialogStyle: React.CSSProperties = {
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    padding: '24px',
-    maxWidth: '600px',
-    width: '100%',
-    maxHeight: '90vh',
-    overflow: 'auto',
-  };
-
   return (
-    <div style={overlayStyle} onClick={onClose}>
-      <div style={dialogStyle} onClick={(e) => e.stopPropagation()}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '20px',
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>
-            Preview Post - {platform.charAt(0).toUpperCase() + platform.slice(1)}
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: '24px',
-              cursor: 'pointer',
-              padding: '0',
-              color: '#8e8e8e',
-            }}
-          >
-            ×
-          </button>
-        </div>
-
-        <SocialPostPreview
-          previewData={previewData}
-          onCaptionEdit={handleCaptionEdit}
-          onHashtagsEdit={handleHashtagsEdit}
-          editable={true}
-        />
-
-        <div
-          style={{
-            display: 'flex',
-            gap: '12px',
-            marginTop: '24px',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <button
-            onClick={onClose}
-            style={{
-              padding: '10px 20px',
-              border: '1px solid #dbdbdb',
-              borderRadius: '8px',
-              backgroundColor: '#ffffff',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 600,
-            }}
-          >
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={`Preview Post - ${platform.charAt(0).toUpperCase() + platform.slice(1)}`}
+      size="md"
+      footer={
+        <ModalActions align="right">
+          <button onClick={onClose} className="btn btn-secondary">
             Cancel
           </button>
-          <button
-            onClick={handlePost}
-            style={{
-              padding: '10px 20px',
-              border: 'none',
-              borderRadius: '8px',
-              backgroundColor: '#0095f6',
-              color: '#ffffff',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 600,
-            }}
-          >
+          <button onClick={handlePost} className="btn btn-primary">
             Post to {platform.charAt(0).toUpperCase() + platform.slice(1)}
           </button>
-        </div>
-      </div>
-    </div>
+        </ModalActions>
+      }
+    >
+      <SocialPostPreview
+        previewData={previewData}
+        onCaptionEdit={handleCaptionEdit}
+        onHashtagsEdit={handleHashtagsEdit}
+        editable={true}
+      />
+    </Modal>
   );
 }

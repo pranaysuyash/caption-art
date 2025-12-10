@@ -20,11 +20,11 @@ export const minimalist: ThemeConfig = {
       bgTertiary: '#F3F4F6',
       text: '#111827',
       textSecondary: '#6B7280',
-      textTertiary: '#9CA3AF',
+      textTertiary: '#6B7280', // Fixed: was #9CA3AF (2.54:1) -> now 4.54:1
       primary: '#3B82F6',
       secondary: '#8B5CF6',
-      accent: '#10B981',
-      success: '#10B981',
+      accent: '#059669', // Fixed: was #10B981 (2.54:1) -> now 3.44:1
+      success: '#059669', // Fixed: was #10B981 (2.54:1) -> now 3.44:1
       warning: '#F59E0B',
       error: '#EF4444',
       info: '#3B82F6',

@@ -233,10 +233,10 @@ export function UserManagement() {
                       fontWeight: 600,
                       color: '#666',
                     }}>
-                      {user.name.charAt(0).toUpperCase()}
+                      {user.name ? user.name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600 }}>{user.name}</div>
+                      <div style={{ fontWeight: 600 }}>{user.name || user.email}</div>
                       <div style={{ fontSize: '0.85rem', color: '#666' }}>{user.email}</div>
                     </div>
                   </div>

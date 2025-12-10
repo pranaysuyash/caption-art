@@ -1,72 +1,103 @@
-/**
- * WorkspaceContext - Global context for active workspace
- */
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import apiFetch from '../lib/api/httpClient';
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from 'react';
-import { workspaceClient, Workspace } from '../lib/api/workspaceClient';
-import { safeLocalStorage } from '../lib/storage/safeLocalStorage';
-
-interface WorkspaceContextType {
-  workspaces: Workspace[];
-  activeWorkspace: Workspace | null;
-  setActiveWorkspace: (workspace: Workspace) => void;
-  refreshWorkspaces: () => Promise<void>;
-  loading: boolean;
+interface Workspace {
+  id: string;
+  clientName: string;
+  description?: string;
+  industry?: string;
+  campaigns?: { id: string; name: string }[];
 }
 
-const WorkspaceContext = createContext<WorkspaceContextType | undefined>(
-  undefined
-);
+interface WorkspaceContextType {
+  // Current/active workspace
+  currentWorkspace: Workspace | null;
+  activeWorkspace: Workspace | null;  // Alias for backward compatibility
+  
+  // Array of all workspaces
+  workspaces: Workspace[];
+  
+  // Actions
+  setCurrentWorkspaceId: (id: string) => void;
+  setActiveWorkspace: (workspace: Workspace) => void;
+  refreshWorkspaces: () => Promise<void>;
+  
+  // State
+  loading: boolean;
+  error: string | null;
+}
+
+const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
+  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null);
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(
-    null
-  );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:3001';
 
-  const refreshWorkspaces = async () => {
+  // Fetch all workspaces
+  const refreshWorkspaces = useCallback(async () => {
     try {
-      setLoading(true);
-      const ws = await workspaceClient.getWorkspaces();
-      setWorkspaces(ws);
-
-      // Set active workspace if not set
-      if (!activeWorkspace && ws.length > 0) {
-        const savedId = safeLocalStorage.getItem('activeWorkspaceId');
-        const active = savedId ? ws.find((w) => w.id === savedId) : ws[0];
-        setActiveWorkspace(active || ws[0]);
+      const res = await apiFetch(`${apiBase}/api/workspaces`);
+      if (res.ok) {
+        const data = await res.json();
+        setWorkspaces(data.workspaces || []);
+        
+        // Auto-select first workspace if none is selected
+        if (!currentWorkspace && data.workspaces?.length > 0) {
+          setCurrentWorkspace(data.workspaces[0]);
+        }
       }
-    } catch (error) {
-      console.error('Failed to fetch workspaces:', error);
+    } catch (err) {
+      console.error('Failed to load workspaces:', err);
+    }
+  }, [apiBase, currentWorkspace]);
+
+  // Load workspaces on mount
+  useEffect(() => {
+    refreshWorkspaces();
+  }, []);
+
+  const setCurrentWorkspaceId = async (id: string) => {
+    if (!id || currentWorkspace?.id === id) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const res = await apiFetch(`${apiBase}/api/workspaces/${id}`);
+      
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentWorkspace(data.workspace);
+      } else {
+        setError('Failed to load workspace');
+      }
+    } catch (err) {
+      console.error('Failed to load workspace:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    refreshWorkspaces();
-  }, []);
-
-  const handleSetActiveWorkspace = (workspace: Workspace) => {
-    setActiveWorkspace(workspace);
-    safeLocalStorage.setItem('activeWorkspaceId', workspace.id);
+  const setActiveWorkspace = (workspace: Workspace) => {
+    setCurrentWorkspace(workspace);
   };
 
   return (
-    <WorkspaceContext.Provider
-      value={{
+    <WorkspaceContext.Provider 
+      value={{ 
+        currentWorkspace, 
+        activeWorkspace: currentWorkspace, 
         workspaces,
-        activeWorkspace,
-        setActiveWorkspace: handleSetActiveWorkspace,
+        setCurrentWorkspaceId, 
+        setActiveWorkspace,
         refreshWorkspaces,
-        loading,
+        loading, 
+        error 
       }}
     >
       {children}

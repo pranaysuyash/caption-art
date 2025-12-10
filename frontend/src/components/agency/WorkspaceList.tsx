@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { Building2 } from 'lucide-react';
 import apiFetch from '../../lib/api/httpClient';
 import { safeLocalStorage } from '../../lib/storage/safeLocalStorage';
 import { adminClient } from '../../lib/api/adminClient';
 import { Breadcrumbs } from '../Breadcrumbs';
+import { ConfirmDialog } from '../ConfirmDialog';
 
 type WorkspaceApi = {
   id: string;
@@ -52,6 +54,7 @@ export function WorkspaceList() {
   const [workspaceMeta, setWorkspaceMeta] = useState<
     Record<string, WorkspaceMeta>
   >(() => loadWorkspaceMeta());
+  const [confirmResetWorkspace, setConfirmResetWorkspace] = useState<string | null>(null);
 
   useEffect(() => {
     loadWorkspaces();
@@ -169,7 +172,6 @@ export function WorkspaceList() {
   };
 
   const handleReset = async (workspaceId: string) => {
-    if (!window.confirm('Reset this workspace? This will wipe data.')) return;
     setResetLoading(workspaceId);
     try {
       await adminClient.resetWorkspace(workspaceId);
@@ -178,6 +180,7 @@ export function WorkspaceList() {
       delete meta[workspaceId];
       setWorkspaceMeta(meta);
       safeLocalStorage.setItem(WORKSPACE_META_KEY, JSON.stringify(meta));
+      setConfirmResetWorkspace(null);
     } catch (err) {
       console.error('Failed to reset workspace', err);
       setError(
@@ -250,30 +253,8 @@ export function WorkspaceList() {
 
       {/* Create Workspace Modal */}
       {showCreateForm && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: 'var(--color-bg-secondary, white)',
-              padding: '2rem',
-              borderRadius: '12px',
-              width: '100%',
-              maxWidth: '500px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            }}
-          >
+        <div className='modal-overlay'>
+          <div className='modal-content'>
             <h2
               style={{
                 fontFamily: 'var(--font-heading, sans-serif)',
@@ -286,21 +267,9 @@ export function WorkspaceList() {
               Create New Workspace
             </h2>
 
-            <form
-              onSubmit={handleCreateWorkspace}
-              style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
-            >
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.5rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text, #1f2937)',
-                  }}
-                >
-                  Client Name
-                </label>
+            <form onSubmit={handleCreateWorkspace} className='form-grid'>
+              <div className='form-field'>
+                <label>Client Name</label>
                 <input
                   type='text'
                   value={createForm.clientName}
@@ -311,29 +280,12 @@ export function WorkspaceList() {
                     }))
                   }
                   placeholder='e.g., Fashion Brand A'
-                  className='input'
                   required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border, #d1d5db)',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                  }}
                 />
               </div>
 
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    marginBottom: '0.5rem',
-                    fontWeight: '500',
-                    color: 'var(--color-text, #1f2937)',
-                  }}
-                >
-                  Industry
-                </label>
+              <div className='form-field'>
+                <label>Industry</label>
                 <select
                   value={createForm.industry}
                   onChange={(e) =>
@@ -342,38 +294,34 @@ export function WorkspaceList() {
                       industry: e.target.value,
                     }))
                   }
-                  className='input'
                   required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--color-border, #d1d5db)',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                  }}
                 >
                   <option value=''>Select industry</option>
-                  <option value='fashion'>Fashion</option>
                   <option value='technology'>Technology</option>
+                  <option value='fashion'>Fashion & Apparel</option>
                   <option value='food'>Food & Beverage</option>
                   <option value='beauty'>Beauty & Cosmetics</option>
+                  <option value='healthcare'>Healthcare & Wellness</option>
+                  <option value='finance'>Finance & Banking</option>
+                  <option value='realestate'>Real Estate</option>
                   <option value='automotive'>Automotive</option>
                   <option value='travel'>Travel & Hospitality</option>
-                  <option value='healthcare'>Healthcare</option>
-                  <option value='finance'>Finance</option>
-                  <option value='education'>Education</option>
+                  <option value='education'>Education & Training</option>
+                  <option value='legal'>Legal Services</option>
+                  <option value='nonprofit'>Non-profit & NGO</option>
+                  <option value='entertainment'>Entertainment & Media</option>
+                  <option value='fitness'>Sports & Fitness</option>
+                  <option value='consulting'>Consulting & Professional Services</option>
+                  <option value='manufacturing'>Manufacturing & Industrial</option>
+                  <option value='agriculture'>Agriculture & Food Production</option>
+                  <option value='energy'>Energy & Utilities</option>
+                  <option value='government'>Government & Public Sector</option>
+                  <option value='retail'>Retail & E-commerce</option>
                   <option value='other'>Other</option>
                 </select>
               </div>
 
-              <div
-                style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  justifyContent: 'flex-end',
-                  marginTop: '1rem',
-                }}
-              >
+              <div className="btn-group" style={{ marginTop: '1rem' }}>
                 <button
                   type='button'
                   onClick={() => {
@@ -403,12 +351,7 @@ export function WorkspaceList() {
 
       {/* Loading State */}
       {loading && (
-        <div
-          className='card-grid skeleton-grid'
-          style={{
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          }}
-        >
+        <div className='card-grid'>
           {Array.from({ length: 6 }).map((_, idx) => (
             <div
               key={idx}
@@ -484,7 +427,9 @@ export function WorkspaceList() {
             border: '2px dashed var(--color-border, #d1d5db)',
           }}
         >
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏢</div>
+          <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+            <Building2 size={48} strokeWidth={1.5} color="var(--color-text-secondary, #6b7280)" />
+          </div>
           <h3
             style={{
               fontFamily: 'var(--font-heading, sans-serif)',
@@ -518,12 +463,7 @@ export function WorkspaceList() {
 
       {/* Workspaces Grid */}
       {!loading && enrichedWorkspaces.length > 0 && (
-        <div
-          className='card-grid'
-          style={{
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          }}
-        >
+        <div className='card-grid'>
           {enrichedWorkspaces.map((workspace) => (
             <Link
               key={workspace.id}
@@ -539,7 +479,9 @@ export function WorkspaceList() {
                     <h3 className='card-title'>{workspace.clientName}</h3>
                     <p className='card-subtitle'>{workspace.industry}</p>
                   </div>
-                  <div className='card-icon'>🏢</div>
+                  <div className='card-icon'>
+                    <Building2 size={24} strokeWidth={1.5} />
+                  </div>
                 </div>
 
                 <div className='card-meta'>
@@ -550,7 +492,7 @@ export function WorkspaceList() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      handleReset(workspace.id);
+                      setConfirmResetWorkspace(workspace.id);
                     }}
                     className='btn btn-ghost btn-sm'
                     disabled={resetLoading === workspace.id}
@@ -563,6 +505,22 @@ export function WorkspaceList() {
           ))}
         </div>
       )}
+
+      {/* Reset Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={confirmResetWorkspace !== null}
+        title="Reset Workspace?"
+        message="This will permanently delete all data in this workspace. This action cannot be undone."
+        confirmLabel="Reset Workspace"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={async () => {
+          if (confirmResetWorkspace) {
+            await handleReset(confirmResetWorkspace);
+          }
+        }}
+        onCancel={() => setConfirmResetWorkspace(null)}
+      />
     </div>
   );
 }

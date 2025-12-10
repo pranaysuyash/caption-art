@@ -18,7 +18,11 @@ type SettingsTab =
   | 'brand-kits' 
   | 'audit-logs';
 
-export function SettingsPage() {
+interface SettingsPageProps {
+  onRestartOnboarding?: () => void;
+}
+
+export function SettingsPage({ onRestartOnboarding }: SettingsPageProps = {}) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('organization');
 
   const tabs = [

@@ -220,9 +220,9 @@ export class PlatformManager {
       const authStatus = await this.checkAuthStatus(platform);
       if (!authStatus.isAuthenticated) {
         const authError = new AuthenticationError(platform);
-        const errorDetails = errorHandler.handleError(authError, platform, () =>
-          this.postToPlatform(platform, image, caption, hashtags)
-        );
+        const errorDetails = errorHandler.handleError(authError, platform, async () => {
+          await this.postToPlatform(platform, image, caption, hashtags);
+        });
         return {
           success: false,
           platform,
@@ -267,9 +267,9 @@ export class PlatformManager {
       // Handle network and unknown errors
       const socialError =
         error instanceof Error ? error : new Error('Unknown error occurred');
-      const errorDetails = errorHandler.handleError(socialError, platform, () =>
-        this.postToPlatform(platform, image, caption, hashtags)
-      );
+      const errorDetails = errorHandler.handleError(socialError, platform, async () => {
+        await this.postToPlatform(platform, image, caption, hashtags);
+      });
 
       return {
         success: false,

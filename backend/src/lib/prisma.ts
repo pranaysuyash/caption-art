@@ -7,6 +7,7 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
 import { log } from '../middleware/logger'
 
 let prisma: PrismaClient
@@ -16,7 +17,16 @@ let prisma: PrismaClient
  */
 export function getPrismaClient(): PrismaClient {
   if (!prisma) {
+    // For Prisma v7 with SQLite, use the adapter with URL configuration
+    const databaseUrl = process.env.DATABASE_URL || 'file:./app.sqlite'
+    
+    // Create the adapter with URL configuration
+    // The adapter will create the database connection internally
+    const adapter = new PrismaBetterSqlite3({ url: databaseUrl })
+    
+    // Create PrismaClient with the adapter
     prisma = new PrismaClient({
+      adapter,
       log:
         process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
     })
